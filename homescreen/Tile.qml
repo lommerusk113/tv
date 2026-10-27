@@ -60,23 +60,32 @@ Item {
             }
         }
 
-        // App tiles: logo image if given, otherwise the name.
-        Image {
-            visible: tile.style === "app" && !!tile.modelData.image
+        // App tiles: icon (optional) with the name below it. apps.json can set
+        // imageScale (icon height / tile height) and showName: false for icons that contain the name.
+        Column {
+            visible: tile.style === "app"
             anchors.centerIn: parent
-            width: parent.width * 0.6
-            height: parent.height * 0.6
-            fillMode: Image.PreserveAspectFit
-            source: tile.style === "app" && tile.modelData.image ? Qt.resolvedUrl(tile.modelData.image) : ""
-        }
-        Text {
-            visible: tile.style === "app" && !tile.modelData.image
-            anchors.centerIn: parent
-            text: tile.modelData.name || ""
-            color: "#ffffff"
-            font.family: tile.theme.font.family
-            font.pixelSize: Config.px(tile.theme.font.sizes.appName)
-            font.weight: Font.Bold
+            spacing: Config.px(8)
+
+            Image {
+                visible: !!tile.modelData.image
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: tile.width * 0.9
+                height: visible ? tile.height * (tile.modelData.imageScale || 0.5) : 0
+                fillMode: Image.PreserveAspectFit
+                sourceSize.height: height * 2   // render SVGs sharp at the focused scale
+                smooth: true
+                source: tile.style === "app" && tile.modelData.image ? Qt.resolvedUrl(tile.modelData.image) : ""
+            }
+            Text {
+                visible: !tile.modelData.image || tile.modelData.showName !== false
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: tile.modelData.name || ""
+                color: "#ffffff"
+                font.family: tile.theme.font.family
+                font.pixelSize: Config.px(tile.modelData.image ? tile.theme.font.sizes.tileTitle : tile.theme.font.sizes.appName)
+                font.weight: tile.modelData.image ? Font.DemiBold : Font.Bold
+            }
         }
 
         // Media tiles: scrim + text at the bottom.

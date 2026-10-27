@@ -9,6 +9,7 @@ RUN dnf -y install --setopt=install_weak_deps=False \
         mesa-dri-drivers mesa-libGL mesa-libEGL \
         xorg-x11-server-Xvfb xdotool ImageMagick \
         google-noto-sans-fonts abattis-cantarell-fonts dejavu-sans-fonts \
+        qt6-qtsvg \
         procps-ng git tzdata \
     && dnf clean all
 

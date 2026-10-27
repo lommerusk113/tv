@@ -90,8 +90,12 @@ All sizes are in 1920x1080 reference px (scaled by `Config.px()`); colors are `#
   `font` {family, sizes{clock, tab, profile, heroMeta, heroTitle, heroBody, button, rowTitle, appName, tileTitle, tileMeta}},
   `radius`, `animationMs` (focus anim; scrolls use 2x), `focus` {scale, borderWidth, glowOpacity},
   `spacing` {page, tile, row, titleGap}, `topBar` {height}, `hero` {height}, `tiles` {app|landscape|poster: [w, h]}.
-- `apps.json`: array of `{id, name, colors: [top, bottom], image: "" | path relative to homescreen/ (logo shown instead of name),
-  launch: [argv...]}`. `launch` is stored only, never run yet.
+- `apps.json`: array of `{id, name, colors: [top, bottom], image: "" | path relative to homescreen/,
+  imageScale (optional, icon height / tile height, default 0.5), showName (optional, default true; false for icons
+  that already contain the name), launch: [argv...]}`. `launch` is stored only, never run yet.
+  Icons in `homescreen/icons/`: jellyfin/youtube/moonlight SVGs copied from the installed Flatpaks
+  (`/var/lib/flatpak/exports/share/icons/hicolor/scalable/apps/`), rikstv.png = rikstv.no's official 512px web-app icon.
+  SVG needs qt6-qtsvg (in the Dockerfile; already on the Bazzite host).
 - `layout.json`: `tabs` [names], `profile` {initial, color}, `initialFocus` (row id), `rows` in display order:
   `{id, type: "hero"|"row" (default row), title, source, style: app|landscape|poster}`.
   `source` = `"apps"` (apps.json) or a key in `data/placeholder.json` (`featured`, `continueWatching`, `trending`).
