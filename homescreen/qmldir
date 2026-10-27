@@ -1,0 +1,5 @@
+singleton Config 1.0 Config.qml
+Home 1.0 Home.qml
+HeroBanner 1.0 HeroBanner.qml
+TileRow 1.0 TileRow.qml
+Tile 1.0 Tile.qml

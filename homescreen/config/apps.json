@@ -1,0 +1,30 @@
+[
+  {
+    "id": "jellyfin",
+    "name": "Jellyfin",
+    "colors": ["#aa5cc3", "#00a4dc"],
+    "image": "",
+    "launch": ["flatpak", "run", "org.jellyfin.JellyfinDesktop"]
+  },
+  {
+    "id": "youtube",
+    "name": "YouTube",
+    "colors": ["#ff0000", "#8c0000"],
+    "image": "",
+    "launch": ["flatpak", "run", "rocks.shy.VacuumTube"]
+  },
+  {
+    "id": "rikstv",
+    "name": "RiksTV",
+    "colors": ["#1d3557", "#0b1a2e"],
+    "image": "",
+    "launch": ["flatpak", "run", "com.google.Chrome", "--kiosk", "https://www.rikstv.no"]
+  },
+  {
+    "id": "moonlight",
+    "name": "Moonlight",
+    "colors": ["#3a3f58", "#151826"],
+    "image": "",
+    "launch": ["flatpak", "run", "com.moonlight_stream.Moonlight"]
+  }
+]

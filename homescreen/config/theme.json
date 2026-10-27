@@ -1,0 +1,39 @@
+{
+  "colors": {
+    "background": "#0e1013",
+    "surface": "#1f2329",
+    "text": "#e8eaed",
+    "textDim": "#9aa0a6",
+    "accent": "#8ab4f8",
+    "focusBorder": "#ffffff",
+    "glow": "#8ab4f8",
+    "onFocused": "#202124"
+  },
+  "font": {
+    "family": "Noto Sans",
+    "sizes": {
+      "clock": 30,
+      "tab": 26,
+      "profile": 24,
+      "heroMeta": 20,
+      "heroTitle": 64,
+      "heroBody": 24,
+      "button": 22,
+      "rowTitle": 28,
+      "appName": 28,
+      "tileTitle": 24,
+      "tileMeta": 18
+    }
+  },
+  "radius": 16,
+  "animationMs": 150,
+  "focus": { "scale": 1.08, "borderWidth": 3, "glowOpacity": 0.8 },
+  "spacing": { "page": 96, "tile": 28, "row": 36, "titleGap": 16 },
+  "topBar": { "height": 110 },
+  "hero": { "height": 600 },
+  "tiles": {
+    "app": [300, 170],
+    "landscape": [400, 226],
+    "poster": [220, 330]
+  }
+}

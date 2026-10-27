@@ -1,0 +1,34 @@
+{
+  "featured": [
+    { "id": "f-northern-lights", "title": "Northern Lights", "meta": "Series · Drama · 2 seasons", "description": "A small fishing town above the Arctic Circle hides a secret that surfaces with the first polar night.", "colors": ["#0b3d5c", "#1a7a6c", "#7cf2c4"] },
+    { "id": "f-last-signal", "title": "The Last Signal", "meta": "Film · Sci-fi · 2h 04m", "description": "An astronaut stranded on a dead station picks up a broadcast that should not exist.", "colors": ["#2b1055", "#7597de", "#d36bff"] },
+    { "id": "f-harbour", "title": "Harbour Street", "meta": "Series · Crime · 3 seasons", "description": "Two detectives with very different methods untangle a smuggling ring in Bergen.", "colors": ["#3d1f0b", "#b5541c", "#ffb35c"] },
+    { "id": "f-wild-coast", "title": "Wild Coast", "meta": "Documentary · Nature · 6 episodes", "description": "A year on Norway's western coastline, from winter storms to the midnight sun.", "colors": ["#0d2b1a", "#2f7a3a", "#b8f27c"] },
+    { "id": "f-midnight-run", "title": "Midnight Run", "meta": "Film · Action · 1h 52m", "description": "A courier has one night to cross the city with a package everyone wants.", "colors": ["#3a0b1f", "#a3123a", "#ff6b8b"] }
+  ],
+  "continueWatching": [
+    { "id": "c-harbour-s2e4", "title": "Harbour Street", "subtitle": "S2 E4 · 23 min left", "progress": 0.62, "colors": ["#b5541c", "#3d1f0b", "#ffb35c"] },
+    { "id": "c-northern-s1e7", "title": "Northern Lights", "subtitle": "S1 E7 · 41 min left", "progress": 0.18, "colors": ["#1a7a6c", "#0b3d5c", "#7cf2c4"] },
+    { "id": "c-last-signal", "title": "The Last Signal", "subtitle": "58 min left", "progress": 0.53, "colors": ["#7597de", "#2b1055", "#d36bff"] },
+    { "id": "c-kitchen-s4e2", "title": "Kitchen Nights", "subtitle": "S4 E2 · 12 min left", "progress": 0.8, "colors": ["#c9a227", "#4a3a06", "#ffe58a"] },
+    { "id": "c-wild-coast-e3", "title": "Wild Coast", "subtitle": "E3 · 30 min left", "progress": 0.35, "colors": ["#2f7a3a", "#0d2b1a", "#b8f27c"] },
+    { "id": "c-quiz-night", "title": "Quiz Night", "subtitle": "S9 E11 · 8 min left", "progress": 0.9, "colors": ["#5c2bb5", "#1c0b3d", "#c49bff"] },
+    { "id": "c-fjord-patrol", "title": "Fjord Patrol", "subtitle": "S1 E2 · 37 min left", "progress": 0.25, "colors": ["#1c5fb5", "#0b1f3d", "#8bc4ff"] },
+    { "id": "c-old-town", "title": "Old Town", "subtitle": "S3 E6 · 19 min left", "progress": 0.7, "colors": ["#7a5230", "#2e1d0f", "#e8c39e"] },
+    { "id": "c-deep-blue", "title": "Deep Blue", "subtitle": "1h 10m left", "progress": 0.1, "colors": ["#0b5c7a", "#04212b", "#5cd6ff"] }
+  ],
+  "trending": [
+    { "id": "t-midnight-run", "title": "Midnight Run", "meta": "Film · 2026", "colors": ["#a3123a", "#3a0b1f", "#ff6b8b"] },
+    { "id": "t-glass-tower", "title": "Glass Tower", "meta": "Series · 2026", "colors": ["#4d6b8a", "#141e29", "#cfe3f7"] },
+    { "id": "t-summer-house", "title": "Summer House", "meta": "Film · 2025", "colors": ["#e0a43a", "#5c3a06", "#fff0b3"] },
+    { "id": "t-iron-valley", "title": "Iron Valley", "meta": "Series · 2026", "colors": ["#5a5a5a", "#1a1a1a", "#c2c2c2"] },
+    { "id": "t-red-snow", "title": "Red Snow", "meta": "Film · 2026", "colors": ["#c23a2b", "#3d0f0b", "#ffd0c9"] },
+    { "id": "t-lantern", "title": "Lantern", "meta": "Series · 2025", "colors": ["#e06c1f", "#3d1a06", "#ffd29e"] },
+    { "id": "t-orbit", "title": "Orbit", "meta": "Documentary · 2026", "colors": ["#1f2d6b", "#070b24", "#8fa3ff"] },
+    { "id": "t-hollow-pines", "title": "Hollow Pines", "meta": "Series · 2026", "colors": ["#2f5c3a", "#0b1f10", "#a8e0b4"] },
+    { "id": "t-velvet", "title": "Velvet", "meta": "Film · 2025", "colors": ["#6b1f5c", "#24071f", "#f59ee0"] },
+    { "id": "t-salt", "title": "Salt", "meta": "Series · 2026", "colors": ["#3a7a8a", "#0b252b", "#b3ecf7"] },
+    { "id": "t-blackout", "title": "Blackout", "meta": "Film · 2026", "colors": ["#2b2b3d", "#0b0b12", "#9e9ec2"] },
+    { "id": "t-tidewater", "title": "Tidewater", "meta": "Series · 2025", "colors": ["#1f7a6b", "#06241f", "#9ef5e0"] }
+  ]
+}
