@@ -1,5 +1,7 @@
 # TV project – Google TV-style living room setup
 
+Remaining work and decisions: see TODO.md
+
 ## Decisions (already made, do not re-litigate)
 - Machine: old laptop running Bazzite, HDMI to an LG 55UJ701V TV (2017, webOS 3.5).
 - Goal: a Google TV-style living room setup. Home screen = Plasma Bigscreen (KDE, Plasma 6.7+), later customized in QML.
