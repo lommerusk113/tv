@@ -93,8 +93,8 @@ All sizes are in 1920x1080 reference px (scaled by `Config.px()`); colors are `#
 - `apps.json`: array of `{id, name, colors: [top, bottom], image: "" | path relative to homescreen/,
   imageScale (optional, icon height / tile height, default 0.5), showName (optional, default true; false for icons
   that already contain the name), launch: [argv...]}`. `launch` is stored only, never run yet.
-  Icons in `homescreen/icons/`: jellyfin/youtube/moonlight SVGs copied from the installed Flatpaks
-  (`/var/lib/flatpak/exports/share/icons/hicolor/scalable/apps/`), rikstv.png = rikstv.no's official 512px web-app icon.
+  Icons in `homescreen/icons/`: jellyfin/moonlight SVGs copied from the installed Flatpaks
+  (`/var/lib/flatpak/exports/share/icons/hicolor/scalable/apps/`), rikstv.png = rikstv.no's official 512px web-app icon, youtube.png = YouTube's official 192px favicon (from youtube.com's web manifest).
   SVG needs qt6-qtsvg (in the Dockerfile; already on the Bazzite host).
 - `layout.json`: `tabs` [names], `profile` {initial, color}, `initialFocus` (row id), `rows` in display order:
   `{id, type: "hero"|"row" (default row), title, source, style: app|landscape|poster}`.
