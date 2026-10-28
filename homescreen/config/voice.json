@@ -48,6 +48,27 @@
       "slå av tv-en",
       "skru av tv",
       "skru av tv-en"
+    ],
+    "jellyfin_pull": [
+      "move to tv",
+      "move to the tv",
+      "move it to tv",
+      "move it to the tv",
+      "move this to tv",
+      "move this to the tv",
+      "put it on the tv",
+      "play it here",
+      "play here",
+      "play it on the tv",
+      "watch it on tv",
+      "flytt til tv",
+      "flytt til tv-en",
+      "flytt den til tv",
+      "flytt den til tv-en",
+      "flytt det til tv-en",
+      "spill her",
+      "spill det her",
+      "sett den på tv-en"
     ]
   },
   "open": [

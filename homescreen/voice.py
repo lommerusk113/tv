@@ -104,6 +104,11 @@ def parse(text, conf=None, apps=None):
     words = text.split()
     best, best_score, start, end = best_app(words, apps)
     named = best if best and best_score >= conf.get("nameMatch", 0.75) else None
+    # A sentence that is exactly one of the fixed phrases wins ("play it here" is not a title called "it here").
+    exact = remove_phrases(words, [normalize(f) for f in conf.get("fillers", [])])
+    for action, ps in conf["phrases"].items():
+        if " ".join(exact) in (normalize(p) for p in ps):
+            return action
     title = title_request(words, conf, named, start, end)
     if title:
         app_id = named["id"] if named else conf.get("defaultTitleApp", "jellyfin")

@@ -156,9 +156,21 @@ def main():
     # Misheard titles (whisper): found through single words and fuzzy matching.
     assert play("deadmans chest") == {"ok": True, "title": "Pirates of the Caribbean: Dead Man's Chest"}
     assert play("kung fu hustling") == {"ok": True, "title": "Kung Fu Hustle"}
+    # Move to TV: the phone's episode stops there and continues here at the same position.
+    res = run("pull")
+    assert json.loads(res.stdout) == {"ok": False, "error": "nothing is playing on another device"}, res.stdout
+    state["sessions"].append({"Id": "phone2", "Client": "Jellyfin Android", "DeviceName": "Pixel",
+                              "LastActivityDate": "2026-10-28T23:20:00Z", "PlayState": {"PositionTicks": 12 * TICKS},
+                              "NowPlayingItem": {"Id": "ep9", "Type": "Episode", "Name": "Pilot", "SeriesName": "Northern Lights",
+                                                 "ParentIndexNumber": 1, "IndexNumber": 1}})
+    res = run("pull")
+    assert json.loads(res.stdout) == {"ok": True, "title": "Northern Lights S1 E1", "from": "Pixel"}, res.stdout
+    assert state["posts"][-2:] == ["/Sessions/phone2/Playing/Stop",
+                                   "/Sessions/here/Playing?playCommand=PlayNow&itemIds=ep9&startPositionTicks=%d" % (12 * TICKS)]
+    state["sessions"].pop()
     out = play("zzz qqq")
     assert out["ok"] is False and "nothing called" in out["error"], out
-    assert len(state["posts"]) == 4
+    assert len(state["posts"]) == 6
 
     # Server down: the last row stays.
     before = (cache / "content.json").read_text()

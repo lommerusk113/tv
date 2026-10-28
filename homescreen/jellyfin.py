@@ -3,6 +3,8 @@
 
   python3 jellyfin.py               writes the jellyfinResume key (the user's resumable videos) into
                                     ~/.cache/tv-project/content.json
+  python3 jellyfin.py pull          "move to TV": stops what this user is watching on another device (phone, browser)
+                                    and continues it here from the same position. Prints {"ok", "title"} like play.
   python3 jellyfin.py home          sends Jellyfin Desktop on this computer to its start page (when leaving the app)
   python3 jellyfin.py play <title>  finds the title on the server and plays it in Jellyfin Desktop on this computer
                                     (remote control through the server, like casting from the phone). A series plays
@@ -225,11 +227,9 @@ def play(query):
         target, position = playable(conf, uid, item)
         if not target:
             return {"ok": False, "error": "no episodes in \"%s\"" % item.get("Name")}
-        deadline = time.monotonic() + PLAY_WAIT
-        while not (session := desktop_session(conf, uid)):
-            if time.monotonic() > deadline:
-                return {"ok": False, "error": "Jellyfin Desktop is not connected to the server"}
-            time.sleep(2)
+        session = wait_for_desktop(conf, uid)
+        if not session:
+            return {"ok": False, "error": "Jellyfin Desktop is not connected to the server"}
         command = urllib.parse.urlencode({"playCommand": "PlayNow", "itemIds": target["Id"], "startPositionTicks": position})
         get(conf, "/Sessions/%s/Playing?%s" % (session["Id"], command), method="POST")
     except (urllib.error.URLError, OSError, ValueError) as e:
@@ -240,6 +240,45 @@ def play(query):
     if target is not item:
         title += " S%s E%s" % (target.get("ParentIndexNumber", "?"), target.get("IndexNumber", "?"))
     return {"ok": True, "title": title}
+
+
+def wait_for_desktop(conf, uid):
+    deadline = time.monotonic() + PLAY_WAIT
+    while not (session := desktop_session(conf, uid)):
+        if time.monotonic() > deadline:
+            return None
+        time.sleep(2)
+    return session
+
+
+def pull():
+    conf = settings()
+    if not conf:
+        return {"ok": False, "error": "no \"jellyfin\" url/apiKey in secrets.json"}
+    try:
+        uid = user_id(conf)
+        here = desktop_session(conf, uid)
+        sessions = get(conf, "/Sessions?" + urllib.parse.urlencode({"controllableByUserId": uid})) or []
+        playing = [s for s in sessions if s.get("NowPlayingItem") and (not here or s["Id"] != here["Id"])]
+        if not playing:
+            return {"ok": False, "error": "nothing is playing on another device"}
+        source = max(playing, key=lambda s: s.get("LastActivityDate") or "")
+        item, position = source["NowPlayingItem"], (source.get("PlayState") or {}).get("PositionTicks") or 0
+        # Stop (not pause) on the other device: it saves the position and leaves the player there.
+        get(conf, "/Sessions/%s/Playing/Stop" % source["Id"], method="POST")
+        target = here or wait_for_desktop(conf, uid)
+        if not target:
+            return {"ok": False, "error": "Jellyfin Desktop is not connected to the server"}
+        command = urllib.parse.urlencode({"playCommand": "PlayNow", "itemIds": item["Id"], "startPositionTicks": position})
+        get(conf, "/Sessions/%s/Playing?%s" % (target["Id"], command), method="POST")
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        return {"ok": False, "error": "%s: %s" % (conf["url"], e)}
+    except SystemExit as e:
+        return {"ok": False, "error": str(e)}
+    title = item.get("Name", "")
+    if item.get("Type") == "Episode":
+        title = "%s S%s E%s" % (item.get("SeriesName", ""), item.get("ParentIndexNumber", "?"), item.get("IndexNumber", "?"))
+    return {"ok": True, "title": title, "from": source.get("DeviceName", "")}
 
 
 def home():
@@ -258,6 +297,9 @@ def home():
 def main():
     if sys.argv[1:] == ["home"]:
         return home()
+    if sys.argv[1:] == ["pull"]:
+        print(json.dumps(pull(), ensure_ascii=False))
+        return
     if len(sys.argv) > 2 and sys.argv[1] == "play":
         print(json.dumps(play(" ".join(sys.argv[2:])), ensure_ascii=False))
         return

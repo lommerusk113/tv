@@ -231,6 +231,13 @@ Item {
                     exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/media.py")) + "' youtube '" + query + "'", () => {});
                     root.youtubeSearch = true;
                     raiseYoutube.restart();
+                } else if (action === "jellyfin_pull") {
+                    // Voice "move to TV": what plays on the phone (Jellyfin) stops there and continues here.
+                    Config.launch("jellyfin");
+                    exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/jellyfin.py")) + "' pull", data => {
+                        if (data["exit code"] !== 0 || data.stdout.indexOf('"ok": true') < 0)
+                            console.warn("tv: jellyfin.py pull: " + (data.stdout + data.stderr).trim());
+                    });
                 } else if (action.startsWith("jellyfin_play:")) {
                     // Voice "play <title> on Jellyfin": open Jellyfin Desktop, then have the server start the title
                     // on it (jellyfin.py play waits for the app to connect).
