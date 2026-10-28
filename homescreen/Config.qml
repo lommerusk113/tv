@@ -15,7 +15,8 @@ QtObject {
     property var voice: ({})      // config/voice.json (recording seconds etc.; phrases are used by voice.py)
     // Set by the Bigscreen plasmoid, null in the prototype:
     property var voiceListener: null  // function(callback({text, action} or null)): record + transcribe (voice.py)
-    property var system: null         // function(action) -> true if handled: volume_*, tv_off
+    property var system: null         // function(action) -> true if handled: volume_*, tv_off, sleep, restart...
+    property var volumeReader: null   // function(callback(volume 0..1)): current output volume (Settings panel)
 
     property var actionRunner: null   // function(action); set by Home.qml (its runAction), for tiles with an "action"
 
@@ -34,7 +35,9 @@ QtObject {
             return;
         }
         console.log("launch:" + appId);
-        if (launcher)
+        if (app.action)  // a built-in "app" such as Settings
+            run(app.action);
+        else if (launcher)
             launcher(app);
     }
 

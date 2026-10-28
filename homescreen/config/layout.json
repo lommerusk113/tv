@@ -7,6 +7,7 @@
     { "id": "continue", "title": "Continue watching", "source": "jellyfinResume", "style": "landscape" },
     { "id": "youtube", "title": "New from your channels", "source": "youtubeChannels", "style": "landscape" },
     { "id": "youtubeRecommended", "title": "Recommended on YouTube", "source": "youtubeRecommended", "style": "landscape" },
-    { "id": "trending", "title": "Trending", "source": "trending", "style": "poster" }
+    { "id": "trending", "title": "Trending", "source": "trending", "style": "poster" },
+    { "id": "moreApps", "title": "More apps", "source": "installedApps", "style": "app" }
   ]
 }

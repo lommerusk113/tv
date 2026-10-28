@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Gear: 8 teeth around a ring, drawn for the Settings tile (tv-project). -->
+  <g fill="#e8eaed">
+    <g id="tooth"><rect x="28" y="4" width="8" height="12" rx="2"/></g>
+    <use href="#tooth" transform="rotate(45 32 32)"/>
+    <use href="#tooth" transform="rotate(90 32 32)"/>
+    <use href="#tooth" transform="rotate(135 32 32)"/>
+    <use href="#tooth" transform="rotate(180 32 32)"/>
+    <use href="#tooth" transform="rotate(225 32 32)"/>
+    <use href="#tooth" transform="rotate(270 32 32)"/>
+    <use href="#tooth" transform="rotate(315 32 32)"/>
+    <circle cx="32" cy="32" r="17"/>
+  </g>
+  <circle cx="32" cy="32" r="7" fill="#2b2f36"/>
+</svg>

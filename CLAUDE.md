@@ -92,7 +92,17 @@ homescreen/
   jellyfin.py       Jellyfin "jellyfinResume" key (Continue watching); test_jellyfin.py = mock test (`--keep DIR`)
   voice.py          `listen` (arecord 4 s -> whisper-cli -> action), `file <wav>`, `parse <text>`; config/voice.json;
                     test_voice.py (`--whisper` also transcribes whisper.cpp's jfk.wav)
-  VoiceOverlay.qml  push-to-talk feedback pill (bottom centre)
+  VoiceOverlay.qml  push-to-talk feedback pill (bottom centre) (also "busy" status: showStatus("Starting…"))
+  SettingsPanel.qml slide-in from the right (Settings tile, gear button, "open settings"): volume (left/right),
+                    turn off TV, System Settings, sleep, restart, shut down (power ones need a second OK); while open,
+                    Home routes keys to it and atRoot is false, so Back closes it instead of opening Bigscreen's overlay
+  apps.py           "More apps" row (installedApps): every exported Flatpak .desktop not pinned in apps.json, with its
+                    hicolor icon; action launch_desktop:<id>; test_apps.py
+  youtube.py        "New from your channels" (channel /videos pages, config/youtube.json) + "Recommended on YouTube"
+                    and history progress (youtube_tv.py + youtube_tv.js, VacuumTube's DevTools port); test_youtube.py
+  media.py          pause (MPRIS), leave (pause + Jellyfin GoHome), YouTube deeplinks (search, history, watch, home)
+  remote.py         global remote buttons (config/remote.json -> X-KDE-Shortcuts .desktop files) and the FIFO to Home
+  jellyfin_back.py  Back on Jellyfin's start page -> home screen (see DevTools ports)
   tvpower.py        LG TV on/off: WOL + bscpylgtv (venv ~/.local/share/tv-project/venv, reruns itself there);
                     `on|off|pair|status|watch-sleep`; settings "tv": {ip, mac, input}; test_tvpower.py (no TV needed)
   test_trakt.py     runs trakt.py auth + sync against a local mock Trakt API: python3 homescreen/test_trakt.py
@@ -119,7 +129,8 @@ All sizes are in 1920x1080 reference px (scaled by `Config.px()`); colors are `#
   `font` {family, sizes{clock, clockDate, tab, heroMeta, heroTitle, heroBody, button, rowTitle, appName, tileTitle, tileMeta}},
   `radius`, `animationMs` (focus anim; scrolls use 2x), `focus` {scale, borderWidth, glowOpacity},
   `spacing` {page, tile, row, titleGap}, `topBar` {height}, `hero` {height}, `tiles` {app|landscape|poster: [w, h]}.
-- `apps.json`: array of `{id, name, colors: [top, bottom], image: "" | path relative to homescreen/,
+- `apps.json`: array of `{id, name, colors: [top, bottom], image: "" | path relative to homescreen/, action (optional:
+  a built-in "app" such as Settings, run instead of launching), voiceNames (optional),
   imageScale (optional, icon height / tile height, default 0.5), showName (optional, default true; false for icons
   that already contain the name), desktopId: "<storage id>.desktop"}`. Launched via Bigscreen's app model; the Flatpak
   ids are their app id + `.desktop` (not yet checked on the host); RiksTV uses our `tv-rikstv.desktop`.
@@ -229,7 +240,7 @@ an unknown key name and an unknown app id.
 | Off | c0030 | POWER (PowerDevil would sleep) | F14 | Launch (5) | tv_power (global) |
 | Input | c01bb | UNKNOWN 240 | F15 | Launch (6) | tv_input (global) |
 | Mic | c0221 | SEARCH (KRunner) | F16 | Launch (7) | voice (global) |
-| Gear | c009f | UNKNOWN 240 | F17 | Launch (8) | unbound |
+| Gear | c009f | UNKNOWN 240 | F17 | Launch (8) | settings (global) |
 | YouTube | c0077 | 588 | F18 | Launch (9) | launch:youtube (global) |
 | Netflix | c0078 | 589 | F19 | F19 | launch:jellyfin (global) |
 | Prime Video | c0079 | KBDILLUMUP (keyboard light) | PROG3 | Launch (3) | launch:moonlight (global) |

@@ -12,10 +12,12 @@ FocusScope {
     property int section: 0       // index into sections
     // Where the home screen starts (layout.initialFocus) and where Back returns to.
     readonly property int initialSection: Math.max(0, sections.findIndex(s => s.id === Config.layout.initialFocus))
-    // True when Back has nothing left to do: on the start row, at its first tile (Bigscreen then opens its overlay).
+    // True when Back has nothing left to do: settings closed, on the start row at its first tile (Bigscreen then opens
+    // its overlay).
     readonly property bool atRoot: {
         const loader = sectionRepeater.count > section ? sectionRepeater.itemAt(section) : null;
-        return section === initialSection && (!loader || !loader.item || loader.item.current === 0);
+        return !settingsPanel.open && section === initialSection
+                && (!loader || !loader.item || loader.item.current === 0);
     }
 
     function buildSections() {
@@ -125,6 +127,12 @@ FocusScope {
     }
 
     function runAction(action) {
+        if (settingsPanel.open && settingsPanel.handle(action))
+            return;
+        if (action === "settings") {
+            settingsPanel.show();
+            return;
+        }
         switch (action) {
         case "left": moveHorizontal(-1); return;
         case "right": moveHorizontal(1); return;
@@ -328,6 +336,10 @@ FocusScope {
                 }
             }
         }
+    }
+
+    SettingsPanel {
+        id: settingsPanel
     }
 
     VoiceOverlay {

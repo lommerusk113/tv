@@ -29,6 +29,7 @@ Item {
         runScript("tmdb.py", tv.reloadLive);
         runScript("jellyfin.py", tv.reloadLive);
         runScript("youtube.py", tv.reloadLive);
+        runScript("apps.py", tv.reloadLive);
         runScript("weather.py", tv.reloadWeather);
     }
 
@@ -90,8 +91,8 @@ Item {
                 remoteRestart.restart();
                 return;
             }
-            if (action === "voice" && !root.windowActive)
-                Shortcuts.toggleHomeScreen(); // the voice overlay lives on the home screen: show it first
+            if ((action === "voice" || action === "settings") && !root.windowActive)
+                Shortcuts.toggleHomeScreen(); // the voice overlay / settings live on the home screen: show it first
             if (action)
                 tv.runAction(action);
             else if (data["exit code"] !== 0)
@@ -229,13 +230,34 @@ Item {
                     callback(result);
                 });
             };
+            // Current output volume for the Settings panel ("Volume: 0.75" or "Volume: 0.75 [MUTED]").
+            Config.volumeReader = callback => {
+                exec.run("wpctl get-volume @DEFAULT_AUDIO_SINK@", data => {
+                    const m = data.stdout.match(/Volume:\s*([\d.]+)/);
+                    if (m)
+                        callback(Number(m[1]));
+                });
+            };
             // Actions the home screen cannot do itself (from the keymap or voice).
             Config.system = action => {
                 const commands = {
                     "volume_up": "wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+",
                     "volume_down": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-",
-                    "volume_mute": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
+                    "volume_mute": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+                    // Settings panel (logind allows these for the active local user, no password)
+                    "sleep": "systemctl suspend",
+                    "restart": "systemctl reboot",
+                    "shutdown": "systemctl poweroff"
                 };
+                if (action.startsWith("launch_desktop:")) {
+                    // A "More apps" tile: any installed app, by its desktop file (apps.py).
+                    Config.launcher({ id: action.slice(15), desktopId: action.slice(15) });
+                    return true;
+                }
+                if (action === "system_settings") {
+                    Plasmoid.applicationListModel.runApplication("systemsettings.desktop");
+                    return true;
+                }
                 if (action.startsWith("youtube_watch:")) {
                     // OK on a "New from your channels" tile: VacuumTube plays the video.
                     root.openYoutube("youtube-watch '" + action.slice(14).replace(/[^A-Za-z0-9_-]/g, "") + "'");

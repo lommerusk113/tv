@@ -13,6 +13,10 @@
       "button": "Mic",
       "action": "voice"
     },
+    "Launch (8)": {
+      "button": "Gear",
+      "action": "settings"
+    },
     "Launch (9)": {
       "button": "YouTube",
       "action": "launch:youtube"
