@@ -86,6 +86,7 @@ homescreen/
                     overlays ~/.cache/tv-project/content.json (live rows) on placeholder.json; reloadLive()
   trakt.py          Trakt "Up next": `auth` (device code login), `sync` (writes content.json); stdlib only
   test_trakt.py     runs trakt.py auth + sync against a local mock Trakt API: python3 homescreen/test_trakt.py
+  weather.py        MET Norway (Yr) current weather -> ~/.cache/tv-project/weather.json; test_weather.py = mock test
   Config.qml        singleton: theme, apps, layout, content, keymap, scale; px(v); withAlpha(); launch(appId) -> launcher hook
   Home.qml          page: top bar (profile, tabs, clock), vertical scrolling, ALL key handling
   HeroBanner.qml    full-bleed featured carousel (Left/Right switches item)
@@ -133,6 +134,10 @@ All sizes are in 1920x1080 reference px (scaled by `Config.px()`); colors are `#
   N seasons", TMDb overview, `logo` = fanart.tv `hdtvlogo` (else `clearlogo`) by TVDB id, en/textless first, most liked.
   HeroBanner draws `image` over the gradient and `logo` (max 150 px high) instead of the title text.
   Verified 2026-10-28 in the container against the mock + generated images only, not real Trakt/TMDb/fanart.tv.
+- Weather: `secrets.json` `"location": {"lat", "lon"}`. weather.py uses Locationforecast 2.0 compact, the forecast step
+  for the current hour, honours Expires/If-Modified-Since, downloads Yr's SVG symbol once (`~/.cache/tv-project/weather-icons/`).
+  Top bar shows icon + temperature left of the clock, hidden without data. TvHome re-reads weather.json every 5 min;
+  Bigscreen runs weather.py on activation and every 10 min while active. Verified 2026-10-28 live (Oslo) in the container.
 - `data/placeholder.json` items: `{id, title, meta | subtitle, description (hero), progress 0..1 (optional), colors: [c0, c1, c2],
   image (optional URL: tile/hero backdrop), logo (optional URL, hero only)}`.
 

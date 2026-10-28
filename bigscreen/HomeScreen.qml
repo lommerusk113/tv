@@ -17,17 +17,32 @@ Item {
     readonly property bool darkenBackground: false
 
     // Whenever the home screen is active again (start, or back from an app): take key focus and refresh
-    // the Trakt rows (trakt.py sync, then reload; a no-op until `trakt.py auth` has been run).
+    // the Trakt rows (trakt.py sync, then reload; a no-op until `trakt.py auth` has been run) and the weather.
     readonly property bool windowActive: Window.active
     onWindowActiveChanged: {
         if (!windowActive)
             return;
         tv.forceActiveFocus();
-        exec.run("python3 '" + localPath(Qt.resolvedUrl("tv/trakt.py")) + "' sync", data => {
+        runScript("trakt.py sync", tv.reloadLive);
+        runScript("weather.py", tv.reloadWeather);
+    }
+
+    // weather.py itself skips the request until MET's Expires, so a short interval costs nothing.
+    Timer {
+        interval: 10 * 60 * 1000
+        running: root.windowActive
+        repeat: true
+        onTriggered: root.runScript("weather.py", tv.reloadWeather)
+    }
+
+    // Runs "<script> [args]" from homescreen/ with python3, then onSuccess().
+    function runScript(command, onSuccess) {
+        const [script, ...args] = command.split(" ");
+        exec.run(["python3", "'" + localPath(Qt.resolvedUrl("tv/" + script)) + "'"].concat(args).join(" "), data => {
             if (data["exit code"] === 0)
-                tv.reloadLive();
+                onSuccess();
             else
-                console.warn("tv: trakt sync: " + data.stderr.trim());
+                console.warn("tv: " + command + ": " + data.stderr.trim());
         });
     }
 

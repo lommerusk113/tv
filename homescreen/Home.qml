@@ -314,5 +314,30 @@ FocusScope {
                 onTriggered: clock.now = new Date()
             }
         }
+
+        // Weather (MET Norway / Yr, from weather.py) left of the clock; hidden until there is data.
+        Row {
+            visible: !!Config.weather
+            anchors.right: clock.left
+            anchors.rightMargin: Config.px(28)
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: Config.px(10)
+
+            Image {
+                visible: status === Image.Ready
+                anchors.verticalCenter: parent.verticalCenter
+                width: Config.px(44)
+                height: width
+                sourceSize: Qt.size(width * 2, height * 2)
+                source: Config.weather && Config.weather.icon ? Config.weather.icon : ""
+            }
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: Config.weather ? Config.weather.temperature + "°" : ""
+                color: home.theme.colors.text
+                font.family: home.theme.font.family
+                font.pixelSize: Config.px(home.theme.font.sizes.clock)
+            }
+        }
     }
 }

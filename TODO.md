@@ -43,6 +43,8 @@ Status and conventions: see CLAUDE.md. Do phases in order. Each phase ends with 
 - Optional: "Because you watched X" using TMDb similar/recommendations based on recent Jellyfin history.
 - Enter on a Jellyfin item opens it in Jellyfin Desktop if possible; otherwise just opens the app.
 
+- [x] (2026-10-28) Yr weather next to the clock (MET Norway, `location` in secrets.json).
+
 ## Phase 5: Turning the TV on and off
 - [ME] On the TV: enable "Mobile TV On → Turn On Via WiFi" and "LG Connect Apps" (Network settings). Connect the TV to the router with an Ethernet cable (Wake-on-LAN is unreliable over Wi-Fi after long standby).
 - [ME] In the router: reserve a fixed IP for the TV's MAC, block all its internet traffic (IPv4 and IPv6, including DNS), and allow local traffic to the laptop. Set this up before the TV first connects. Verify nothing goes out (TV browser, router logs).

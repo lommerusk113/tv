@@ -20,6 +20,7 @@ FocusScope {
 
     // Live rows written by trakt.py sync; their keys override data/placeholder.json. Optional.
     readonly property string liveUrl: StandardPaths.writableLocation(StandardPaths.GenericCacheLocation) + "/tv-project/content.json"
+    readonly property string weatherUrl: StandardPaths.writableLocation(StandardPaths.GenericCacheLocation) + "/tv-project/weather.json"
     property var placeholder: ({})
     property string liveText: ""
 
@@ -69,6 +70,23 @@ FocusScope {
             Qt.callLater(loader.item.goHome);
             console.log("config: live content updated");
         });
+    }
+
+    // Re-read weather.json (written by weather.py); a missing or unreadable file keeps what is shown.
+    function reloadWeather() {
+        readFile(weatherUrl, text => {
+            try {
+                Config.weather = JSON.parse(text);
+            } catch (e) {}
+        });
+    }
+
+    Timer {
+        interval: 5 * 60 * 1000
+        running: true
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: root.reloadWeather()
     }
 
     Binding {

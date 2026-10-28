@@ -9,6 +9,7 @@ QtObject {
     property var layout: null     // config/layout.json
     property var content: ({})    // data/placeholder.json
     property var keymap: ({})     // config/keymap.json: Qt key name (Qt.Key_<name>) -> action
+    property var weather: null    // ~/.cache/tv-project/weather.json (weather.py); null until there is one
     property real scale: 1        // window width / 1920
     property var launcher: null   // function(app); set by the Bigscreen plasmoid, null in the prototype (log only)
 

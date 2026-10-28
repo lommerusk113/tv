@@ -35,3 +35,4 @@ scripts, then `scripts/vnc.sh`, and open `vnc://localhost:5901` (password `tv`) 
 Rendering uses Mesa llvmpipe, so no GPU is needed. `shots/` is git-ignored.
 
 This product uses the TMDB API but is not endorsed or certified by TMDB. Title logos from fanart.tv.
+Weather data from MET Norway (api.met.no, CC BY 4.0); weather icons by Yr (MIT).
