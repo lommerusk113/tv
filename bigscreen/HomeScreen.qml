@@ -85,6 +85,11 @@ Item {
     function waitForRemote() {
         exec.run("python3 '" + localPath(Qt.resolvedUrl("tv/remote.py")) + "' wait", data => {
             const action = data.stdout.trim();
+            if (action === "show_home") { // Back on Jellyfin's start page (jellyfin_back.py)
+                Shortcuts.toggleHomeScreen();
+                remoteRestart.restart();
+                return;
+            }
             if (action === "voice" && !root.windowActive)
                 Shortcuts.toggleHomeScreen(); // the voice overlay lives on the home screen: show it first
             if (action)
@@ -290,6 +295,10 @@ Item {
             };
             forceActiveFocus();
             root.waitForRemote();
+            // Back on Jellyfin's start page returns here (runs as long as the home screen does).
+            exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/jellyfin_back.py")) + "'", data => {
+                console.warn("tv: jellyfin_back.py ended: " + data.stderr.trim().slice(-300));
+            });
             // Wake the TV and switch it to this laptop's input (no-op without "tv" in secrets.json).
             root.runScript("tvpower.py on", () => {});
         }

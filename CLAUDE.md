@@ -253,3 +253,18 @@ an unknown key name and an unknown app id.
 - Jellyfin Desktop must be in TV layout or the arrows only scroll: in its profile's jellyfin-desktop.conf
   (~/.var/app/org.jellyfin.JellyfinDesktop/data/jellyfin-desktop/profiles/<id>/), "main": "layout": "tv",
   "webMode": "tv" (edit with Jellyfin closed; `--tv` does the same for one start). Set on the host 2026-10-28.
+
+## DevTools ports (127.0.0.1 only; the user accepted this on 2026-10-29: "its just youtube, its not that sensitive")
+- VacuumTube: `--remote-debugging-port=9231` in its flags.txt (scripts/install-youtube-debug.sh). homescreen/youtube_tv.py
+  runs youtube_tv.js inside the YouTube TV page: InnerTube browse (FEwhat_to_watch = recommendations, FEhistory =
+  history with percentDurationWatched) with the app's own token from localStorage
+  `yt.leanback.default::cached-access-tokens`; the token never leaves the page. YouTube's Data API has no history.
+  Deeplinks VacuumTube understands: `watch?v=ID`, `tv?launch=search&vq=Q`, `tv?c=FEhistory`; any deeplink raises it.
+- Jellyfin Desktop: Flatpak override `QTWEBENGINE_REMOTE_DEBUGGING=127.0.0.1:9232` (scripts/install-jellyfin-debug.sh).
+  homescreen/jellyfin_back.py (started by HomeScreen.qml) injects a handler: Jellyfin Desktop delivers remote keys as
+  commands on `window.api.input.hostInput` ("back", "up"...), not DOM keydown; "back" on `#/home` without a dialog ->
+  `remote.py send show_home` -> Shortcuts.toggleHomeScreen(). Runtime.enable replays old console messages: filter by
+  timestamp.
+- Jellyfin tiles (`jellyfin_play_id:`): when Jellyfin runs, PlayNow goes out in the background and Jellyfin is raised
+  once the session's PositionTicks moves (jellyfin.py start), so it opens straight into the video; "Starting…" pill
+  meanwhile. media.py leave <app> does not pause the app being opened.
