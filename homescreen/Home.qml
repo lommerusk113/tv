@@ -98,40 +98,54 @@ FocusScope {
         vScroll.start();
     }
 
-    Keys.onPressed: event => {
-        switch (event.key) {
-        case Qt.Key_Left:
-            moveHorizontal(-1);
-            break;
-        case Qt.Key_Right:
-            moveHorizontal(1);
-            break;
-        case Qt.Key_Up:
-            moveVertical(-1);
-            break;
-        case Qt.Key_Down:
-            moveVertical(1);
-            break;
-        case Qt.Key_Return:
-        case Qt.Key_Enter:
-        case Qt.Key_Select:
-            activate();
-            break;
-        case Qt.Key_Escape:
-        case Qt.Key_Back:
-            back();
-            break;
-        default:
-            return;
+    // Back to the start state: every row at its first tile, focus on layout.initialFocus.
+    function goHome() {
+        for (let i = 0; i < sections.length; i++)
+            sectionAt(i).current = 0;
+        currentTab = 0;
+        const initial = sections.findIndex(s => s.id === Config.layout.initialFocus);
+        section = initial >= 0 ? initial : 0;
+        scrollToSection();
+    }
+
+    // Qt key code -> action, built from config/keymap.json (keys are Qt.Key_<name> names).
+    readonly property var keyActions: {
+        const out = {};
+        for (const name in Config.keymap) {
+            const code = Qt["Key_" + name];
+            if (code === undefined)
+                console.warn("keymap: unknown key '" + name + "'");
+            else
+                out[code] = Config.keymap[name];
         }
+        return out;
+    }
+
+    function runAction(action) {
+        switch (action) {
+        case "left": moveHorizontal(-1); return;
+        case "right": moveHorizontal(1); return;
+        case "up": moveVertical(-1); return;
+        case "down": moveVertical(1); return;
+        case "select": activate(); return;
+        case "back": back(); return;
+        case "home": goHome(); return;
+        }
+        if (action.startsWith("launch:") && !Config.apps.some(a => "launch:" + a.id === action))
+            console.warn("keymap: no app for '" + action + "'");
+        else
+            console.log(action.startsWith("launch:") ? action : "action:" + action); // ponytail: logged only until Phase 3 runs commands
+    }
+
+    Keys.onPressed: event => {
+        const action = keyActions[event.key];
+        if (action === undefined)
+            return;
+        runAction(action);
         event.accepted = true;
     }
 
-    Component.onCompleted: {
-        const initial = sections.findIndex(s => s.id === Config.layout.initialFocus);
-        section = initial >= 0 ? initial : 0;
-        Qt.callLater(scrollToSection);
-    }
+    Component.onCompleted: Qt.callLater(goHome)
 
     Rectangle {
         anchors.fill: parent

@@ -8,6 +8,7 @@ QtObject {
     property var apps: []         // config/apps.json
     property var layout: null     // config/layout.json
     property var content: ({})    // data/placeholder.json
+    property var keymap: ({})     // config/keymap.json: Qt key name (Qt.Key_<name>) -> action
     property real scale: 1        // window width / 1920
 
     // Sizes in theme.json are in 1920x1080 reference pixels.

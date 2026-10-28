@@ -1,0 +1,19 @@
+{
+  "Left": "left",
+  "Right": "right",
+  "Up": "up",
+  "Down": "down",
+  "Return": "select",
+  "Enter": "select",
+  "Select": "select",
+  "Escape": "back",
+  "Back": "back",
+  "HomePage": "home",
+  "F1": "launch:youtube",
+  "F2": "launch:jellyfin",
+  "F3": "launch:rikstv",
+  "F4": "launch:moonlight",
+  "VolumeUp": "volume_up",
+  "VolumeDown": "volume_down",
+  "VolumeMute": "volume_mute"
+}

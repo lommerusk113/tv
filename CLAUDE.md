@@ -66,10 +66,11 @@ pkill -f '^python3 run\.py'                              # stop (anchor the patt
 - Config is read at startup: restart after editing JSON.
 
 ### Keys
-Arrows move focus (row to row lands on the nearest tile horizontally), Enter activates, Escape/Back goes back
+Keys come from `config/keymap.json` (see Config format). Default: arrows move focus (row to row lands on the nearest tile horizontally), Enter activates, Escape/Back goes back
 (first to tile 0 of the row, then to the tabs). Enter logs only: `launch:<app-id>` (app tiles),
 `open:<item-id>` (hero/media), `tab:<name>`. Nothing is launched.
-Initial focus: the row named by `layout.json` `initialFocus`.
+Initial focus: the row named by `layout.json` `initialFocus`. Home (`HomePage`, X11 `XF86HomePage`) resets every row
+to tile 0 and returns to that row. F1-F4 log `launch:youtube|jellyfin|rikstv|moonlight`; volume keys log `action:volume_*`.
 
 ### Files
 ```
@@ -82,7 +83,7 @@ homescreen/
   HeroBanner.qml    full-bleed featured carousel (Left/Right switches item)
   TileRow.qml       titled horizontal row, animated horizontal scroll, focusNearest()
   Tile.qml          tile styles app / landscape / poster; focus = scale + white outline + blurred glow
-  config/theme.json, config/apps.json, config/layout.json
+  config/theme.json, config/apps.json, config/layout.json, config/keymap.json
   data/placeholder.json   placeholder hero/continue/trending content (replace with real data later)
 ```
 
@@ -102,11 +103,17 @@ All sizes are in 1920x1080 reference px (scaled by `Config.px()`); colors are `#
   `{id, type: "hero"|"row" (default row), title, source, style: app|landscape|poster}`.
   `source` = `"apps"` (apps.json) or a key in `data/placeholder.json` (`featured`, `continueWatching`, `trending`).
   Rows whose source is empty are skipped with a warning.
+- `keymap.json`: `{ "<Qt key name>": "<action>" }`; the name is `Qt.Key_<name>` without the prefix (`Left`, `Return`,
+  `Back`, `HomePage`, `VolumeUp`, `F1`...). Actions: `left right up down select back home`, `launch:<app-id>` (logged),
+  anything else is logged as `action:<name>` (not implemented yet). Unknown key names / app ids are warned on stderr.
+  Placeholder bindings until the remote's real key codes are captured (Phase 1).
 - `data/placeholder.json` items: `{id, title, meta | subtitle, description (hero), progress 0..1 (optional), colors: [c0, c1, c2]}`.
 
 ### Verified 2026-10-27 (screenshots)
 Key sequence Right×3, Down, Right, Down, Enter, Up×2 (+ Enter, Esc×2), horizontal scroll to the end of a row,
 and theme.json / layout.json / apps.json edits all verified on the laptop panel. Not yet tested on the TV.
+keymap.json verified 2026-10-28 in the container: Home key, F2/F4 launch logs, volume/mute action logs, warnings for
+an unknown key name and an unknown app id.
 
 ## Rules
 - **Every UI change must be verified with a screenshot (and you must look at it) before you report it as done.**

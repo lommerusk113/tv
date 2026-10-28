@@ -14,7 +14,7 @@ Window {
     title: "TV Home Screen (prototype)"
     color: "#000000"
 
-    property int pending: 4
+    property int pending: 5
 
     function loadJson(path, apply) {
         const xhr = new XMLHttpRequest();
@@ -46,6 +46,7 @@ Window {
         loadJson("config/apps.json", v => Config.apps = v);
         loadJson("config/layout.json", v => Config.layout = v);
         loadJson("data/placeholder.json", v => Config.content = v);
+        loadJson("config/keymap.json", v => Config.keymap = v);
     }
 
     Loader {

@@ -30,7 +30,7 @@ Status and conventions: see CLAUDE.md. Do phases in order. Each phase ends with 
   - Moonlight: `flatpak run com.moonlight_stream.Moonlight`
   - RiksTV: `flatpak run com.google.Chrome --kiosk https://www.rikstv.no`
 - Home/Back on the remote must always return to the home screen from any app (close or hide the app; confirm with screenshots).
-- Remote key mapping driven by a keymap.json in config (button → action, e.g. `launch:jellyfin`, `home`, `volume_up`). Prefer handling keys inside the home screen. A system-level remapper (input-remapper/keyd) is an install, so ask first.
+- [x] (2026-10-28, logging only; rebind to the real remote codes after Phase 1) Remote key mapping driven by a keymap.json in config (button → action, e.g. `launch:jellyfin`, `home`, `volume_up`). Prefer handling keys inside the home screen. A system-level remapper (input-remapper/keyd) is an install, so ask first.
 - Map one remote button to Moonlight's exit-stream shortcut (Ctrl+Alt+Shift+Q).
 - [ME] Test RiksTV playback in Chrome (DRM shows black in screenshots). If needed: Chrome policies (URL allowlist) to keep the kiosk on RiksTV domains.
 
