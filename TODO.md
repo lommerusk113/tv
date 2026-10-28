@@ -38,6 +38,7 @@ Status and conventions: see CLAUDE.md. Do phases in order. Each phase ends with 
 - [x] (2026-10-28, mock-tested; needs a Trakt API app + `python3 homescreen/trakt.py auth` on the host) Trakt "Up next" row (replaces the placeholder Continue watching row).
 - Jellyfin "Continue watching": the server's resume-items API with a user token from secrets.json; artwork from the server.
 - [x] (2026-10-28, mock-tested) TMDb backdrops on the Up next tiles (optional `tmdb.apiKey` in secrets.json).
+- [x] (2026-10-28, mock-tested) Hero = Trakt recommendations with TMDb backdrops + fanart.tv title logos.
 - TMDb "Trending": TMDb API with the key from secrets.json; cache responses and images locally; show placeholders when offline.
 - Optional: "Because you watched X" using TMDb similar/recommendations based on recent Jellyfin history.
 - Enter on a Jellyfin item opens it in Jellyfin Desktop if possible; otherwise just opens the app.

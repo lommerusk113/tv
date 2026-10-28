@@ -13,8 +13,9 @@ from pathlib import Path
 
 def show(trakt_id, title):
     ids = {"trakt": trakt_id, "slug": title.lower().replace(" ", "-")}
-    if trakt_id in (1, 2):  # Kitchen Nights has no TMDb id
+    if trakt_id in (1, 2):  # Kitchen Nights has no TMDb or TVDB id
         ids["tmdb"] = 1000 + trakt_id
+        ids["tvdb"] = 5000 + trakt_id
     return {"title": title, "ids": ids}
 
 
@@ -42,11 +43,20 @@ GET = {
     "/shows/2/progress/watched": {"next_episode": episode(202, 2, 6, "After Ice")},
     "/shows/3/progress/watched": {"next_episode": episode(301, 4, 2, None)},
     "/shows/5/progress/watched": {"next_episode": None},
+    "/recommendations/shows?limit=10": [show(3, "Kitchen Nights"), show(2, "Northern Lights"), show(1, "Harbour Street")],
 }
 TMDB = {
-    "/3/tv/1001?api_key=tk": {"backdrop_path": "/harbour.jpg"},
+    "/3/tv/1001?api_key=tk": {"backdrop_path": "/harbour.jpg", "overview": "Fishing town.", "number_of_seasons": 2,
+                              "genres": [{"name": "Drama"}, {"name": "Crime"}]},
     "/3/tv/1002?api_key=tk": {"backdrop_path": None},
     "/t/p/w780/harbour.jpg": b"jpeg bytes",
+    "/t/p/w1280/harbour.jpg": b"big jpeg bytes",
+    "/v3/tv/5001?api_key=fk&client_key=ck": {"hdtvlogo": [
+        {"url": "LOGO_HOST/logo-de.png", "lang": "de", "likes": "9"},
+        {"url": "LOGO_HOST/logo-en-low.png", "lang": "en", "likes": "1"},
+        {"url": "LOGO_HOST/logo-en.png", "lang": "en", "likes": "4"},
+    ]},
+    "/logo-en.png": b"png bytes",
 }
 polls = []
 tmdb_requests = []
@@ -97,9 +107,11 @@ def main():
     threading.Thread(target=server.serve_forever, daemon=True).start()
     home = Path(tempfile.mkdtemp())
     (home / "config/tv-project").mkdir(parents=True)
-    (home / "config/tv-project/secrets.json").write_text(json.dumps({"trakt": {"clientId": "cid", "clientSecret": "secret"}, "tmdb": {"apiKey": "tk"}}))
+    (home / "config/tv-project/secrets.json").write_text(json.dumps({"trakt": {"clientId": "cid", "clientSecret": "secret"}, "tmdb": {"apiKey": "tk"},
+                                                                         "fanart": {"apiKey": "fk", "clientKey": "ck"}}))
     api = "http://127.0.0.1:%d" % server.server_port
-    env = dict(os.environ, TRAKT_API=api, TMDB_API=api, TMDB_IMAGES=api,
+    TMDB["/v3/tv/5001?api_key=fk&client_key=ck"] = json.loads(json.dumps(TMDB["/v3/tv/5001?api_key=fk&client_key=ck"]).replace("LOGO_HOST", api))
+    env = dict(os.environ, TRAKT_API=api, TMDB_API=api, TMDB_IMAGES=api, FANART_API=api,
                XDG_CONFIG_HOME=str(home / "config"), XDG_CACHE_HOME=str(home / "cache"))
     script = Path(__file__).with_name("trakt.py")
 
@@ -113,7 +125,8 @@ def main():
     assert oct((home / "config/tv-project/trakt-token.json").stat().st_mode & 0o777) == "0o600"
 
     run("sync")
-    items = json.loads((home / "cache/tv-project/content.json").read_text())["upNext"]
+    content = json.loads((home / "cache/tv-project/content.json").read_text())
+    items = content["upNext"]
     assert [i["title"] for i in items] == ["Northern Lights", "Harbour Street", "Kitchen Nights"], items
     assert items[0]["subtitle"] == "S2 E5 · The Ice" and items[0]["progress"] == 0.655
     assert items[1]["subtitle"] == "S1 E3 · Old Pause"
@@ -125,9 +138,18 @@ def main():
     image = home / "cache/tv-project/images/tmdb-tv-1001.jpg"
     assert items[1]["image"] == image.as_uri() and image.read_bytes() == b"jpeg bytes"
     assert "image" not in items[0] and "image" not in items[2]
+    # Hero: only recommendations with a TMDb backdrop; logo = English, most liked
+    images = home / "cache/tv-project/images"
+    assert content["featured"] == [{
+        "id": "trakt-show-1", "title": "Harbour Street", "meta": "Series · Drama · 2 seasons", "description": "Fishing town.",
+        "colors": items[1]["colors"], "image": (images / "tmdb-tv-1001-w1280.jpg").as_uri(),
+        "logo": (images / "fanart-tv-5001-logo.png").as_uri()}], content["featured"]
+    assert (images / "fanart-tv-5001-logo.png").read_bytes() == b"png bytes"
+
+    # Second sync: nothing is downloaded again, the cached logo needs no fanart.tv request
     tmdb_requests.clear()
     run("sync")
-    assert tmdb_requests == ["/3/tv/1002?api_key=tk"], tmdb_requests  # only the show without a cached image
+    assert not [r for r in tmdb_requests if r.startswith(("/t/p/", "/v3/", "/logo"))], tmdb_requests
     print("ok")
 
 

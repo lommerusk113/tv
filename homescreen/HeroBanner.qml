@@ -26,7 +26,7 @@ Item {
             console.log("open:" + entry.id);
     }
 
-    // Generated backdrops, one per item, cross-fading.
+    // Backdrops, one per item, cross-fading: the item's image (TMDb, from trakt.py) over a generated gradient.
     Repeater {
         model: hero.items
 
@@ -62,6 +62,13 @@ Item {
                 y: hero.height * 0.4
                 color: modelData.colors[2]
                 opacity: 0.2
+            }
+            Image {
+                anchors.fill: parent
+                source: modelData.image ? Qt.resolvedUrl(modelData.image) : ""
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+                visible: status === Image.Ready
             }
         }
     }
@@ -101,7 +108,20 @@ Item {
             font.pixelSize: Config.px(hero.theme.font.sizes.heroMeta)
             font.weight: Font.DemiBold
         }
+        // Title logo (fanart.tv) when the item has one, otherwise the title as text.
+        Image {
+            id: logo
+            width: parent.width * 0.8
+            height: visible ? Config.px(150) : 0
+            source: hero.entry && hero.entry.logo ? Qt.resolvedUrl(hero.entry.logo) : ""
+            fillMode: Image.PreserveAspectFit
+            horizontalAlignment: Image.AlignLeft
+            verticalAlignment: Image.AlignBottom
+            asynchronous: true
+            visible: status === Image.Ready
+        }
         Text {
+            visible: !logo.visible
             width: parent.width
             text: hero.entry ? hero.entry.title : ""
             color: hero.theme.colors.text

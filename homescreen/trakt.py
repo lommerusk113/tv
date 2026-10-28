@@ -2,11 +2,14 @@
 """Trakt "Up next" for the home screen. Standard library only.
 
   python3 trakt.py auth   one-time login: shows a code to enter at trakt.tv/activate, saves the token
-  python3 trakt.py sync   writes the upNext row to ~/.cache/tv-project/content.json (overrides data/placeholder.json)
+  python3 trakt.py sync   writes the upNext row and the featured hero (recommendations) to
+                          ~/.cache/tv-project/content.json (overrides data/placeholder.json)
 
-Needs ~/.config/tv-project/secrets.json: {"trakt": {"clientId": "...", "clientSecret": "..."}, "tmdb": {"apiKey": "..."}}
-(create an API app at https://trakt.tv/oauth/applications, redirect URI urn:ietf:wg:oauth:2.0:oob; the TMDb v3 API key
-is optional and adds show backdrops, cached in ~/.cache/tv-project/images/).
+Needs ~/.config/tv-project/secrets.json:
+  {"trakt": {"clientId": "...", "clientSecret": "..."}, "tmdb": {"apiKey": "..."}, "fanart": {"apiKey": "...", "clientKey": "..."}}
+(create an API app at https://trakt.tv/oauth/applications, redirect URI urn:ietf:wg:oauth:2.0:oob).
+tmdb (v3 API key) is optional: backdrops, and the hero needs it. fanart (fanart.tv key, clientKey optional) is optional:
+title logos in the hero. Images are cached in ~/.cache/tv-project/images/.
 The token goes to ~/.config/tv-project/trakt-token.json (mode 600). Neither file is in the repo.
 """
 import colorsys
@@ -22,6 +25,7 @@ from pathlib import Path
 API = os.environ.get("TRAKT_API", "https://api.trakt.tv")
 TMDB_API = os.environ.get("TMDB_API", "https://api.themoviedb.org")
 TMDB_IMAGES = os.environ.get("TMDB_IMAGES", "https://image.tmdb.org")
+FANART_API = os.environ.get("FANART_API", "https://webservice.fanart.tv")
 CONFIG = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "tv-project"
 CACHE = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "tv-project"
 TOKEN = CONFIG / "trakt-token.json"
@@ -52,29 +56,97 @@ def request(path, body=None, token=None):
         return e.code, None
 
 
-def backdrop(show):
-    """file:// URL of the show's TMDb backdrop, downloaded once; None without a TMDb key, id or backdrop."""
-    tmdb_id = show["ids"].get("tmdb")
-    key = secrets().get("tmdb", {}).get("apiKey")
-    if not tmdb_id or not key:
+def fetch_json(url):
+    """Parsed JSON from a third-party API (TMDb, fanart.tv); None on any failure, which only costs artwork."""
+    try:
+        with urllib.request.urlopen(url, timeout=20) as res:
+            return json.loads(res.read())
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        print(f"trakt: {url.split('?')[0]}: {e}", file=sys.stderr)
         return None
-    path = CACHE / "images" / ("tmdb-tv-%d.jpg" % tmdb_id)
+
+
+def download(url, name):
+    """file:// URL of ~/.cache/tv-project/images/<name>, downloaded from url once; None on failure."""
+    path = CACHE / "images" / name
     if not path.exists():
         try:
-            with urllib.request.urlopen("%s/3/tv/%d?api_key=%s" % (TMDB_API, tmdb_id, key), timeout=20) as res:
-                backdrop_path = json.loads(res.read()).get("backdrop_path")
-            if not backdrop_path:
-                return None
-            with urllib.request.urlopen(TMDB_IMAGES + "/t/p/w780" + backdrop_path, timeout=30) as res:
+            with urllib.request.urlopen(url, timeout=30) as res:
                 data = res.read()
-        except (urllib.error.URLError, OSError, ValueError) as e:
-            print(f"trakt: no backdrop for tmdb {tmdb_id}: {e}", file=sys.stderr)
+        except (urllib.error.URLError, OSError) as e:
+            print(f"trakt: {url}: {e}", file=sys.stderr)
             return None
         path.parent.mkdir(parents=True, exist_ok=True)
         tmp = path.with_suffix(".tmp")
         tmp.write_bytes(data)
         tmp.replace(path)
     return path.as_uri()
+
+
+def tmdb_show(show):
+    """TMDb details of a Trakt show; None without a TMDb key or id."""
+    key = secrets().get("tmdb", {}).get("apiKey")
+    tmdb_id = show["ids"].get("tmdb")
+    return fetch_json("%s/3/tv/%d?api_key=%s" % (TMDB_API, tmdb_id, key)) if key and tmdb_id else None
+
+
+def backdrop(show):
+    """file:// URL of the show's TMDb backdrop (w780, for tiles); the API is only asked until it is cached."""
+    name = "tmdb-tv-%s.jpg" % show["ids"].get("tmdb")
+    if (CACHE / "images" / name).exists():
+        return (CACHE / "images" / name).as_uri()
+    details = tmdb_show(show)
+    if not details or not details.get("backdrop_path"):
+        return None
+    return download(TMDB_IMAGES + "/t/p/w780" + details["backdrop_path"], name)
+
+
+def logo(show):
+    """file:// URL of the show's fanart.tv HD logo (else clear logo), English or textless first, most liked."""
+    keys = secrets().get("fanart", {})
+    tvdb_id = show["ids"].get("tvdb")
+    if not keys.get("apiKey") or not tvdb_id:
+        return None
+    name = "fanart-tv-%d-logo.png" % tvdb_id
+    if (CACHE / "images" / name).exists():
+        return (CACHE / "images" / name).as_uri()
+    query = "api_key=" + keys["apiKey"] + ("&client_key=" + keys["clientKey"] if keys.get("clientKey") else "")
+    data = fetch_json("%s/v3/tv/%d?%s" % (FANART_API, tvdb_id, query)) or {}
+    logos = data.get("hdtvlogo") or data.get("clearlogo") or []
+    logos = [l for l in logos if l.get("lang") in ("en", "00", "")] or logos
+    if not logos:
+        return None
+    return download(max(logos, key=lambda l: int(l.get("likes") or 0))["url"], name)
+
+
+def featured(recommendations, limit=5):
+    """Hero items: recommended shows with a TMDb backdrop (w1280), genre/seasons line, overview, fanart.tv logo."""
+    items = []
+    for show in recommendations:
+        details = tmdb_show(show)
+        image = details and details.get("backdrop_path") and download(
+            TMDB_IMAGES + "/t/p/w1280" + details["backdrop_path"], "tmdb-tv-%d-w1280.jpg" % show["ids"]["tmdb"])
+        if not image:
+            continue
+        seasons = details.get("number_of_seasons")
+        meta = ["Series"] + [g["name"] for g in details.get("genres", [])[:1]]
+        if seasons:
+            meta.append("%d season%s" % (seasons, "" if seasons == 1 else "s"))
+        item = {
+            "id": "trakt-show-%d" % show["ids"]["trakt"],
+            "title": show["title"],
+            "meta": " · ".join(meta),
+            "description": details.get("overview") or "",
+            "colors": colors(show["ids"]["slug"]),
+            "image": image,
+        }
+        show_logo = logo(show)
+        if show_logo:
+            item["logo"] = show_logo
+        items.append(item)
+        if len(items) == limit:
+            break
+    return items
 
 
 def save_token(token):
@@ -199,7 +271,12 @@ def sync():
     CACHE.mkdir(parents=True, exist_ok=True)
     out = CACHE / "content.json"
     tmp = out.with_suffix(".tmp")
-    tmp.write_text(json.dumps({"upNext": up_next(playback, watched, next_episodes, hidden, backdrop)}, ensure_ascii=False, indent=1))
+    content = {
+        "upNext": up_next(playback, watched, next_episodes, hidden, backdrop),
+        # Empty (no TMDb key) hides the hero rather than showing the made-up placeholder shows.
+        "featured": featured(get("/recommendations/shows?limit=10")),
+    }
+    tmp.write_text(json.dumps(content, ensure_ascii=False, indent=1))
     tmp.replace(out)  # atomic, so the home screen never reads half a file
     print(f"trakt: wrote {out}")
 
