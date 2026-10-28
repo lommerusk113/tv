@@ -3,6 +3,10 @@
 
   python3 media.py pause             pause every media player that is playing (MPRIS: Jellyfin Desktop, VacuumTube,
                                      Chrome/RiksTV), so switching apps does not leave the old one playing
+  python3 media.py leave [app id]    pause, then send Jellyfin back to its start page (unless it is the given app,
+                                     the one being opened), so it starts from there next time
+  python3 media.py youtube-home      a running VacuumTube goes to YouTube's start page (and comes to the front: a
+                                     link always raises VacuumTube, so this is done when opening it, not when leaving)
   python3 media.py youtube <query>   open YouTube's search results for the query in VacuumTube (started if needed)
 """
 import re
@@ -14,6 +18,8 @@ MPRIS = "org.mpris.MediaPlayer2."
 YOUTUBE_FLATPAK = "rocks.shy.VacuumTube"
 # The deeplink YouTube's TV app (leanback) understands for a search; tested with VacuumTube 2026-10.
 YOUTUBE_SEARCH = "https://www.youtube.com/tv?launch=search&vq={}"
+YOUTUBE_HOME = "https://www.youtube.com/tv"
+HERE = __import__("pathlib").Path(__file__).resolve().parent
 
 
 def gdbus(dest, method, *args):
@@ -35,6 +41,23 @@ def pause():
             print("paused", player[len(MPRIS):])
 
 
+def running(flatpak_id):
+    res = subprocess.run(["flatpak", "ps", "--columns=application"], capture_output=True, text=True, timeout=10)
+    return flatpak_id in res.stdout.split()
+
+
+def leave(keep=None):
+    pause()
+    if keep != "jellyfin":
+        subprocess.run([sys.executable, str(HERE / "jellyfin.py"), "home"], timeout=60)
+
+
+def youtube_home():
+    if running(YOUTUBE_FLATPAK):  # never start VacuumTube just to reset it
+        subprocess.run(["flatpak", "run", YOUTUBE_FLATPAK, "--deeplink", YOUTUBE_HOME],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30)
+
+
 def youtube(query):
     pause()
     url = YOUTUBE_SEARCH.format(urllib.parse.quote(query))
@@ -46,6 +69,10 @@ def youtube(query):
 def main():
     if sys.argv[1:2] == ["pause"] and len(sys.argv) == 2:
         pause()
+    elif sys.argv[1:2] == ["leave"] and len(sys.argv) <= 3:
+        leave(sys.argv[2] if len(sys.argv) == 3 else None)
+    elif sys.argv[1:] == ["youtube-home"]:
+        youtube_home()
     elif sys.argv[1:2] == ["youtube"] and len(sys.argv) > 2:
         youtube(" ".join(sys.argv[2:]))
     else:

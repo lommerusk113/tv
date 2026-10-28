@@ -36,7 +36,7 @@ Item {
     Connections {
         target: Shortcuts
         function onToggleHomeScreen() {
-            root.pauseMedia(); // like a TV box: going home pauses what was playing
+            root.leaveApps(""); // like a TV box: going home pauses, and apps start from their start page next time
             tv.goHome();
             tv.forceActiveFocus();
             // Minimizing everything leaves no active window, so the home screen would not get the next key.
@@ -101,8 +101,11 @@ Item {
         onTriggered: root.waitForRemote()
     }
 
-    function pauseMedia() {
-        exec.run("python3 '" + localPath(Qt.resolvedUrl("tv/media.py")) + "' pause", () => {});
+    property bool youtubeSearch: false // set while a voice search opens YouTube, so it is not reset to its front page
+
+    // media.py leave: pause everything, reset YouTube and Jellyfin to their start page, except keepAppId (being opened).
+    function leaveApps(keepAppId) {
+        exec.run("python3 '" + localPath(Qt.resolvedUrl("tv/media.py")) + "' leave " + (keepAppId || ""), () => {});
     }
 
     // True when the app's window is the active one (then launching it again must not pause it).
@@ -187,9 +190,15 @@ Item {
         Component.onCompleted: {
             Config.launcher = app => {
                 const model = Plasmoid.applicationListModel;
-                // Switching to another app pauses whatever plays (Jellyfin keeps playing in the background otherwise).
+                // Switching to another app pauses whatever plays (Jellyfin keeps playing in the background otherwise)
+                // and sends the other apps back to their start page.
                 if (!root.appIsActive(app.desktopId))
-                    root.pauseMedia();
+                    root.leaveApps(app.id);
+                // YouTube starts from its front page, unless it is being opened for a voice search.
+                if (app.id === "youtube" && !root.appIsActive(app.desktopId) && !root.youtubeSearch
+                        && model.isApplicationRunning(app.desktopId))
+                    exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/media.py")) + "' youtube-home", () => {});
+                root.youtubeSearch = false;
                 if (model.isApplicationRunning(app.desktopId))
                     model.maximizeApplication(app.desktopId);
                 else
@@ -220,6 +229,7 @@ Item {
                     // other players first); then raise its window, which the deeplink alone does not do.
                     const query = action.slice(15).replace(/'/g, "'\\''");
                     exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/media.py")) + "' youtube '" + query + "'", () => {});
+                    root.youtubeSearch = true;
                     raiseYoutube.restart();
                 } else if (action.startsWith("jellyfin_play:")) {
                     // Voice "play <title> on Jellyfin": open Jellyfin Desktop, then have the server start the title

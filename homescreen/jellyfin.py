@@ -3,6 +3,7 @@
 
   python3 jellyfin.py               writes the jellyfinResume key (the user's resumable videos) into
                                     ~/.cache/tv-project/content.json
+  python3 jellyfin.py home          sends Jellyfin Desktop on this computer to its start page (when leaving the app)
   python3 jellyfin.py play <title>  finds the title on the server and plays it in Jellyfin Desktop on this computer
                                     (remote control through the server, like casting from the phone). A series plays
                                     its next-up episode; a started video resumes. Prints {"ok", "title"} or
@@ -241,7 +242,22 @@ def play(query):
     return {"ok": True, "title": title}
 
 
+def home():
+    """GoHome remote command to this computer's Jellyfin Desktop; quietly nothing when it is not running."""
+    conf = settings()
+    if not conf:
+        return
+    try:
+        session = desktop_session(conf, user_id(conf))
+        if session:
+            get(conf, "/Sessions/%s/Command/GoHome" % session["Id"], method="POST")
+    except (urllib.error.URLError, OSError, ValueError, SystemExit) as e:
+        print(f"jellyfin: home: {e}", file=sys.stderr)
+
+
 def main():
+    if sys.argv[1:] == ["home"]:
+        return home()
     if len(sys.argv) > 2 and sys.argv[1] == "play":
         print(json.dumps(play(" ".join(sys.argv[2:])), ensure_ascii=False))
         return
