@@ -19,7 +19,7 @@ Item {
     readonly property bool darkenBackground: false
 
     // Whenever the home screen is active again (start, or back from an app): take key focus and refresh
-    // the Trakt rows (trakt.py sync, then reload; a no-op until `trakt.py auth` has been run) and the weather.
+    // the rows (Trakt: a no-op until `trakt.py auth`; TMDb, Jellyfin, YouTube channels) and the weather.
     readonly property bool windowActive: Window.active
     onWindowActiveChanged: {
         if (!windowActive)
@@ -28,6 +28,7 @@ Item {
         runScript("trakt.py sync", tv.reloadLive);
         runScript("tmdb.py", tv.reloadLive);
         runScript("jellyfin.py", tv.reloadLive);
+        runScript("youtube.py", tv.reloadLive);
         runScript("weather.py", tv.reloadWeather);
     }
 
@@ -230,7 +231,10 @@ Item {
                     "volume_down": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-",
                     "volume_mute": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
                 };
-                if (action.startsWith("youtube_search:") || action === "youtube_history") {
+                if (action.startsWith("youtube_watch:")) {
+                    // OK on a "New from your channels" tile: VacuumTube plays the video.
+                    root.openYoutube("youtube-watch '" + action.slice(14).replace(/[^A-Za-z0-9_-]/g, "") + "'");
+                } else if (action.startsWith("youtube_search:") || action === "youtube_history") {
                     // Voice "play <query> on YouTube" / "move YouTube to the TV": VacuumTube opens the search results or
                     // the watch history (media.py pauses other players first); then raise its window, which the
                     // deeplink alone does not do.

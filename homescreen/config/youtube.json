@@ -1,0 +1,11 @@
+{
+  "comment": "Channels for the \"New from your channels\" row (youtube.py). id is the channel id (UC...); find it on the channel page (youtube.com/@handle -> share -> copy channel ID) or ask Claude.",
+  "perChannel": 6,
+  "maxItems": 20,
+  "channels": [
+    { "name": "Asmongold TV", "id": "UCQeRaTukNYft1_6AZPACnog" },
+    { "name": "WestJett", "id": "UCZIuYUzkmEXgSSXzReOmeLw" },
+    { "name": "Fireship", "id": "UCsBjURrPoezykLs9EqgamOA" },
+    { "name": "Nerdrotic", "id": "UC5T0tXJN5CrMZUEJuz4oovw" }
+  ]
+}

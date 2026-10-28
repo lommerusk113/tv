@@ -7,6 +7,7 @@
     { "id": "apps", "title": "Your apps", "source": "apps", "style": "app" },
     { "id": "upnext", "title": "Up next", "source": ["jellyfinNextUp", "upNext"], "style": "landscape" },
     { "id": "continue", "title": "Continue watching", "source": "jellyfinResume", "style": "landscape" },
+    { "id": "youtube", "title": "New from your channels", "source": "youtubeChannels", "style": "landscape" },
     { "id": "trending", "title": "Trending", "source": "trending", "style": "poster" }
   ]
 }

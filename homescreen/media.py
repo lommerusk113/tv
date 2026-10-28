@@ -8,6 +8,7 @@
   python3 media.py youtube-home      a running VacuumTube goes to YouTube's start page (and comes to the front: a
                                      link always raises VacuumTube, so this is done when opening it, not when leaving)
   python3 media.py youtube-history   open the YouTube account's watch history (newest first) to pick from
+  python3 media.py youtube-watch <id>  play that YouTube video in VacuumTube (tiles of the "New from your channels" row)
   python3 media.py youtube <query>   open YouTube's search results for the query in VacuumTube (started if needed)
 """
 import re
@@ -21,6 +22,7 @@ YOUTUBE_FLATPAK = "rocks.shy.VacuumTube"
 YOUTUBE_SEARCH = "https://www.youtube.com/tv?launch=search&vq={}"
 YOUTUBE_HOME = "https://www.youtube.com/tv"
 YOUTUBE_HISTORY = "https://www.youtube.com/tv?c=FEhistory"
+YOUTUBE_WATCH = "https://www.youtube.com/watch?v={}"
 HERE = __import__("pathlib").Path(__file__).resolve().parent
 
 
@@ -60,9 +62,12 @@ def youtube_home():
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30)
 
 
-def youtube(query=None):
+def youtube(query=None, video=None):
     pause()
-    url = YOUTUBE_SEARCH.format(urllib.parse.quote(query)) if query else YOUTUBE_HISTORY
+    if video:
+        url = YOUTUBE_WATCH.format(urllib.parse.quote(video))
+    else:
+        url = YOUTUBE_SEARCH.format(urllib.parse.quote(query)) if query else YOUTUBE_HISTORY
     # A running VacuumTube gets the link from the new process (single instance) and that process exits.
     subprocess.Popen(["flatpak", "run", YOUTUBE_FLATPAK, "--fullscreen", "--deeplink", url],
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
@@ -75,6 +80,8 @@ def main():
         leave(sys.argv[2] if len(sys.argv) == 3 else None)
     elif sys.argv[1:] == ["youtube-home"]:
         youtube_home()
+    elif sys.argv[1:2] == ["youtube-watch"] and len(sys.argv) == 3:
+        youtube(video=sys.argv[2])
     elif sys.argv[1:] == ["youtube-history"]:
         youtube()
     elif sys.argv[1:2] == ["youtube"] and len(sys.argv) > 2:
