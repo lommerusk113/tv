@@ -254,12 +254,14 @@ Item {
                                 console.warn("tv: jellyfin.py pull: " + (result.stdout + result.stderr).trim());
                         });
                     });
-                } else if (action.startsWith("jellyfin_play:")) {
-                    // Voice "play <title> on Jellyfin": open Jellyfin Desktop, then have the server start the title
-                    // on it (jellyfin.py play waits for the app to connect).
+                } else if (action.startsWith("jellyfin_play:") || action.startsWith("jellyfin_play_id:")) {
+                    // Voice "play <title> on Jellyfin" / OK on a Jellyfin tile or the banner: open Jellyfin Desktop,
+                    // then have the server start the item on it (jellyfin.py waits for the app to connect).
                     Config.launch("jellyfin");
-                    const title = action.slice(14).replace(/'/g, "'\\''");
-                    exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/jellyfin.py")) + "' play '" + title + "'", data => {
+                    const byId = action.startsWith("jellyfin_play_id:");
+                    const arg = action.slice(action.indexOf(":") + 1).replace(/'/g, "'\\''");
+                    exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/jellyfin.py")) + "' " + (byId ? "play-id" : "play")
+                             + " '" + arg + "'", data => {
                         if (data["exit code"] !== 0 || data.stdout.indexOf('"ok": true') < 0)
                             console.warn("tv: jellyfin.py play: " + (data.stdout + data.stderr).trim());
                     });

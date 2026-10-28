@@ -15,9 +15,12 @@ FocusScope {
     function buildSections() {
         const out = [];
         for (const r of Config.layout.rows) {
-            const items = r.source === "apps" ? Config.apps : (Config.content[r.source] || []);
+            // "source" is a content key, or a list of them: the first with items wins (Jellyfin, else Trakt/placeholder).
+            const sources = [].concat(r.source);
+            const source = sources.find(k => k === "apps" || (Config.content[k] || []).length) || sources[0];
+            const items = source === "apps" ? Config.apps : (Config.content[source] || []);
             if (!items.length) {
-                console.warn("layout: skipping row '" + r.id + "', no items in source '" + r.source + "'");
+                console.warn("layout: skipping row '" + r.id + "', no items in source '" + sources.join("', '") + "'");
                 continue;
             }
             out.push({
@@ -25,7 +28,7 @@ FocusScope {
                 type: r.type || "row",
                 title: r.title || "",
                 style: r.style || "landscape",
-                action: r.source === "apps" ? "launch" : "open",
+                action: source === "apps" ? "launch" : "open",
                 items: items
             });
         }
@@ -178,7 +181,10 @@ FocusScope {
         event.accepted = true;
     }
 
-    Component.onCompleted: Qt.callLater(goHome)
+    Component.onCompleted: {
+        Config.actionRunner = runAction;
+        Qt.callLater(goHome);
+    }
 
     Rectangle {
         anchors.fill: parent

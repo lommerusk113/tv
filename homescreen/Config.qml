@@ -17,6 +17,16 @@ QtObject {
     property var voiceListener: null  // function(callback({text, action} or null)): record + transcribe (voice.py)
     property var system: null         // function(action) -> true if handled: volume_*, tv_off
 
+    property var actionRunner: null   // function(action); set by Home.qml (its runAction), for tiles with an "action"
+
+    // Runs a keymap-style action ("launch:x", "jellyfin_play_id:<id>", ...), as tiles with an "action" do.
+    function run(action) {
+        if (actionRunner)
+            actionRunner(action);
+        else
+            console.log("action:" + action);
+    }
+
     function launch(appId) {
         const app = apps.find(a => a.id === appId);
         if (!app) {

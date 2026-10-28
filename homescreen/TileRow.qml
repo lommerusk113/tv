@@ -21,7 +21,8 @@ Item {
             current = n;
     }
 
-    // App tiles launch their app; media items log open:<id> and, when they name an "app" (Jellyfin items), launch it.
+    // App tiles launch their app; media items log open:<id> and run their "action" (Jellyfin: play the item), else
+    // launch the "app" they name.
     function activate() {
         const item = items[current];
         if (section.action === "launch") {
@@ -29,7 +30,9 @@ Item {
             return;
         }
         console.log(section.action + ":" + item.id);
-        if (item.app)
+        if (item.action)
+            Config.run(item.action);
+        else if (item.app)
             Config.launch(item.app);
     }
 

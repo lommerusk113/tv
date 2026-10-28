@@ -21,9 +21,13 @@ Item {
             current = n;
     }
 
+    // "Watch now": the entry's action (Jellyfin banner items play), else only logged.
     function activate() {
-        if (entry)
-            console.log("open:" + entry.id);
+        if (!entry)
+            return;
+        console.log("open:" + entry.id);
+        if (entry.action)
+            Config.run(entry.action);
     }
 
     // Backdrops, one per item, cross-fading: the item's image (TMDb, from trakt.py) over a generated gradient.

@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
-"""Jellyfin for the home screen: the "Continue watching" row, and playing a title by name (voice). Standard library only.
+"""Jellyfin for the home screen: its rows and banner, and playing things (tiles, voice). Standard library only.
 
-  python3 jellyfin.py               writes the jellyfinResume key (the user's resumable videos) into
-                                    ~/.cache/tv-project/content.json
+  python3 jellyfin.py               writes into ~/.cache/tv-project/content.json: jellyfinResume (Continue watching),
+                                    jellyfinNextUp (next episode of each series) and jellyfinFeatured (the banner:
+                                    newest unwatched films and series, with backdrop and logo). Tiles carry
+                                    "action": "jellyfin_play_id:<item id>", so OK starts them (resuming)
+  python3 jellyfin.py play-id <id>  plays the item (a series: its next-up episode) in Jellyfin Desktop here
   python3 jellyfin.py playing       what plays on another device of this user ({"ok", "title"}), without touching it
   python3 jellyfin.py pull          "move to TV": stops what this user is watching on another device (phone, browser)
                                     and continues it here from the same position. Prints {"ok", "title"} like play.
@@ -32,6 +35,8 @@ import urllib.request
 from trakt import CACHE, colors, download, secrets, update_content
 
 MAX_ITEMS = 15
+FEATURED = 6
+IMAGE_TYPES = "Primary,Backdrop,Thumb,Logo"
 PLAY_WAIT = float(os.environ.get("JELLYFIN_PLAY_WAIT", "40"))  # seconds for Jellyfin Desktop to start and connect
 DESKTOP_CLIENTS = ("jellyfin desktop", "jellyfin media player")
 MIN_MATCH = 0.6   # below this a search hit is not what was asked for
@@ -75,11 +80,70 @@ def user_id(conf):
 
 
 def resume_items(conf, uid):
-    query = urllib.parse.urlencode({"limit": MAX_ITEMS, "mediaTypes": "Video", "enableImageTypes": "Primary,Backdrop,Thumb"})
+    query = urllib.parse.urlencode({"limit": MAX_ITEMS, "mediaTypes": "Video", "enableImageTypes": IMAGE_TYPES})
     data = get(conf, "/UserItems/Resume?userId=%s&%s" % (uid, query))  # Jellyfin 10.9+
     if data is None:
         data = get(conf, "/Users/%s/Items/Resume?%s" % (uid, query))  # older servers
     return (data or {}).get("Items", [])
+
+
+def next_up(conf, uid):
+    query = urllib.parse.urlencode({"userId": uid, "limit": MAX_ITEMS, "enableImageTypes": IMAGE_TYPES,
+                                    "fields": "UserData", "enableResumable": "false"})
+    return (get(conf, "/Shows/NextUp?" + query) or {}).get("Items", [])
+
+
+def newest(conf, uid):
+    """Newest unwatched films and series (for the banner), newest first."""
+    query = urllib.parse.urlencode({"userId": uid, "includeItemTypes": "Movie,Series", "recursive": "true",
+                                    "sortBy": "DateCreated", "sortOrder": "Descending", "filters": "IsUnplayed",
+                                    "limit": 30, "enableImageTypes": IMAGE_TYPES,
+                                    "fields": "Overview,Genres,ChildCount,UserData"})
+    return (get(conf, "/Items?" + query) or {}).get("Items", [])
+
+
+def image_url(conf, item_id, kind, tag, width):
+    return "%s/Items/%s/Images/%s?tag=%s&maxWidth=%d&quality=90" % (conf["url"].rstrip("/"), item_id, kind, tag, width)
+
+
+def featured(conf, items):
+    """Banner entries: items with a backdrop (w1280), "Film/Series · genre · year/seasons", overview, logo if any;
+    at most one per franchise (the first two words before a colon)."""
+    out, franchises = [], set()
+    for item in items:
+        backdrops = item.get("BackdropImageTags") or []
+        # One per franchise, so a box set added at once does not fill the banner ("Resident Evil: Retribution").
+        franchise = " ".join(words(item.get("Name", "").split(":")[0]).split()[:2])
+        if not backdrops or franchise in franchises:
+            continue
+        franchises.add(franchise)
+        image = download(image_url(conf, item["Id"], "Backdrop/0", backdrops[0], 1280),
+                         "jellyfin-%s-backdrop1280-%s.jpg" % (item["Id"], backdrops[0]))
+        if not image:
+            continue
+        meta = ["Series" if item.get("Type") == "Series" else "Film"] + (item.get("Genres") or [])[:1]
+        if item.get("Type") == "Series" and item.get("ChildCount"):
+            meta.append("%d season%s" % (item["ChildCount"], "" if item["ChildCount"] == 1 else "s"))
+        elif item.get("ProductionYear"):
+            meta.append(str(item["ProductionYear"]))
+        entry = {
+            "id": "jellyfin-" + item["Id"],
+            "title": item.get("Name", ""),
+            "meta": " · ".join(meta),
+            "description": item.get("Overview") or "",
+            "colors": colors(item["Id"]),
+            "image": image,
+            "action": "jellyfin_play_id:" + item["Id"],
+        }
+        logo_tag = (item.get("ImageTags") or {}).get("Logo")
+        logo = logo_tag and download(image_url(conf, item["Id"], "Logo", logo_tag, 800),
+                                     "jellyfin-%s-logo-%s.png" % (item["Id"], logo_tag))
+        if logo:
+            entry["logo"] = logo
+        out.append(entry)
+        if len(out) == FEATURED:
+            break
+    return out
 
 
 def artwork(item):
@@ -105,20 +169,21 @@ def tile(conf, item):
         title = item.get("Name", "")
         parts = [str(item["ProductionYear"]) if item.get("ProductionYear") else None]
     if left:
-        parts.append("%d min left" % left)
+        parts.append(("%d min left" if user.get("PlaybackPositionTicks") else "%d min") % left)
     out = {
         "id": "jellyfin-" + item["Id"],
         "title": title,
         "subtitle": " · ".join(p for p in parts if p),
         "colors": colors(item.get("SeriesId") or item["Id"]),
         "app": "jellyfin",
+        "action": "jellyfin_play_id:" + item["Id"],
     }
     if user.get("PlayedPercentage") is not None:
         out["progress"] = round(user["PlayedPercentage"] / 100, 3)
     art = artwork(item)
     if art:
         image_id, kind, tag = art
-        image = download("%s/Items/%s/Images/%s?tag=%s&maxWidth=780&quality=90" % (conf["url"].rstrip("/"), image_id, kind, tag),
+        image = download(image_url(conf, image_id, kind, tag, 780),
                          "jellyfin-%s-%s-%s.jpg" % (image_id, kind.split("/")[0].lower(), tag))
         if image:
             out["image"] = image
@@ -225,18 +290,41 @@ def play(query):
         item = find(conf, uid, query)
         if not item:
             return {"ok": False, "error": "nothing called \"%s\"" % query}
-        target, position = playable(conf, uid, item)
-        if not target:
-            return {"ok": False, "error": "no episodes in \"%s\"" % item.get("Name")}
-        session = wait_for_desktop(conf, uid)
-        if not session:
-            return {"ok": False, "error": "Jellyfin Desktop is not connected to the server"}
-        command = urllib.parse.urlencode({"playCommand": "PlayNow", "itemIds": target["Id"], "startPositionTicks": position})
-        get(conf, "/Sessions/%s/Playing?%s" % (session["Id"], command), method="POST")
+        return start(conf, uid, item)
     except (urllib.error.URLError, OSError, ValueError) as e:
         return {"ok": False, "error": "%s: %s" % (conf["url"], e)}
     except SystemExit as e:  # user_id(): ambiguous or unknown user
         return {"ok": False, "error": str(e)}
+
+
+def play_id(item_id):
+    conf = settings()
+    if not conf:
+        return {"ok": False, "error": "no \"jellyfin\" url/apiKey in secrets.json"}
+    try:
+        uid = user_id(conf)
+        query = urllib.parse.urlencode({"userId": uid, "fields": "UserData"})
+        item = get(conf, "/Items/%s?%s" % (urllib.parse.quote(item_id), query))
+        if not item:
+            return {"ok": False, "error": "no item %s" % item_id}
+        return start(conf, uid, item)
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        return {"ok": False, "error": "%s: %s" % (conf["url"], e)}
+    except SystemExit as e:
+        return {"ok": False, "error": str(e)}
+
+
+def start(conf, uid, item):
+    """Plays the item (a series: its next-up episode, a started video: from its position) on this computer's
+    Jellyfin Desktop, waiting for it to connect. Returns the {"ok", "title"} result."""
+    target, position = playable(conf, uid, item)
+    if not target:
+        return {"ok": False, "error": "no episodes in \"%s\"" % item.get("Name")}
+    session = wait_for_desktop(conf, uid)
+    if not session:
+        return {"ok": False, "error": "Jellyfin Desktop is not connected to the server"}
+    command = urllib.parse.urlencode({"playCommand": "PlayNow", "itemIds": target["Id"], "startPositionTicks": position})
+    get(conf, "/Sessions/%s/Playing?%s" % (session["Id"], command), method="POST")
     title = item.get("Name", "")
     if target is not item:
         title += " S%s E%s" % (target.get("ParentIndexNumber", "?"), target.get("IndexNumber", "?"))
@@ -323,6 +411,9 @@ def main():
     if sys.argv[1:] in (["pull"], ["playing"]):
         print(json.dumps((pull if sys.argv[1] == "pull" else playing)(), ensure_ascii=False))
         return
+    if len(sys.argv) == 3 and sys.argv[1] == "play-id":
+        print(json.dumps(play_id(sys.argv[2]), ensure_ascii=False))
+        return
     if len(sys.argv) > 2 and sys.argv[1] == "play":
         print(json.dumps(play(" ".join(sys.argv[2:])), ensure_ascii=False))
         return
@@ -331,11 +422,16 @@ def main():
         print("jellyfin: no \"jellyfin\" url/apiKey in secrets.json; keeping content.json", file=sys.stderr)
         return
     try:
-        items = [tile(conf, i) for i in resume_items(conf, user_id(conf))]
+        uid = user_id(conf)
+        rows = {
+            "jellyfinResume": [tile(conf, i) for i in resume_items(conf, uid)],
+            "jellyfinNextUp": [tile(conf, i) for i in next_up(conf, uid)],
+            "jellyfinFeatured": featured(conf, newest(conf, uid)),
+        }
     except (urllib.error.URLError, OSError, ValueError) as e:
         print(f"jellyfin: {conf['url']}: {e}; keeping content.json", file=sys.stderr)
         return
-    print(f"jellyfin: wrote {update_content({'jellyfinResume': items})}")
+    print(f"jellyfin: wrote {update_content(rows)}")
 
 
 if __name__ == "__main__":

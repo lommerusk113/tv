@@ -28,9 +28,19 @@ ITEMS = [
      "ImageTags": {"Primary": "p2"}, "BackdropImageTags": ["b2"]},
     {"Id": "mv2", "Type": "Movie", "Name": "No Art", "UserData": {}},
 ]
+NEWEST = [
+    {"Id": "re1", "Type": "Movie", "Name": "Resident Evil: Retribution", "ProductionYear": 2012, "Genres": ["Action"],
+     "Overview": "Alice again.", "BackdropImageTags": ["rb1"], "ImageTags": {"Logo": "rl1"}},
+    {"Id": "re2", "Type": "Movie", "Name": "Resident Evil: Afterlife", "BackdropImageTags": ["rb2"]},
+    {"Id": "nb", "Type": "Series", "Name": "Nobel", "ChildCount": 1, "Genres": ["Drama"], "BackdropImageTags": ["nb1"]},
+    {"Id": "nobd", "Type": "Movie", "Name": "No Backdrop"},
+]
 FILES = {
     "/Items/s1/Images/Thumb?tag=t1&maxWidth=780&quality=90": png(160, 90, (60, 170, 160), (10, 40, 40)),
     "/Items/mv1/Images/Backdrop/0?tag=b2&maxWidth=780&quality=90": png(160, 90, (200, 40, 80), (40, 10, 30)),
+    "/Items/re1/Images/Backdrop/0?tag=rb1&maxWidth=1280&quality=90": png(160, 90, (90, 20, 20), (10, 0, 0)),
+    "/Items/re1/Images/Logo?tag=rl1&maxWidth=800&quality=90": png(80, 30, (255, 255, 255), (200, 200, 200)),
+    "/Items/nb/Images/Backdrop/0?tag=nb1&maxWidth=1280&quality=90": png(160, 90, (20, 60, 90), (0, 10, 20)),
 }
 SEARCH = [
     {"Id": "lotr2", "Type": "Movie", "Name": "The Lord of the Rings: The Two Towers", "ProductionYear": 2002, "UserData": {}},
@@ -66,8 +76,12 @@ class Mock(BaseHTTPRequestHandler):
             # Like Jellyfin: the exact text must appear in the name (so "deadmans chest" finds nothing by itself).
             body = json.dumps({"Items": [i for i in SEARCH if query in i["Name"].lower()]}).encode()
         elif self.path.startswith("/Shows/NextUp?"):
-            series = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)["seriesId"][0]
-            body = json.dumps({"Items": NEXT_UP.get(series, [])}).encode()
+            series = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query).get("seriesId", [None])[0]
+            body = json.dumps({"Items": NEXT_UP.get(series, []) if series else NEXT_UP["bb"]}).encode()
+        elif self.path.startswith("/Items?userId=u1&includeItemTypes=Movie%2CSeries&"):
+            body = json.dumps({"Items": NEWEST}).encode()
+        elif self.path.startswith("/Items/lotr1?userId=u1"):
+            body = json.dumps(SEARCH[1]).encode()
         elif self.path.startswith("/Sessions?controllableByUserId=u1"):
             body = json.dumps(state["sessions"]).encode()
         elif self.path in FILES:
@@ -127,11 +141,19 @@ def main():
     items = content["jellyfinResume"]
     images = cache / "images"
     assert items[0] == {"id": "jellyfin-ep1", "title": "Northern Lights", "subtitle": "S2 E5 · The Ice · 30 min left",
-                        "colors": items[0]["colors"], "app": "jellyfin", "progress": 0.4,
+                        "colors": items[0]["colors"], "app": "jellyfin", "action": "jellyfin_play_id:ep1", "progress": 0.4,
                         "image": (images / "jellyfin-s1-thumb-t1.jpg").as_uri()}, items[0]
     assert items[1]["subtitle"] == "2026 · 10 min left" and items[1]["progress"] == 0.909
     assert items[1]["image"] == (images / "jellyfin-mv1-backdrop-b2.jpg").as_uri()
     assert items[2]["title"] == "No Art" and "image" not in items[2] and "progress" not in items[2]
+    # Up next: the next episode of each series; banner: newest with a backdrop, one per franchise, logo when there is one.
+    assert [i["action"] for i in content["jellyfinNextUp"]] == ["jellyfin_play_id:bb-s2e3"]
+    hero = content["jellyfinFeatured"]
+    assert [h["title"] for h in hero] == ["Resident Evil: Retribution", "Nobel"], hero
+    assert hero[0]["meta"] == "Film · Action · 2012" and hero[0]["description"] == "Alice again."
+    assert hero[0]["image"] == (images / "jellyfin-re1-backdrop1280-rb1.jpg").as_uri() and "logo" in hero[0]
+    assert hero[1]["meta"] == "Series · Drama · 1 season" and "logo" not in hero[1]
+    assert hero[1]["action"] == "jellyfin_play_id:nb"
 
     # Older server (no /UserItems/Resume): falls back to /Users/{id}/Items/Resume.
     state["new_api"] = False
@@ -171,9 +193,13 @@ def main():
     assert state["posts"][-2:] == ["/Sessions/phone2/Playing/Stop",
                                    "/Sessions/here/Playing?playCommand=PlayNow&itemIds=ep9&startPositionTicks=%d" % (12 * TICKS)]
     state["sessions"].pop()
+    # A tile: play by id (resumes the started film).
+    res = run("play-id", "lotr1")
+    assert json.loads(res.stdout) == {"ok": True, "title": "The Lord of the Rings: The Fellowship of the Ring"}, res.stdout
+    assert state["posts"][-1] == "/Sessions/here/Playing?playCommand=PlayNow&itemIds=lotr1&startPositionTicks=%d" % (30 * TICKS)
     out = play("zzz qqq")
     assert out["ok"] is False and "nothing called" in out["error"], out
-    assert len(state["posts"]) == 6
+    assert len(state["posts"]) == 7
 
     # Server down: the last row stays.
     before = (cache / "content.json").read_text()
