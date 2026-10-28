@@ -46,7 +46,10 @@ def icon(symbol):
 
 
 def main():
-    location = json.loads((CONFIG / "secrets.json").read_text()).get("location")
+    try:
+        location = json.loads((CONFIG / "secrets.json").read_text()).get("location")
+    except (OSError, ValueError):
+        location = None
     if not location:
         sys.exit('weather: no "location": {"lat", "lon"} in secrets.json')
     old = json.loads(OUT.read_text()) if OUT.exists() else {}

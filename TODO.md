@@ -55,8 +55,14 @@ Status and conventions: see CLAUDE.md. Do phases in order. Each phase ends with 
 ## Phase 5: Turning the TV on and off
 - [ME] On the TV: enable "Mobile TV On → Turn On Via WiFi" and "LG Connect Apps" (Network settings). Connect the TV to the router with an Ethernet cable (Wake-on-LAN is unreliable over Wi-Fi after long standby).
 - [ME] In the router: reserve a fixed IP for the TV's MAC, block all its internet traffic (IPv4 and IPv6, including DNS), and allow local traffic to the laptop. Set this up before the TV first connects. Verify nothing goes out (TV browser, router logs).
-- Install bscpylgtv in the user's home (pipx/venv; ask first). Pair it with the TV (accept the prompt on screen [ME]); store the client key outside the repo.
-- Scripts: TV on (wakeonlan to the TV's MAC and IP, then switch to the laptop's HDMI input), TV off. Run on laptop wake/sleep and when the home screen starts.
+- [x] (2026-10-28) bscpylgtv 0.5.5 installed in the venv `~/.local/share/tv-project/venv`. Pairing still to do with the TV
+  [ME]: add `"tv": {"ip", "mac", "input"}` to secrets.json, run `python3 homescreen/tvpower.py pair`, accept on the TV
+  (key -> `~/.config/tv-project/lgtv-keys.sqlite`).
+- [x] (2026-10-28, tested without a TV: test_tvpower.py) `homescreen/tvpower.py on|off|pair|status|watch-sleep`: WOL to
+  broadcast + TV IP, retry until the API answers (40 s), set input; off via the API. Bigscreen runs `tvpower.py on` when
+  the home screen starts.
+- [ME] Run `scripts/install-tv-power.sh` (enables the user service `tv-sleep.service`: TV off before sleep, on after
+  wake). Claude Code's auto mode refused to enable a login service on its own, so this is yours; `--remove` undoes it.
 - Fallback if Wake-on-LAN is unreliable: ESP32 IR blaster over USB serial (LG uses NEC IR codes with discrete power on/off).
 
 ## Phase 6: Voice control

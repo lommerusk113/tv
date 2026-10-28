@@ -113,6 +113,8 @@ Item {
                     model.runApplication(app.desktopId);
             };
             forceActiveFocus();
+            // Wake the TV and switch it to this laptop's input (no-op without "tv" in secrets.json).
+            root.runScript("tvpower.py on", () => {});
         }
     }
 }

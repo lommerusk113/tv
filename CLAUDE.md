@@ -88,6 +88,8 @@ homescreen/
                     update_content() = locked, atomic merge into content.json (each script owns its keys)
   tmdb.py           TMDb "trending" key (posters); test_tmdb.py = mock test (`--keep DIR` to view it in the prototype)
   jellyfin.py       Jellyfin "jellyfinResume" key (Continue watching); test_jellyfin.py = mock test (`--keep DIR`)
+  tvpower.py        LG TV on/off: WOL + bscpylgtv (venv ~/.local/share/tv-project/venv, reruns itself there);
+                    `on|off|pair|status|watch-sleep`; settings "tv": {ip, mac, input}; test_tvpower.py (no TV needed)
   test_trakt.py     runs trakt.py auth + sync against a local mock Trakt API: python3 homescreen/test_trakt.py
   weather.py        MET Norway (Yr) current weather -> ~/.cache/tv-project/weather.json; test_weather.py = mock test
   Config.qml        singleton: theme, apps, layout, content, keymap, scale; px(v); withAlpha(); launch(appId) -> launcher hook
@@ -100,6 +102,9 @@ homescreen/
   desktop/tv-rikstv.desktop  Chrome kiosk on rikstv.no; install-bigscreen.sh copies it to ~/.local/share/applications
 bigscreen/HomeScreen.qml    replaces the stock plasmoid's HomeScreen.qml (see Bigscreen below)
 scripts/install-bigscreen.sh  host: install/--remove the home screen in Bigscreen; container: used by bigscreen-start.sh
+scripts/install-tv-power.sh   host: bscpylgtv venv + tv-sleep.service (systemd user unit, systemd-inhibit delay lock + gdbus
+                              PrepareForSleep -> tvpower off/on); --remove. NOT run yet (auto mode refused; user runs it)
+scripts/focus-home.sh         host: give keyboard focus to Bigscreen's home screen before ydotool tests
 ```
 
 ### Config format
