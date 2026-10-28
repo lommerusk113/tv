@@ -80,3 +80,7 @@ Status and conventions: see CLAUDE.md. Do phases in order. Each phase ends with 
 - Settings screen in the home screen to edit theme.json/layout.json/keymap.json with the remote.
 - Ambient screensaver when idle.
 - Lighter variant for grandma on a Raspberry Pi 5: Chromium kiosk on RiksTV, only channel up/down, number keys and volume, read-only file system.
+- [x] (2026-10-28, host, real server) Voice "play <title> [on Jellyfin]" (EN/NO): voice.py -> jellyfin_play:<title> ->
+  HomeScreen.qml opens Jellyfin Desktop and runs `jellyfin.py play <title>` (server search, in-progress/next-up pick,
+  PlayNow on this computer's Jellyfin Desktop session). Verified: "lord of the rings" resumed Fellowship of the Ring.
+  The API key in secrets.json is temporary; replace it later (Dashboard -> API Keys).
