@@ -13,6 +13,7 @@ title logos in the hero. Images are cached in ~/.cache/tv-project/images/.
 The token goes to ~/.config/tv-project/trakt-token.json (mode 600). Neither file is in the repo.
 """
 import colorsys
+import fcntl
 import hashlib
 import json
 import os
@@ -199,6 +200,26 @@ def access_token():
     return fresh["access_token"]
 
 
+def update_content(updates):
+    """Merges updates into ~/.cache/tv-project/content.json; each script (trakt.py, tmdb.py) owns its own keys.
+
+    Locked, because the home screen runs the scripts at the same time, and atomic, so it never reads half a file.
+    """
+    CACHE.mkdir(parents=True, exist_ok=True)
+    out = CACHE / "content.json"
+    with open(CACHE / "content.lock", "w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        try:
+            content = json.loads(out.read_text())
+        except (OSError, ValueError):
+            content = {}
+        content.update(updates)
+        tmp = out.with_suffix(".tmp")
+        tmp.write_text(json.dumps(content, ensure_ascii=False, indent=1))
+        tmp.replace(out)
+    return out
+
+
 def colors(seed):
     """Stable placeholder gradient [base, dark, highlight] per show, until there is artwork."""
     hue = int(hashlib.md5(seed.encode()).hexdigest()[:4], 16) / 0xFFFF
@@ -268,16 +289,11 @@ def sync():
     next_episodes = {w["show"]["ids"]["trakt"]: get("/shows/%d/progress/watched" % w["show"]["ids"]["trakt"])["next_episode"]
                      for w in watched}
 
-    CACHE.mkdir(parents=True, exist_ok=True)
-    out = CACHE / "content.json"
-    tmp = out.with_suffix(".tmp")
-    content = {
+    out = update_content({
         "upNext": up_next(playback, watched, next_episodes, hidden, backdrop),
         # Empty (no TMDb key) hides the hero rather than showing the made-up placeholder shows.
         "featured": featured(get("/recommendations/shows?limit=10")),
-    }
-    tmp.write_text(json.dumps(content, ensure_ascii=False, indent=1))
-    tmp.replace(out)  # atomic, so the home screen never reads half a file
+    })
     print(f"trakt: wrote {out}")
 
 

@@ -84,7 +84,9 @@ homescreen/
   main.qml          prototype Window 1920x1080 containing TvHome
   TvHome.qml        loads the JSON into Config (readFile: XHR by default), then loads Home.qml; atTop for Bigscreen's Back;
                     overlays ~/.cache/tv-project/content.json (live rows) on placeholder.json; reloadLive()
-  trakt.py          Trakt "Up next": `auth` (device code login), `sync` (writes content.json); stdlib only
+  trakt.py          Trakt "Up next": `auth` (device code login), `sync` (writes content.json); stdlib only;
+                    update_content() = locked, atomic merge into content.json (each script owns its keys)
+  tmdb.py           TMDb "trending" key (posters); test_tmdb.py = mock test (`--keep DIR` to view it in the prototype)
   test_trakt.py     runs trakt.py auth + sync against a local mock Trakt API: python3 homescreen/test_trakt.py
   weather.py        MET Norway (Yr) current weather -> ~/.cache/tv-project/weather.json; test_weather.py = mock test
   Config.qml        singleton: theme, apps, layout, content, keymap, scale; px(v); withAlpha(); launch(appId) -> launcher hook
@@ -134,6 +136,10 @@ All sizes are in 1920x1080 reference px (scaled by `Config.px()`); colors are `#
   N seasons", TMDb overview, `logo` = fanart.tv `hdtvlogo` (else `clearlogo`) by TVDB id, en/textless first, most liked.
   HeroBanner draws `image` over the gradient and `logo` (max 150 px high) instead of the title text.
   Verified 2026-10-28 in the container against the mock + generated images only, not real Trakt/TMDb/fanart.tv.
+- Trending (`tmdb.py`): `/3/trending/all/week` (films + series, people and poster-less items skipped, max 20), poster
+  w500 cached as `images/tmdb-<movie|tv>-<id>-poster.jpg`, meta "Film · 2026" / "Series · 2025". Raw response cached in
+  `~/.cache/tv-project/tmdb-trending.json` for 6 h; on failure the stale cache is used; no key and no cache = content.json
+  untouched (placeholder row stays). Bigscreen runs it on activation. Verified 2026-10-28 against the mock only.
 - Weather: `secrets.json` `"location": {"lat", "lon"}`. weather.py uses Locationforecast 2.0 compact, the forecast step
   for the current hour, honours Expires/If-Modified-Since, downloads Yr's SVG symbol once (`~/.cache/tv-project/weather-icons/`).
   Top bar shows icon + temperature left of the clock, hidden without data. TvHome re-reads weather.json every 5 min;

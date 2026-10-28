@@ -37,13 +37,16 @@ Status and conventions: see CLAUDE.md. Do phases in order. Each phase ends with 
 - [x] (2026-10-28, logging only; rebind to the real remote codes after Phase 1) Remote key mapping driven by a keymap.json in config (button → action, e.g. `launch:jellyfin`, `home`, `volume_up`). Prefer handling keys inside the home screen. A system-level remapper (input-remapper/keyd) is an install, so ask first.
 - Map one remote button to Moonlight's exit-stream shortcut (Ctrl+Alt+Shift+Q). Blocked: needs the remote's key codes (Phase 1) and a Moonlight host to test. Moonlight captures the keyboard while streaming (and may inhibit KWin global shortcuts), so this probably needs Moonlight's "capture system shortcuts" setting off plus a global shortcut.
 - [ME] Test RiksTV playback in Chrome (DRM shows black in screenshots). If needed: Chrome policies (URL allowlist) to keep the kiosk on RiksTV domains.
+  First start of the Chrome Flatpak shows "Google Chrome and ChromeOS Additional Terms of Service" (Accept/Cancel) over the
+  kiosk; accept it once yourself (2026-10-28: the tile launches Chrome fine, the dialog blocks rikstv.no until accepted).
+- [ME] Jellyfin Desktop asks for the server address on first start (launch from the tile works, 2026-10-28).
 
 ## Phase 4: Real data in the rows
 - [x] (2026-10-28, mock-tested; needs a Trakt API app + `python3 homescreen/trakt.py auth` on the host) Trakt "Up next" row (replaces the placeholder Continue watching row).
 - Jellyfin "Continue watching": the server's resume-items API with a user token from secrets.json; artwork from the server.
 - [x] (2026-10-28, mock-tested) TMDb backdrops on the Up next tiles (optional `tmdb.apiKey` in secrets.json).
 - [x] (2026-10-28, mock-tested) Hero = Trakt recommendations with TMDb backdrops + fanart.tv title logos.
-- TMDb "Trending": TMDb API with the key from secrets.json; cache responses and images locally; show placeholders when offline.
+- [x] (2026-10-28, mock-tested + prototype screenshot; real TMDb untested, needs `tmdb.apiKey`) TMDb "Trending": `homescreen/tmdb.py`, run by Bigscreen on activation; response cached 6 h, posters cached; offline/no key keeps the last row (or the placeholder).
 - Optional: "Because you watched X" using TMDb similar/recommendations based on recent Jellyfin history.
 - Enter on a Jellyfin item opens it in Jellyfin Desktop if possible; otherwise just opens the app.
 
