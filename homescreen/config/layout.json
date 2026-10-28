@@ -1,6 +1,4 @@
 {
-  "tabs": ["For you", "Apps", "Library"],
-  "profile": { "initial": "J", "color": "#e8710a" },
   "initialFocus": "apps",
   "rows": [
     { "id": "hero", "type": "hero", "source": ["jellyfinFeatured", "featured"] },

@@ -14,7 +14,6 @@
     "sizes": {
       "clock": 30,
       "tab": 26,
-      "profile": 24,
       "heroMeta": 20,
       "heroTitle": 64,
       "heroBody": 24,
@@ -29,8 +28,8 @@
   "animationMs": 150,
   "focus": { "scale": 1.08, "borderWidth": 3, "glowOpacity": 0.8 },
   "spacing": { "page": 96, "tile": 28, "row": 36, "titleGap": 16 },
-  "topBar": { "height": 110 },
-  "hero": { "height": 600 },
+  "topBar": { "height": 72 },
+  "hero": { "height": 700 },
   "tiles": {
     "app": [300, 170],
     "landscape": [400, 226],

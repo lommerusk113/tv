@@ -25,8 +25,8 @@ FocusScope {
     property string liveText: ""
 
     property int pending: 7
-    // True when Back has nothing left to do in Home (focus is on the tabs); Bigscreen then opens its overlay.
-    readonly property bool atTop: loader.item ? loader.item.section === -1 : false
+    // True when Back has nothing left to do in Home (start row, first tile); Bigscreen then opens its overlay.
+    readonly property bool atTop: loader.item ? loader.item.atRoot : false
 
     function loadJson(path, apply, optional) {
         root.readFile(Qt.resolvedUrl(path), text => {

@@ -9,8 +9,14 @@ FocusScope {
 
     readonly property var theme: Config.theme
     readonly property var sections: buildSections()
-    property int section: 0       // -1 = tabs in the top bar, otherwise index into sections
-    property int currentTab: 0
+    property int section: 0       // index into sections
+    // Where the home screen starts (layout.initialFocus) and where Back returns to.
+    readonly property int initialSection: Math.max(0, sections.findIndex(s => s.id === Config.layout.initialFocus))
+    // True when Back has nothing left to do: on the start row, at its first tile (Bigscreen then opens its overlay).
+    readonly property bool atRoot: {
+        const loader = sectionRepeater.count > section ? sectionRepeater.itemAt(section) : null;
+        return section === initialSection && (!loader || !loader.item || loader.item.current === 0);
+    }
 
     function buildSections() {
         const out = [];
@@ -41,19 +47,15 @@ FocusScope {
     }
 
     function moveHorizontal(d) {
-        if (section < 0) {
-            currentTab = Math.max(0, Math.min(Config.layout.tabs.length - 1, currentTab + d));
-            return;
-        }
         sectionAt(section).move(d);
     }
 
     function moveVertical(d) {
         const next = section + d;
-        if (next < -1 || next >= sections.length)
+        if (next < 0 || next >= sections.length)
             return;
-        const from = section >= 0 ? sectionAt(section) : null;
-        const to = next >= 0 ? sectionAt(next) : null;
+        const from = sectionAt(section);
+        const to = sectionAt(next);
         // Row to row: land on the tile closest to the one we leave, like Google TV.
         if (from && to && from.isRow && to.isRow)
             to.focusNearest(from.focusCenterX());
@@ -62,20 +64,17 @@ FocusScope {
     }
 
     function activate() {
-        if (section < 0) {
-            console.log("tab:" + Config.layout.tabs[currentTab]);
-            return;
-        }
         sectionAt(section).activate();
     }
 
+    // Back: first tile of the row, then the start row, then (atRoot) nothing left; Bigscreen takes over.
     function back() {
-        if (section >= 0 && sectionAt(section).current > 0) {
+        if (sectionAt(section).current > 0) {
             sectionAt(section).current = 0;
             return;
         }
-        if (section >= 0) {
-            section = -1;
+        if (section !== initialSection) {
+            section = initialSection;
             scrollToSection();
             return;
         }
@@ -103,9 +102,7 @@ FocusScope {
     function goHome() {
         for (let i = 0; i < sections.length; i++)
             sectionAt(i).current = 0;
-        currentTab = 0;
-        const initial = sections.findIndex(s => s.id === Config.layout.initialFocus);
-        section = initial >= 0 ? initial : 0;
+        section = initialSection;
         scrollToSection(true);
     }
 
@@ -211,7 +208,7 @@ FocusScope {
         Column {
             id: column
             width: page.width
-            topPadding: home.sections.length && home.sections[0].type === "hero" ? 0 : Config.px(home.theme.topBar.height)
+            topPadding: home.sections.length && home.sections[0].type === "hero" ? 0 : Config.px(home.theme.spacing.page) / 2
             spacing: Config.px(home.theme.spacing.row)
 
             Repeater {
@@ -244,97 +241,13 @@ FocusScope {
         }
     }
 
-    // Top bar: profile, tabs, clock. Stays in place while the page scrolls.
+    // Clock and weather in the top-right corner of the banner; they fade out as the page scrolls.
     Item {
         id: topBar
         width: parent.width
         height: Config.px(home.theme.topBar.height)
-
-        Rectangle {
-            anchors.fill: parent
-            gradient: Gradient {
-                GradientStop { position: 0; color: Config.withAlpha(home.theme.colors.background, 0.95) }
-                GradientStop { position: 0.7; color: Config.withAlpha(home.theme.colors.background, 0.6) }
-                GradientStop { position: 1; color: Config.withAlpha(home.theme.colors.background, 0) }
-            }
-        }
-        // Becomes solid once the page scrolls, so rows don't show through the tabs.
-        Rectangle {
-            anchors.fill: parent
-            color: home.theme.colors.background
-            opacity: Math.min(1, page.contentY / Config.px(80))
-        }
-
-        Row {
-            anchors.left: parent.left
-            anchors.leftMargin: Config.px(home.theme.spacing.page)
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: Config.px(24)
-
-            Rectangle {
-                anchors.verticalCenter: parent.verticalCenter
-                width: Config.px(52)
-                height: width
-                radius: width / 2
-                color: Config.layout.profile.color
-
-                Text {
-                    anchors.centerIn: parent
-                    text: Config.layout.profile.initial
-                    color: "#ffffff"
-                    font.family: home.theme.font.family
-                    font.pixelSize: Config.px(home.theme.font.sizes.profile)
-                    font.weight: Font.DemiBold
-                }
-            }
-
-            Item {
-                width: Config.px(12)
-                height: 1
-            }
-
-            Repeater {
-                model: Config.layout.tabs
-
-                delegate: Rectangle {
-                    id: tab
-                    required property string modelData
-                    required property int index
-                    readonly property bool selected: index === home.currentTab
-                    readonly property bool focused: selected && home.section === -1
-
-                    anchors.verticalCenter: parent.verticalCenter
-                    height: Config.px(52)
-                    width: label.implicitWidth + Config.px(44)
-                    radius: height / 2
-                    color: focused ? home.theme.colors.focusBorder : "transparent"
-                    scale: focused ? home.theme.focus.scale : 1
-                    Behavior on scale { NumberAnimation { duration: home.theme.animationMs; easing.type: Easing.OutCubic } }
-                    Behavior on color { ColorAnimation { duration: home.theme.animationMs } }
-
-                    Text {
-                        id: label
-                        anchors.centerIn: parent
-                        text: tab.modelData
-                        color: tab.focused ? home.theme.colors.onFocused
-                                           : (tab.selected ? home.theme.colors.text : home.theme.colors.textDim)
-                        font.family: home.theme.font.family
-                        font.pixelSize: Config.px(home.theme.font.sizes.tab)
-                        font.weight: tab.selected ? Font.DemiBold : Font.Normal
-                    }
-
-                    Rectangle {
-                        visible: tab.selected && !tab.focused
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        anchors.bottom: parent.bottom
-                        width: label.width
-                        height: Config.px(3)
-                        radius: height / 2
-                        color: home.theme.colors.accent
-                    }
-                }
-            }
-        }
+        opacity: Math.max(0, 1 - page.contentY / Config.px(80))
+        visible: opacity > 0
 
         Text {
             id: clock
@@ -344,6 +257,8 @@ FocusScope {
             anchors.verticalCenter: parent.verticalCenter
             text: Qt.formatTime(now, "HH:mm")
             color: home.theme.colors.text
+            style: Text.Raised  // readable on bright banner pictures
+            styleColor: Config.withAlpha("#000000", 0.6)
             font.family: home.theme.font.family
             font.pixelSize: Config.px(home.theme.font.sizes.clock)
 

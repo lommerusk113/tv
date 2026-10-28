@@ -70,9 +70,11 @@ pkill -f '^python3 run\.py'                              # stop (anchor the patt
 
 ### Keys
 Keys come from `config/keymap.json` (see Config format). Default: arrows move focus (row to row lands on the nearest tile horizontally), Enter activates, Escape/Back goes back
-(first to tile 0 of the row, then to the tabs; in Bigscreen one more Back opens Bigscreen's overlay: tasks, search, settings).
+(first to tile 0 of the row, then to the start row `initialFocus`; in Bigscreen one more Back opens Bigscreen's overlay: tasks,
+search, settings). Up stops at the hero; there is no top bar (removed 2026-10-29: only a clock/weather in the corner).
 Enter on an app tile logs `launch:<app-id>` and, in Bigscreen only, starts the app (`Config.launch`, see Bigscreen below);
-the prototype only logs. Hero/media logs `open:<item-id>`, tabs log `tab:<name>`.
+the prototype only logs. Hero/media log `open:<item-id>` and run the item's `action` (`Config.run`), e.g.
+`jellyfin_play_id:<id>` or `youtube_watch:<id>`.
 Initial focus: the row named by `layout.json` `initialFocus`. Home (`HomePage`, X11 `XF86HomePage`) resets every row
 to tile 0, scrolls to the top and returns to that row. F1-F4 = `launch:youtube|jellyfin|rikstv|moonlight`; volume keys log `action:volume_*`.
 
@@ -96,7 +98,7 @@ homescreen/
   test_trakt.py     runs trakt.py auth + sync against a local mock Trakt API: python3 homescreen/test_trakt.py
   weather.py        MET Norway (Yr) current weather -> ~/.cache/tv-project/weather.json; test_weather.py = mock test
   Config.qml        singleton: theme, apps, layout, content, keymap, scale; px(v); withAlpha(); launch(appId) -> launcher hook
-  Home.qml          page: top bar (profile, tabs, clock), vertical scrolling, ALL key handling
+  Home.qml          page: corner clock/weather, vertical scrolling, ALL key handling
   HeroBanner.qml    full-bleed featured carousel (Left/Right switches item)
   TileRow.qml       titled horizontal row, animated horizontal scroll, focusNearest()
   Tile.qml          tile styles app / landscape / poster; focus = scale + white outline + blurred glow
@@ -114,7 +116,7 @@ scripts/install-voice.sh      host: brew whisper-cpp + ggml-base.bin (sha1-check
 ### Config format
 All sizes are in 1920x1080 reference px (scaled by `Config.px()`); colors are `#rrggbb`.
 - `theme.json`: `colors` {background, surface, text, textDim, accent, focusBorder, glow, onFocused},
-  `font` {family, sizes{clock, tab, profile, heroMeta, heroTitle, heroBody, button, rowTitle, appName, tileTitle, tileMeta}},
+  `font` {family, sizes{clock, tab, heroMeta, heroTitle, heroBody, button, rowTitle, appName, tileTitle, tileMeta}},
   `radius`, `animationMs` (focus anim; scrolls use 2x), `focus` {scale, borderWidth, glowOpacity},
   `spacing` {page, tile, row, titleGap}, `topBar` {height}, `hero` {height}, `tiles` {app|landscape|poster: [w, h]}.
 - `apps.json`: array of `{id, name, colors: [top, bottom], image: "" | path relative to homescreen/,
@@ -124,9 +126,11 @@ All sizes are in 1920x1080 reference px (scaled by `Config.px()`); colors are `#
   Icons in `homescreen/icons/`: jellyfin/moonlight SVGs copied from the installed Flatpaks
   (`/var/lib/flatpak/exports/share/icons/hicolor/scalable/apps/`), rikstv.png = rikstv.no's official 512px web-app icon, youtube.png = YouTube's official 192px favicon (from youtube.com's web manifest).
   SVG needs qt6-qtsvg (in the Dockerfile; already on the Bazzite host).
-- `layout.json`: `tabs` [names], `profile` {initial, color}, `initialFocus` (row id), `rows` in display order:
+- `layout.json`: `initialFocus` (row id), `rows` in display order:
   `{id, type: "hero"|"row" (default row), title, source, style: app|landscape|poster}`.
-  `source` = `"apps"` (apps.json) or a key in `data/placeholder.json` (`featured`, `continueWatching`, `trending`).
+  `source` = `"apps"` (apps.json) or a content key, or a list of keys (first with items wins, e.g.
+  `["jellyfinFeatured", "featured"]`): live keys from ~/.cache/tv-project/content.json (jellyfin.py, youtube.py, tmdb.py,
+  trakt.py) over `data/placeholder.json` (`featured`, `continueWatching`, `trending`).
   Rows whose source is empty are skipped with a warning.
 - `keymap.json`: `{ "<Qt key name>": "<action>" }`; the name is `Qt.Key_<name>` without the prefix (`Left`, `Return`,
   `Back`, `HomePage`, `VolumeUp`, `F1`...). Actions: `left right up down select back home`, `launch:<app-id>` (logged),
@@ -189,7 +193,7 @@ an unknown key name and an unknown app id.
 - `bigscreen/HomeScreen.qml`: reads the JSON with the plasma5support `executable` engine (`cat`), because plasmashell has no
   `QML_XHR_ALLOW_FILE_READ`; sets `Config.launcher` to `Plasmoid.applicationListModel` (maximize if running, else
   runApplication(desktopId), verified with a fake .desktop in the container); enables upstream's BackHandler only when
-  Home is at the tabs; refocuses Home when the window becomes active.
+  Back has nothing left to do (start row, first tile); refocuses Home when the window becomes active.
 - Try without logging out: `/usr/bin/plasma-bigscreen-swap-session` = `plasmashell --replace` with the Bigscreen env in the
   current session. Ask before running it (session change). Run it detached: `(setsid nohup plasma-bigscreen-swap-session >log 2>&1 &)`.
   **Swapping back** needs `PLASMA_BIGSCREEN_LAUNCH_REASON=swap` in the calling shell (the script checks the caller's env,

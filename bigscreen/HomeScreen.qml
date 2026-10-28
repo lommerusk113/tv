@@ -157,7 +157,7 @@ Item {
     }
 
     // Upstream main.qml opens the Bigscreen overlay (tasks, search, settings) on Back. Let Home use Back for its own
-    // navigation first and hand it to the overlay only once focus is on the tabs.
+    // navigation first and hand it to the overlay only once Back has nothing left to do (start row, first tile).
     Binding {
         target: root.parent.Bigscreen.BackHandler
         property: "enabled"

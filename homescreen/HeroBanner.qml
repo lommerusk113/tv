@@ -13,7 +13,9 @@ Item {
     readonly property var entry: items.length ? items[Math.min(current, items.length - 1)] : null
 
     implicitHeight: Config.px(theme.hero.height)
-    clip: true
+    // The backdrop is shown whole (16:9 across the full width), so it reaches below the banner: the rows after it
+    // (your apps) sit on its lower part, like Google TV.
+    readonly property real backdropHeight: width * 9 / 16
 
     function move(d) {
         const n = current + d;
@@ -30,71 +32,78 @@ Item {
             Config.run(entry.action);
     }
 
-    // Backdrops, one per item, cross-fading: the item's image (TMDb, from trakt.py) over a generated gradient.
-    Repeater {
-        model: hero.items
+    // Backdrops, one per item, cross-fading: the item's image (Jellyfin/TMDb) over a generated gradient.
+    Item {
+        id: backdrop
+        width: parent.width
+        height: hero.backdropHeight
+        z: -1
 
-        delegate: Item {
-            required property var modelData
-            required property int index
-            anchors.fill: parent
-            opacity: index === hero.current ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: hero.theme.animationMs * 3 } }
+        Repeater {
+            model: hero.items
 
-            Rectangle {
+            delegate: Item {
+                required property var modelData
+                required property int index
                 anchors.fill: parent
-                gradient: Gradient {
-                    orientation: Gradient.Horizontal
-                    GradientStop { position: 0; color: modelData.colors[0] }
-                    GradientStop { position: 1; color: modelData.colors[1] }
+                opacity: index === hero.current ? 1 : 0
+                Behavior on opacity { NumberAnimation { duration: hero.theme.animationMs * 3 } }
+
+                Rectangle {
+                    anchors.fill: parent
+                    gradient: Gradient {
+                        orientation: Gradient.Horizontal
+                        GradientStop { position: 0; color: modelData.colors[0] }
+                        GradientStop { position: 1; color: modelData.colors[1] }
+                    }
+                }
+                Rectangle {
+                    width: hero.width * 0.5
+                    height: width
+                    radius: width / 2
+                    x: hero.width * 0.55
+                    y: -height * 0.4
+                    color: modelData.colors[2]
+                    opacity: 0.35
+                }
+                Rectangle {
+                    width: hero.width * 0.28
+                    height: width
+                    radius: width / 2
+                    x: hero.width * 0.8
+                    y: backdrop.height * 0.4
+                    color: modelData.colors[2]
+                    opacity: 0.2
+                }
+                Image {
+                    anchors.fill: parent
+                    source: modelData.image ? Qt.resolvedUrl(modelData.image) : ""
+                    fillMode: Image.PreserveAspectCrop
+                    asynchronous: true
+                    visible: status === Image.Ready
                 }
             }
-            Rectangle {
-                width: hero.width * 0.5
-                height: width
-                radius: width / 2
-                x: hero.width * 0.55
-                y: -height * 0.4
-                color: modelData.colors[2]
-                opacity: 0.35
-            }
-            Rectangle {
-                width: hero.width * 0.28
-                height: width
-                radius: width / 2
-                x: hero.width * 0.8
-                y: hero.height * 0.4
-                color: modelData.colors[2]
-                opacity: 0.2
-            }
-            Image {
-                anchors.fill: parent
-                source: modelData.image ? Qt.resolvedUrl(modelData.image) : ""
-                fillMode: Image.PreserveAspectCrop
-                asynchronous: true
-                visible: status === Image.Ready
-            }
         }
-    }
 
-    // Scrims so the text stays readable and the banner fades into the page.
-    Rectangle {
-        anchors.fill: parent
-        gradient: Gradient {
-            orientation: Gradient.Horizontal
-            GradientStop { position: 0; color: Config.withAlpha(hero.theme.colors.background, 0.9) }
-            GradientStop { position: 0.5; color: Config.withAlpha(hero.theme.colors.background, 0.45) }
-            GradientStop { position: 1; color: Config.withAlpha(hero.theme.colors.background, 0) }
+        // Scrims so the text stays readable and the picture fades into the page at its bottom edge.
+        Rectangle {
+            anchors.fill: parent
+            gradient: Gradient {
+                orientation: Gradient.Horizontal
+                GradientStop { position: 0; color: Config.withAlpha(hero.theme.colors.background, 0.9) }
+                GradientStop { position: 0.5; color: Config.withAlpha(hero.theme.colors.background, 0.45) }
+                GradientStop { position: 1; color: Config.withAlpha(hero.theme.colors.background, 0) }
+            }
         }
-    }
-    Rectangle {
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        height: parent.height * 0.35
-        gradient: Gradient {
-            GradientStop { position: 0; color: Config.withAlpha(hero.theme.colors.background, 0) }
-            GradientStop { position: 1; color: hero.theme.colors.background }
+        Rectangle {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            height: parent.height * 0.3
+            gradient: Gradient {
+                GradientStop { position: 0; color: Config.withAlpha(hero.theme.colors.background, 0) }
+                GradientStop { position: 1; color: hero.theme.colors.background }
+            }
         }
     }
 
