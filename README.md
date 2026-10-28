@@ -8,6 +8,12 @@ and later ported into Plasma Bigscreen. See `CLAUDE.md` for decisions, config fo
 cd homescreen && python3 run.py
 ```
 
+## Install into Plasma Bigscreen (Bazzite laptop)
+```bash
+scripts/install-bigscreen.sh            # user-dir copy of the stock home screen with ours swapped in; --remove undoes it
+plasma-bigscreen-swap-session           # try it in the current session (run again to swap back), or log in to Plasma Bigscreen
+```
+
 ## Run headless in a container (any machine with Docker or Podman)
 ```bash
 docker build -t tv-homescreen .
@@ -19,5 +25,8 @@ scripts/key.sh Right Right Down Return     # X11 key names (Left Right Up Down R
 scripts/shot.sh shots/test.png             # screenshot of the virtual screen
 cat /tmp/homescreen.log                    # QML errors and launch:/open: lines
 scripts/stop.sh
+
+# or: run it inside the real Plasma Bigscreen home screen (plasmoidviewer), then key.sh / shot.sh as above
+scripts/bigscreen-start.sh
 ```
 Rendering uses Mesa llvmpipe, so no GPU is needed. `shots/` is git-ignored.

@@ -7,11 +7,7 @@
       "#0b0f1f"
     ],
     "image": "icons/jellyfin.svg",
-    "launch": [
-      "flatpak",
-      "run",
-      "org.jellyfin.JellyfinDesktop"
-    ]
+    "desktopId": "org.jellyfin.JellyfinDesktop.desktop"
   },
   {
     "id": "youtube",
@@ -21,11 +17,7 @@
       "#0f0f0f"
     ],
     "image": "icons/youtube.png",
-    "launch": [
-      "flatpak",
-      "run",
-      "rocks.shy.VacuumTube"
-    ]
+    "desktopId": "rocks.shy.VacuumTube.desktop"
   },
   {
     "id": "rikstv",
@@ -37,13 +29,7 @@
     "image": "icons/rikstv.png",
     "imageScale": 1.0,
     "showName": false,
-    "launch": [
-      "flatpak",
-      "run",
-      "com.google.Chrome",
-      "--kiosk",
-      "https://www.rikstv.no"
-    ]
+    "desktopId": "tv-rikstv.desktop"
   },
   {
     "id": "moonlight",
@@ -53,10 +39,6 @@
       "#151826"
     ],
     "image": "icons/moonlight.svg",
-    "launch": [
-      "flatpak",
-      "run",
-      "com.moonlight_stream.Moonlight"
-    ]
+    "desktopId": "com.moonlight_stream.Moonlight.desktop"
   }
 ]

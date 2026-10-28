@@ -79,14 +79,15 @@ FocusScope {
         console.log("back:root");
     }
 
-    // Scroll the page just enough to keep the focused section visible below the top bar.
-    function scrollToSection() {
+    // Scroll the page just enough to keep the focused section visible below the top bar
+    // (measured from the top of the page instead of the current position when fromTop is set).
+    function scrollToSection(fromTop) {
         let target = 0;
         if (section > 0) {
             const it = sectionRepeater.itemAt(section);
             const top = column.y + it.y - Config.px(theme.topBar.height);
             const bottom = column.y + it.y + it.height + Config.px(theme.spacing.row);
-            target = page.contentY;
+            target = fromTop ? 0 : page.contentY;
             if (top < target)
                 target = top;
             else if (bottom > target + page.height)
@@ -105,7 +106,7 @@ FocusScope {
         currentTab = 0;
         const initial = sections.findIndex(s => s.id === Config.layout.initialFocus);
         section = initial >= 0 ? initial : 0;
-        scrollToSection();
+        scrollToSection(true);
     }
 
     // Qt key code -> action, built from config/keymap.json (keys are Qt.Key_<name> names).
@@ -131,10 +132,10 @@ FocusScope {
         case "back": back(); return;
         case "home": goHome(); return;
         }
-        if (action.startsWith("launch:") && !Config.apps.some(a => "launch:" + a.id === action))
-            console.warn("keymap: no app for '" + action + "'");
+        if (action.startsWith("launch:"))
+            Config.launch(action.slice(7));
         else
-            console.log(action.startsWith("launch:") ? action : "action:" + action); // ponytail: logged only until Phase 3 runs commands
+            console.log("action:" + action); // ponytail: volume etc. logged only, implement when the remote is mapped
     }
 
     Keys.onPressed: event => {

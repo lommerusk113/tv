@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=RiksTV
+Comment=RiksTV in Chrome kiosk mode (installed by tv-project scripts/install-bigscreen.sh)
+Exec=flatpak run com.google.Chrome --kiosk https://www.rikstv.no
+Icon=com.google.Chrome
+StartupWMClass=google-chrome

@@ -27,6 +27,9 @@ Remaining work and decisions: see TODO.md
 - **Container (any machine):** see `README.md`. Use `scripts/headless-start.sh`, `scripts/key.sh <X11 key names>`,
   `scripts/shot.sh <file>` (then Read the PNG), `scripts/stop.sh`. Log: `/tmp/homescreen.log`.
   Same Qt (Fedora 44, PySide6 6.11), Xvfb + llvmpipe. Verified 2026-10-27: identical render incl. glow.
+  `scripts/bigscreen-start.sh` instead runs it inside the real Bigscreen 6.7.5 containment (plasmoidviewer + openbox,
+  same key.sh/shot.sh/stop.sh). Apps don't exist there, so launches do nothing. Upstream logs `appletsLayout is not defined`
+  (harmless, from the dummy clock applet plasmoidviewer requires).
 - Repo: https://github.com/lommerusk113/tv (private).
 
 ## Screenshot command (Bazzite host only, works)
@@ -62,29 +65,34 @@ pkill -f '^python3 run\.py'                              # stop (anchor the patt
 - `run.py` only sets env vars and loads `main.qml`; exits 1 if loading fails. Keep all logic in QML/JS.
 - Env set by run.py: `QML_XHR_ALLOW_FILE_READ=1` (needed for XHR to read the JSON files),
   `QT_LOGGING_RULES=qml.debug=true;js.debug=true` (Fedora's `/usr/share/qt6/qtlogging.ini` has `*.debug=false`,
-  which silences console.log), `QT_FORCE_STDERR_LOGGING=1`. Bigscreen will need the XHR flag too (or another loader).
+  which silences console.log), `QT_FORCE_STDERR_LOGGING=1`. Bigscreen reads the JSON with `cat` instead (see Bigscreen integration).
 - Config is read at startup: restart after editing JSON.
 
 ### Keys
 Keys come from `config/keymap.json` (see Config format). Default: arrows move focus (row to row lands on the nearest tile horizontally), Enter activates, Escape/Back goes back
-(first to tile 0 of the row, then to the tabs). Enter logs only: `launch:<app-id>` (app tiles),
-`open:<item-id>` (hero/media), `tab:<name>`. Nothing is launched.
+(first to tile 0 of the row, then to the tabs; in Bigscreen one more Back opens Bigscreen's overlay: tasks, search, settings).
+Enter on an app tile logs `launch:<app-id>` and, in Bigscreen only, starts the app (`Config.launch`, see Bigscreen below);
+the prototype only logs. Hero/media logs `open:<item-id>`, tabs log `tab:<name>`.
 Initial focus: the row named by `layout.json` `initialFocus`. Home (`HomePage`, X11 `XF86HomePage`) resets every row
-to tile 0 and returns to that row. F1-F4 log `launch:youtube|jellyfin|rikstv|moonlight`; volume keys log `action:volume_*`.
+to tile 0, scrolls to the top and returns to that row. F1-F4 = `launch:youtube|jellyfin|rikstv|moonlight`; volume keys log `action:volume_*`.
 
 ### Files
 ```
 homescreen/
   run.py            PySide6 launcher (no app logic)
   qmldir            registers the Config singleton + components
-  main.qml          Window 1920x1080; loads the JSON via XHR into Config, then loads Home.qml
-  Config.qml        singleton: theme, apps, layout, content, scale; px(v) scales 1920-based sizes; withAlpha()
+  main.qml          prototype Window 1920x1080 containing TvHome
+  TvHome.qml        loads the JSON into Config (readFile: XHR by default), then loads Home.qml; atTop for Bigscreen's Back
+  Config.qml        singleton: theme, apps, layout, content, keymap, scale; px(v); withAlpha(); launch(appId) -> launcher hook
   Home.qml          page: top bar (profile, tabs, clock), vertical scrolling, ALL key handling
   HeroBanner.qml    full-bleed featured carousel (Left/Right switches item)
   TileRow.qml       titled horizontal row, animated horizontal scroll, focusNearest()
   Tile.qml          tile styles app / landscape / poster; focus = scale + white outline + blurred glow
   config/theme.json, config/apps.json, config/layout.json, config/keymap.json
   data/placeholder.json   placeholder hero/continue/trending content (replace with real data later)
+  desktop/tv-rikstv.desktop  Chrome kiosk on rikstv.no; install-bigscreen.sh copies it to ~/.local/share/applications
+bigscreen/HomeScreen.qml    replaces the stock plasmoid's HomeScreen.qml (see Bigscreen below)
+scripts/install-bigscreen.sh  host: install/--remove the home screen in Bigscreen; container: used by bigscreen-start.sh
 ```
 
 ### Config format
@@ -95,7 +103,8 @@ All sizes are in 1920x1080 reference px (scaled by `Config.px()`); colors are `#
   `spacing` {page, tile, row, titleGap}, `topBar` {height}, `hero` {height}, `tiles` {app|landscape|poster: [w, h]}.
 - `apps.json`: array of `{id, name, colors: [top, bottom], image: "" | path relative to homescreen/,
   imageScale (optional, icon height / tile height, default 0.5), showName (optional, default true; false for icons
-  that already contain the name), launch: [argv...]}`. `launch` is stored only, never run yet.
+  that already contain the name), desktopId: "<storage id>.desktop"}`. Launched via Bigscreen's app model; the Flatpak
+  ids are their app id + `.desktop` (not yet checked on the host); RiksTV uses our `tv-rikstv.desktop`.
   Icons in `homescreen/icons/`: jellyfin/moonlight SVGs copied from the installed Flatpaks
   (`/var/lib/flatpak/exports/share/icons/hicolor/scalable/apps/`), rikstv.png = rikstv.no's official 512px web-app icon, youtube.png = YouTube's official 192px favicon (from youtube.com's web manifest).
   SVG needs qt6-qtsvg (in the Dockerfile; already on the Bazzite host).
@@ -115,27 +124,22 @@ and theme.json / layout.json / apps.json edits all verified on the laptop panel.
 keymap.json verified 2026-10-28 in the container: Home key, F2/F4 launch logs, volume/mute action logs, warnings for
 an unknown key name and an unknown app id.
 
-## Bigscreen packaging (researched 2026-10-28 from the Fedora 44 6.7.5 RPMs, not yet tested on the host)
-- Session: `plasma-bigscreen-wayland` sources `plasma-bigscreen-common-env` (sets `PLASMA_DEFAULT_SHELL=org.kde.plasma.bigscreen`,
-  `PLASMA_PLATFORM=mediacenter`, prepends `~/.config/plasma-bigscreen` to `XDG_CONFIG_DIRS`), then `startplasma-wayland`.
-- Shell package `/usr/share/plasma/shells/org.kde.plasma.bigscreen` (fallback `org.kde.plasma.nano`); its `contents/defaults`
-  sets `[Desktop] Containment=org.kde.bigscreen.homescreen`.
-- Home screen = containment plasmoid `/usr/share/plasma/plasmoids/org.kde.bigscreen.homescreen/` (QML on disk, ~3.1k lines)
-  plus C++ plugin `/usr/lib64/qt6/plugins/plasma/applets/org.kde.bigscreen.homescreen.so` (no QML embedded in it).
-  - `ui/main.qml`: ContainmentItem; Meta/Back/controller home -> home overlay (task switcher, settings), Shortcuts.toggleHomeScreen
-    -> minimize all tasks, startup feedback, search, favorites, wallpaper blur/scrim, then `HomeScreen {}` = the visible page.
-  - `ui/HomeScreen.qml` (137 lines): header + app grid (`launcher/`). This is the part our prototype replaces.
-  - Useful C++ API: `Plasmoid.applicationListModel.runApplication(desktopId)`, `isApplicationRunning()`, `maximizeApplication()`,
-    `Plasmoid.executeCommand(cmd)`. Use these for Phase 3 launching (apps.json gets a desktop id; RiksTV needs its own .desktop file).
-- Plan: shadow copy at `~/.local/share/plasma/plasmoids/org.kde.bigscreen.homescreen/` (KPackage looks in the user dir first;
-  the .so keeps loading from /usr). Copy upstream 6.7.5 unchanged, swap `HomeScreen {}` in main.qml for our `Home`, keep
-  everything else upstream. Install via a script that copies from /usr/share + overlays our files, so a KDE update = re-run + diff.
-  Risk: a stale copy breaks when the .so API changes after a Bazzite update; the script should refuse on version mismatch.
-- Open questions to test on the host: does the user-dir copy win for a plasmoid with a C++ plugin; XHR config loading needs
-  `QML_XHR_ALLOW_FILE_READ=1` in plasmashell's env (e.g. `~/.config/plasma-workspace/env/*.sh`, outside ~/tv-project: ask);
-  QML cache (`~/.cache/plasmashell/qmlcache`) may hide edits until cleared; `Config.scale` must bind to the containment width.
-- No logout needed to try it: `/usr/bin/plasma-bigscreen-swap-session` runs `plasmashell --replace` with the Bigscreen env
-  inside the current session and toggles back on a second run. Still a session change: ask before running it.
+## Bigscreen integration (built 2026-10-28, tested in the container only, not yet on the host)
+- Session: `plasma-bigscreen-wayland` sources `plasma-bigscreen-common-env` (`PLASMA_DEFAULT_SHELL=org.kde.plasma.bigscreen`),
+  then `startplasma-wayland`. The shell's `contents/defaults` sets `Containment=org.kde.bigscreen.homescreen`.
+- That containment = QML package `/usr/share/plasma/plasmoids/org.kde.bigscreen.homescreen/` + C++ plugin
+  `/usr/lib64/qt6/plugins/plasma/applets/org.kde.bigscreen.homescreen.so`. Its `ui/main.qml` does the overlay (Meta/Back:
+  tasks, search, settings), toggleHomeScreen shortcut (minimize all), startup feedback, wallpaper; then `HomeScreen {}`.
+- `scripts/install-bigscreen.sh` copies it to `~/.local/share/plasma/plasmoids/` (the user copy wins, verified; the .so still
+  loads), swaps in `bigscreen/HomeScreen.qml`, symlinks `homescreen/` as `contents/ui/tv`, installs `homescreen/desktop/*.desktop`,
+  clears `~/.cache/plasmashell/qmlcache`. Refuses if plasma-bigscreen != 6.7.5 (`FORCE=1` after checking upstream main.qml).
+  `--remove` restores the stock home screen. Edits under homescreen/ need only a plasmashell restart.
+- `bigscreen/HomeScreen.qml`: reads the JSON with the plasma5support `executable` engine (`cat`), because plasmashell has no
+  `QML_XHR_ALLOW_FILE_READ`; sets `Config.launcher` to `Plasmoid.applicationListModel` (maximize if running, else
+  runApplication(desktopId), verified with a fake .desktop in the container); enables upstream's BackHandler only when
+  Home is at the tabs; refocuses Home when the window becomes active.
+- Try without logging out: `/usr/bin/plasma-bigscreen-swap-session` = `plasmashell --replace` with the Bigscreen env in the
+  current session; run again to swap back. Ask before running it (session change).
 
 ## Rules
 - **Every UI change must be verified with a screenshot (and you must look at it) before you report it as done.**

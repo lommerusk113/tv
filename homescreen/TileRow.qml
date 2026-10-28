@@ -22,7 +22,10 @@ Item {
     }
 
     function activate() {
-        console.log(section.action + ":" + items[current].id);
+        if (section.action === "launch")
+            Config.launch(items[current].id);
+        else
+            console.log(section.action + ":" + items[current].id);
     }
 
     // Horizontal centre of the focused tile, in window coordinates.

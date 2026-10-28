@@ -10,6 +10,18 @@ QtObject {
     property var content: ({})    // data/placeholder.json
     property var keymap: ({})     // config/keymap.json: Qt key name (Qt.Key_<name>) -> action
     property real scale: 1        // window width / 1920
+    property var launcher: null   // function(app); set by the Bigscreen plasmoid, null in the prototype (log only)
+
+    function launch(appId) {
+        const app = apps.find(a => a.id === appId);
+        if (!app) {
+            console.warn("launch: no app '" + appId + "'");
+            return;
+        }
+        console.log("launch:" + appId);
+        if (launcher)
+            launcher(app);
+    }
 
     // Sizes in theme.json are in 1920x1080 reference pixels.
     function px(v) { return Math.round(v * scale); }
