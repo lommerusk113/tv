@@ -29,4 +29,7 @@ scripts/stop.sh
 # or: run it inside the real Plasma Bigscreen home screen (plasmoidviewer), then key.sh / shot.sh as above
 scripts/bigscreen-start.sh
 ```
+
+Watch and drive it with a real keyboard: start the container with `-p 127.0.0.1:5901:5900`, run one of the start
+scripts, then `scripts/vnc.sh`, and open `vnc://localhost:5901` (password `tv`) in macOS Screen Sharing.
 Rendering uses Mesa llvmpipe, so no GPU is needed. `shots/` is git-ignored.

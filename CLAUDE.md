@@ -27,7 +27,7 @@ Remaining work and decisions: see TODO.md
 - **Container (any machine):** see `README.md`. Use `scripts/headless-start.sh`, `scripts/key.sh <X11 key names>`,
   `scripts/shot.sh <file>` (then Read the PNG), `scripts/stop.sh`. Log: `/tmp/homescreen.log`.
   Same Qt (Fedora 44, PySide6 6.11), Xvfb + llvmpipe. Verified 2026-10-27: identical render incl. glow.
-  `scripts/bigscreen-start.sh` instead runs it inside the real Bigscreen 6.7.5 containment (plasmoidviewer + openbox,
+  `scripts/vnc.sh` shares the screen over VNC (README). `scripts/bigscreen-start.sh` instead runs it inside the real Bigscreen 6.7.5 containment (plasmoidviewer + openbox,
   same key.sh/shot.sh/stop.sh). Apps don't exist there, so launches do nothing. Upstream logs `appletsLayout is not defined`
   (harmless, from the dummy clock applet plasmoidviewer requires).
 - Repo: https://github.com/lommerusk113/tv (private).
