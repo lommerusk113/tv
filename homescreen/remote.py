@@ -16,6 +16,7 @@ import select
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -74,7 +75,9 @@ def wait():
 
 def install():
     conf = json.loads((HERE / "config/remote.json").read_text())["global"]
+    # Remove first and let Plasma notice, otherwise it keeps the old key of a button whose key changed.
     uninstall()
+    rebuild_menu()
     APPS_DIR.mkdir(parents=True, exist_ok=True)
     for key, entry in conf.items():
         name = PREFIX + "".join(c if c.isalnum() else "-" for c in entry["button"].lower()).strip("-") + ".desktop"
@@ -85,8 +88,14 @@ def install():
             "NoDisplay=true\n"
             f"X-KDE-Shortcuts={key}\n")
         print(f"{entry['button']}: {key} -> {entry['action']}")
+    rebuild_menu()
+
+
+def rebuild_menu():
+    """Plasma's global shortcuts pick up .desktop changes when the menu cache is rebuilt."""
     if shutil.which("kbuildsycoca6"):
         subprocess.run(["kbuildsycoca6"], capture_output=True)
+        time.sleep(1)
 
 
 def uninstall():
