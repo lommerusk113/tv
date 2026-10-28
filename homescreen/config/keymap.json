@@ -16,5 +16,13 @@
   "VolumeUp": "volume_up",
   "VolumeDown": "volume_down",
   "VolumeMute": "volume_mute",
-  "F5": "voice"
+  "F5": "voice",
+  "Search": "voice",
+  "evdev:402": "up",
+  "evdev:403": "down",
+  "evdev:588": "launch:youtube",
+  "evdev:589": "launch:jellyfin",
+  "KeyboardBrightnessUp": "launch:rikstv",
+  "KeyboardBrightnessDown": "launch:moonlight",
+  "evdev:362": "launch:rikstv"
 }

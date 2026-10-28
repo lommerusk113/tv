@@ -109,10 +109,15 @@ FocusScope {
         scrollToSection(true);
     }
 
-    // Qt key code -> action, built from config/keymap.json (keys are Qt.Key_<name> names).
+    // Qt key code -> action, built from config/keymap.json (keys are Qt.Key_<name> names, or "evdev:<code>" for
+    // remote buttons that have no Qt key, e.g. the Strong remote's YouTube button is evdev:588).
     readonly property var keyActions: {
         const out = {};
         for (const name in Config.keymap) {
+            if (name.startsWith("evdev:")) {
+                out[name] = Config.keymap[name];
+                continue;
+            }
             const code = Qt["Key_" + name];
             if (code === undefined)
                 console.warn("keymap: unknown key '" + name + "'");
@@ -163,7 +168,10 @@ FocusScope {
     }
 
     Keys.onPressed: event => {
-        const action = keyActions[event.key];
+        let action = event.key ? keyActions[event.key] : undefined;
+        // On Linux the native scan code is the evdev code + 8.
+        if (action === undefined && event.nativeScanCode > 8)
+            action = keyActions["evdev:" + (event.nativeScanCode - 8)];
         if (action === undefined)
             return;
         runAction(action);
