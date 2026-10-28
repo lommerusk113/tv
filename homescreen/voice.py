@@ -33,6 +33,7 @@ def config():
 def normalize(text):
     """Lower case, no punctuation or whisper markers like [BLANK_AUDIO] / (music), single spaces."""
     text = re.sub(r"\[[^\]]*\]|\([^)]*\)|\*[^*]*\*", " ", text.lower())
+    text = re.sub(r"['\u2019]", "", text)  # "man's" -> "mans", not "man s"
     return " ".join(re.sub(r"[^\w\s-]", " ", text).split())
 
 

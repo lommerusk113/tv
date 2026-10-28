@@ -40,6 +40,8 @@ SEARCH = [
      "UserData": {"Played": True}},
     {"Id": "bb", "Type": "Series", "Name": "Breaking Bad", "UserData": {}},
     {"Id": "bbe", "Type": "Episode", "Name": "Breaking Bad Habits", "UserData": {}},
+    {"Id": "potc2", "Type": "Movie", "Name": "Pirates of the Caribbean: Dead Man's Chest", "UserData": {}},
+    {"Id": "kfh", "Type": "Movie", "Name": "Kung Fu Hustle", "UserData": {}},
 ]
 NEXT_UP = {"bb": [{"Id": "bb-s2e3", "Type": "Episode", "Name": "Bit by a Dead Bee", "ParentIndexNumber": 2, "IndexNumber": 3,
                    "UserData": {}}]}
@@ -61,7 +63,8 @@ class Mock(BaseHTTPRequestHandler):
             body = json.dumps({"Items": ITEMS[:1]}).encode()
         elif self.path.startswith("/Items?userId=u1&searchTerm="):
             query = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)["searchTerm"][0].lower()
-            body = json.dumps({"Items": [i for i in SEARCH if any(w in i["Name"].lower() for w in query.split())]}).encode()
+            # Like Jellyfin: the exact text must appear in the name (so "deadmans chest" finds nothing by itself).
+            body = json.dumps({"Items": [i for i in SEARCH if query in i["Name"].lower()]}).encode()
         elif self.path.startswith("/Shows/NextUp?"):
             series = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)["seriesId"][0]
             body = json.dumps({"Items": NEXT_UP.get(series, [])}).encode()
@@ -150,9 +153,12 @@ def main():
     # A series plays its next-up episode from the start.
     assert play("breaking bad") == {"ok": True, "title": "Breaking Bad S2 E3"}
     assert state["posts"][-1] == "/Sessions/here/Playing?playCommand=PlayNow&itemIds=bb-s2e3&startPositionTicks=0"
+    # Misheard titles (whisper): found through single words and fuzzy matching.
+    assert play("deadmans chest") == {"ok": True, "title": "Pirates of the Caribbean: Dead Man's Chest"}
+    assert play("kung fu hustling") == {"ok": True, "title": "Kung Fu Hustle"}
     out = play("zzz qqq")
     assert out["ok"] is False and "nothing called" in out["error"], out
-    assert len(state["posts"]) == 2
+    assert len(state["posts"]) == 4
 
     # Server down: the last row stays.
     before = (cache / "content.json").read_text()

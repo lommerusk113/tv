@@ -30,6 +30,9 @@ from trakt import CACHE, colors, download, secrets, update_content
 MAX_ITEMS = 15
 PLAY_WAIT = float(os.environ.get("JELLYFIN_PLAY_WAIT", "40"))  # seconds for Jellyfin Desktop to start and connect
 DESKTOP_CLIENTS = ("jellyfin desktop", "jellyfin media player")
+MIN_MATCH = 0.6   # below this a search hit is not what was asked for
+GOOD_MATCH = 0.85  # stop searching more terms once a hit is this close
+STOP_WORDS = {"the", "and", "of", "a", "an", "on", "in", "to", "for", "with", "og", "en", "et", "av", "på", "med", "til"}
 TICKS_PER_MINUTE = 600_000_000
 
 
@@ -119,21 +122,36 @@ def tile(conf, item):
 
 
 def words(text):
-    return " ".join(re.sub(r"[^\w\s]", " ", text.lower()).split())
+    """Lower case, apostrophes dropped ("man's" -> "mans"), other punctuation -> spaces."""
+    return " ".join(re.sub(r"[^\w\s]", " ", re.sub(r"['\u2019]", "", text.lower())).split())
+
+
+def compact(text):
+    return words(text).replace(" ", "")
+
+
+def match_score(query, name):
+    """How well a spoken title matches an item name, ignoring spaces and apostrophes (whisper writes "deadman's chest").
+    1.0 exact; 0.95 when the query is part of the name ("dead mans chest" in "Pirates of the Caribbean: Dead Man's
+    Chest"); otherwise the best fuzzy match against the whole name or a same-length part of it ("kung fu hustling")."""
+    q, n = compact(query), compact(name)
+    if not q or not n:
+        return 0
+    if q == n:
+        return 1.0
+    if q in n:
+        return 0.95
+    whole = difflib.SequenceMatcher(None, q, n).ratio()
+    parts = max(difflib.SequenceMatcher(None, q, n[i:i + len(q)]).ratio() for i in range(max(1, len(n) - len(q) + 1)))
+    return max(whole, 0.9 * parts)
 
 
 def pick(items, query):
     """The search hit to play: the closest title; among equally close ones (e.g. three Lord of the Rings films) the one
     in progress, then the first unwatched, then the oldest."""
-    query = words(query)
-
-    def score(item):
-        name = words(item.get("Name", ""))
-        ratio = difflib.SequenceMatcher(None, query, name).ratio()
-        return max(ratio, 0.9 if name.startswith(query) or query in name else 0)
-
-    scored = [(score(i), i) for i in items if i.get("Type") in ("Movie", "Series", "Episode", "Video")]
-    scored = [(s, i) for s, i in scored if s >= 0.5]
+    scored = [(match_score(query, i.get("Name", "")), i) for i in items
+              if i.get("Type") in ("Movie", "Series", "Episode", "Video")]
+    scored = [(s, i) for s, i in scored if s >= MIN_MATCH]
     if not scored:
         return None
     best = max(s for s, _ in scored)
@@ -145,6 +163,28 @@ def pick(items, query):
                 item.get("ProductionYear") or 9999)
 
     return min(close, key=order)
+
+
+def search_terms(query):
+    """The spoken title, then (Jellyfin only finds exact text) its longest words, then their first letters
+    ("hustling" -> "hustl" finds "Hustle")."""
+    ws = sorted({w for w in words(query).split() if len(w) >= 3 and w not in STOP_WORDS}, key=len, reverse=True)[:4]
+    terms = [query, words(query)] + ws + [w[:5] for w in ws if len(w) > 6]
+    return list(dict.fromkeys(t for t in terms if t))
+
+
+def find(conf, uid, query):
+    """Search with search_terms() until something matches well; the best of everything found."""
+    found = {}
+    for term in search_terms(query):
+        search = urllib.parse.urlencode({"userId": uid, "searchTerm": term, "recursive": "true", "limit": 25,
+                                         "includeItemTypes": "Movie,Series,Episode,Video", "fields": "UserData"})
+        for item in (get(conf, "/Items?" + search) or {}).get("Items") or []:
+            found.setdefault(item["Id"], item)
+        best = pick(list(found.values()), query)
+        if best and match_score(query, best.get("Name", "")) >= GOOD_MATCH:
+            return best
+    return pick(list(found.values()), query)
 
 
 def playable(conf, uid, item):
@@ -178,9 +218,7 @@ def play(query):
         return {"ok": False, "error": "no \"jellyfin\" url/apiKey in secrets.json"}
     try:
         uid = user_id(conf)
-        search = urllib.parse.urlencode({"userId": uid, "searchTerm": query, "recursive": "true", "limit": 25,
-                                         "includeItemTypes": "Movie,Series,Episode,Video", "fields": "UserData"})
-        item = pick((get(conf, "/Items?" + search) or {}).get("Items") or [], query)
+        item = find(conf, uid, query)
         if not item:
             return {"ok": False, "error": "nothing called \"%s\"" % query}
         target, position = playable(conf, uid, item)

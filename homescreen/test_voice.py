@@ -37,6 +37,7 @@ CASES = {
     "watch the office on jelly fin": "jellyfin_play:the office",
     "Open Jellyfin please": "launch:jellyfin",
     "play cat videos on youtube": "launch:youtube",
+    "Play Deadman's Chest.": "jellyfin_play:deadmans chest",
 }
 
 
