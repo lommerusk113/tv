@@ -87,6 +87,7 @@ homescreen/
   trakt.py          Trakt "Up next": `auth` (device code login), `sync` (writes content.json); stdlib only;
                     update_content() = locked, atomic merge into content.json (each script owns its keys)
   tmdb.py           TMDb "trending" key (posters); test_tmdb.py = mock test (`--keep DIR` to view it in the prototype)
+  jellyfin.py       Jellyfin "jellyfinResume" key (Continue watching); test_jellyfin.py = mock test (`--keep DIR`)
   test_trakt.py     runs trakt.py auth + sync against a local mock Trakt API: python3 homescreen/test_trakt.py
   weather.py        MET Norway (Yr) current weather -> ~/.cache/tv-project/weather.json; test_weather.py = mock test
   Config.qml        singleton: theme, apps, layout, content, keymap, scale; px(v); withAlpha(); launch(appId) -> launcher hook
@@ -140,6 +141,12 @@ All sizes are in 1920x1080 reference px (scaled by `Config.px()`); colors are `#
   w500 cached as `images/tmdb-<movie|tv>-<id>-poster.jpg`, meta "Film · 2026" / "Series · 2025". Raw response cached in
   `~/.cache/tv-project/tmdb-trending.json` for 6 h; on failure the stale cache is used; no key and no cache = content.json
   untouched (placeholder row stays). Bigscreen runs it on activation. Verified 2026-10-28 against the mock only.
+- Continue watching (`jellyfin.py`): secrets `"jellyfin": {"url", "apiKey" (Dashboard -> API Keys), "user" (name; optional
+  with one user)}`. `/UserItems/Resume?userId=` (10.9+), falls back to `/Users/{id}/Items/Resume`; max 15. Tile: series
+  title, "S2 E5 · <name> · 30 min left" (films: year), progress, 16:9 art (Thumb, parent Thumb, Backdrop, parent
+  Backdrop, Primary) cached as `images/jellyfin-<id>-<type>-<tag>.jpg`, `"app": "jellyfin"`. Server down / not configured
+  = content.json untouched. The layout's "continue" row has no placeholder data, so it is hidden until configured.
+- Items may carry `"app": "<apps.json id>"`: Enter logs open:<id> and launches that app (TileRow.activate).
 - Weather: `secrets.json` `"location": {"lat", "lon"}`. weather.py uses Locationforecast 2.0 compact, the forecast step
   for the current hour, honours Expires/If-Modified-Since, downloads Yr's SVG symbol once (`~/.cache/tv-project/weather-icons/`).
   Top bar shows icon + temperature left of the clock, hidden without data. TvHome re-reads weather.json every 5 min;

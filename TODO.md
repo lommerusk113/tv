@@ -43,12 +43,12 @@ Status and conventions: see CLAUDE.md. Do phases in order. Each phase ends with 
 
 ## Phase 4: Real data in the rows
 - [x] (2026-10-28, mock-tested; needs a Trakt API app + `python3 homescreen/trakt.py auth` on the host) Trakt "Up next" row (replaces the placeholder Continue watching row).
-- Jellyfin "Continue watching": the server's resume-items API with a user token from secrets.json; artwork from the server.
+- [x] (2026-10-28, mock-tested + prototype screenshot; real server untested, needs `jellyfin` in secrets.json) Jellyfin "Continue watching": `homescreen/jellyfin.py` (API key + user), row hidden until configured.
 - [x] (2026-10-28, mock-tested) TMDb backdrops on the Up next tiles (optional `tmdb.apiKey` in secrets.json).
 - [x] (2026-10-28, mock-tested) Hero = Trakt recommendations with TMDb backdrops + fanart.tv title logos.
 - [x] (2026-10-28, mock-tested + prototype screenshot; real TMDb untested, needs `tmdb.apiKey`) TMDb "Trending": `homescreen/tmdb.py`, run by Bigscreen on activation; response cached 6 h, posters cached; offline/no key keeps the last row (or the placeholder).
 - Optional: "Because you watched X" using TMDb similar/recommendations based on recent Jellyfin history.
-- Enter on a Jellyfin item opens it in Jellyfin Desktop if possible; otherwise just opens the app.
+- [x] (2026-10-28) Enter on a Jellyfin item opens Jellyfin Desktop (item `"app": "jellyfin"`). Opening the exact item is not done: Jellyfin Desktop 2.0 has no known deep-link argument; revisit if it gets one.
 
 - [x] (2026-10-28) Yr weather next to the clock (MET Norway, `location` in secrets.json).
 

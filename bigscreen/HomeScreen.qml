@@ -26,6 +26,7 @@ Item {
         tv.forceActiveFocus();
         runScript("trakt.py sync", tv.reloadLive);
         runScript("tmdb.py", tv.reloadLive);
+        runScript("jellyfin.py", tv.reloadLive);
         runScript("weather.py", tv.reloadWeather);
     }
 
