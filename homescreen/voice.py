@@ -6,8 +6,9 @@
   python3 voice.py file <wav>        the same for a 16 kHz mono WAV file
   python3 voice.py parse <sentence>  only the text -> action step
 
-Actions are the keymap's: home, launch:<app id>, volume_up, volume_down, volume_mute, tv_off. Phrases (English and
-Norwegian) are in config/voice.json; app names come from config/apps.json "name" plus optional "voiceNames".
+Actions are the keymap's: home, launch:<app id>, volume_up, volume_down, volume_mute, tv_off, plus
+jellyfin_play:<title> for "play <title> [on Jellyfin]" (jellyfin.py play). Phrases (English and Norwegian) are in
+config/voice.json; app names come from config/apps.json "name" plus optional "voiceNames".
 Needs whisper-cli (brew install whisper-cpp) and the model in config/voice.json (scripts/install-voice.sh).
 Standard library only.
 """
@@ -39,31 +40,73 @@ def contains(text, phrase):
     return re.search(r"(^|\s)" + re.escape(phrase) + r"($|\s)", text) is not None
 
 
-def name_score(text, name):
-    """How well some run of up to 3 words in text, joined without spaces, matches the name (1.0 = exact).
+def name_match(words, name):
+    """(score, start, end) of the run of up to 3 words that, joined without spaces, best matches the name (1.0 = exact).
 
     Fuzzy, because whisper hears "open your cube" for "open YouTube" and "riks tv" for "RiksTV".
     """
-    words, name = text.split(), name.replace(" ", "")
-    runs = ["".join(words[i:j]) for i in range(len(words)) for j in range(i + 1, min(i + 3, len(words)) + 1)]
-    return max((difflib.SequenceMatcher(None, run, name).ratio() for run in runs), default=0)
+    name = name.replace(" ", "")
+    runs = [(difflib.SequenceMatcher(None, "".join(words[i:j]), name).ratio(), i, j)
+            for i in range(len(words)) for j in range(i + 1, min(i + 3, len(words)) + 1)]
+    return max(runs, default=(0, 0, 0))
+
+
+def name_score(text, name):
+    return name_match(text.split(), name)[0]
+
+
+def best_app(words, apps):
+    """(app, score, start, end) of the app whose name (or voiceNames) best matches a run of words."""
+    best = (None, 0, 0, 0)
+    for app in apps:
+        for name in [normalize(n) for n in [app.get("name", ""), *app.get("voiceNames", [])] if n]:
+            score, i, j = name_match(words, name)
+            if score > best[1]:
+                best = (app, score, i, j)
+    return best
+
+
+def remove_phrases(words, phrases):
+    text = " " + " ".join(words) + " "
+    for phrase in sorted(phrases, key=len, reverse=True):
+        text = text.replace(" " + phrase + " ", " ")
+    return text.split()
+
+
+def title_request(words, conf, app, start, end):
+    """The title in "play <title> [on <app>]", or None. Only for the play app (Jellyfin) or when no app is named."""
+    verbs = sorted((normalize(v).split() for v in conf.get("open", [])), key=len, reverse=True)
+    at = next(((i, len(v)) for i in range(len(words)) for v in verbs if words[i:i + len(v)] == v), None)
+    if at is None:
+        return None
+    if app:
+        if app["id"] != conf.get("playApp", "jellyfin"):
+            return None
+        if start > 0 and words[start - 1] in conf.get("prepositions", []):
+            start -= 1
+        words = words[:start] + words[end:]
+        if at[0] >= start:  # the verb came after the app name ("jellyfin play x"): shift it
+            at = (at[0] - (end - start), at[1])
+    rest = remove_phrases(words[at[0] + at[1]:], [normalize(f) for f in conf.get("fillers", [])])
+    return " ".join(rest) or None
 
 
 def parse(text, conf=None, apps=None):
-    """Action for a sentence, or None. App names win over the fixed phrases ("play youtube" opens YouTube)."""
+    """Action for a sentence, or None. "play <title> [on Jellyfin]" plays the title; otherwise app names win over the
+    fixed phrases ("play youtube" opens YouTube)."""
     conf = conf or config()
     apps = apps if apps is not None else json.loads((HERE / "config/apps.json").read_text())
     text = normalize(text)
     if not text:
         return None
-    best, best_score = None, 0
-    for app in apps:
-        for name in [normalize(n) for n in [app.get("name", ""), *app.get("voiceNames", [])] if n]:
-            score = name_score(text, name)
-            if score > best_score:
-                best, best_score = app, score
-    if best and best_score >= conf.get("nameMatch", 0.75):
-        return "launch:" + best["id"]
+    words = text.split()
+    best, best_score, start, end = best_app(words, apps)
+    named = best if best and best_score >= conf.get("nameMatch", 0.75) else None
+    title = title_request(words, conf, named, start, end)
+    if title:
+        return "jellyfin_play:" + title
+    if named:
+        return "launch:" + named["id"]
     # Longest phrase first, so "turn off the tv" is not read as something shorter.
     phrases = sorted(((p, action) for action, ps in conf["phrases"].items() for p in ps), key=lambda x: -len(x[0]))
     for phrase, action in phrases:

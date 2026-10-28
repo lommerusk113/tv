@@ -62,5 +62,30 @@
     "vis",
     "se",
     "gå til"
+  ],
+  "playApp": "jellyfin",
+  "prepositions": [
+    "on",
+    "in",
+    "at",
+    "from",
+    "with",
+    "using",
+    "på",
+    "i",
+    "fra",
+    "med"
+  ],
+  "fillers": [
+    "please",
+    "for me",
+    "now",
+    "can you",
+    "could you",
+    "takk",
+    "nå",
+    "for meg",
+    "kan du",
+    "vær så snill"
   ]
 }

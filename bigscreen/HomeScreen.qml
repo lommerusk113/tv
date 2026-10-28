@@ -189,7 +189,16 @@ Item {
                     "volume_down": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-",
                     "volume_mute": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
                 };
-                if (action === "tv_off" || action === "tv_power" || action === "tv_input")
+                if (action.startsWith("jellyfin_play:")) {
+                    // Voice "play <title> on Jellyfin": open Jellyfin Desktop, then have the server start the title
+                    // on it (jellyfin.py play waits for the app to connect).
+                    Config.launch("jellyfin");
+                    const title = action.slice(14).replace(/'/g, "'\\''");
+                    exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/jellyfin.py")) + "' play '" + title + "'", data => {
+                        if (data["exit code"] !== 0 || data.stdout.indexOf('"ok": true') < 0)
+                            console.warn("tv: jellyfin.py play: " + (data.stdout + data.stderr).trim());
+                    });
+                } else if (action === "tv_off" || action === "tv_power" || action === "tv_input")
                     root.runScript("tvpower.py " + {"tv_off": "off", "tv_power": "toggle", "tv_input": "on"}[action], () => {});
                 else if (commands[action])
                     exec.run(commands[action], () => {});

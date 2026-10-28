@@ -29,6 +29,14 @@ CASES = {
     "(music playing)": None,
     "What is the weather like": None,
     "": None,
+    "Play Lord of the Rings on Jellyfin.": "jellyfin_play:lord of the rings",
+    "play the lord of the rings": "jellyfin_play:the lord of the rings",
+    "Spill Ringenes herre på Jellyfin": "jellyfin_play:ringenes herre",
+    "Can you play Breaking Bad please": "jellyfin_play:breaking bad",
+    "Jellyfin, play The Martian": "jellyfin_play:the martian",
+    "watch the office on jelly fin": "jellyfin_play:the office",
+    "Open Jellyfin please": "launch:jellyfin",
+    "play cat videos on youtube": "launch:youtube",
 }
 
 

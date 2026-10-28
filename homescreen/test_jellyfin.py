@@ -6,10 +6,12 @@
 """
 import json
 import os
+import socket
 import subprocess
 import sys
 import tempfile
 import threading
+import urllib.parse
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
@@ -30,7 +32,18 @@ FILES = {
     "/Items/s1/Images/Thumb?tag=t1&maxWidth=780&quality=90": png(160, 90, (60, 170, 160), (10, 40, 40)),
     "/Items/mv1/Images/Backdrop/0?tag=b2&maxWidth=780&quality=90": png(160, 90, (200, 40, 80), (40, 10, 30)),
 }
-state = {"new_api": True, "down": False, "requests": []}
+SEARCH = [
+    {"Id": "lotr2", "Type": "Movie", "Name": "The Lord of the Rings: The Two Towers", "ProductionYear": 2002, "UserData": {}},
+    {"Id": "lotr1", "Type": "Movie", "Name": "The Lord of the Rings: The Fellowship of the Ring", "ProductionYear": 2001,
+     "UserData": {"PlaybackPositionTicks": 30 * TICKS}},
+    {"Id": "lotr3", "Type": "Movie", "Name": "The Lord of the Rings: The Return of the King", "ProductionYear": 2003,
+     "UserData": {"Played": True}},
+    {"Id": "bb", "Type": "Series", "Name": "Breaking Bad", "UserData": {}},
+    {"Id": "bbe", "Type": "Episode", "Name": "Breaking Bad Habits", "UserData": {}},
+]
+NEXT_UP = {"bb": [{"Id": "bb-s2e3", "Type": "Episode", "Name": "Bit by a Dead Bee", "ParentIndexNumber": 2, "IndexNumber": 3,
+                   "UserData": {}}]}
+state = {"new_api": True, "down": False, "requests": [], "sessions": [], "posts": []}
 
 
 class Mock(BaseHTTPRequestHandler):
@@ -46,6 +59,14 @@ class Mock(BaseHTTPRequestHandler):
             body = json.dumps({"Items": ITEMS}).encode()
         elif self.path.startswith("/Users/u1/Items/Resume?") and not state["new_api"]:
             body = json.dumps({"Items": ITEMS[:1]}).encode()
+        elif self.path.startswith("/Items?userId=u1&searchTerm="):
+            query = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)["searchTerm"][0].lower()
+            body = json.dumps({"Items": [i for i in SEARCH if any(w in i["Name"].lower() for w in query.split())]}).encode()
+        elif self.path.startswith("/Shows/NextUp?"):
+            series = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)["seriesId"][0]
+            body = json.dumps({"Items": NEXT_UP.get(series, [])}).encode()
+        elif self.path.startswith("/Sessions?controllableByUserId=u1"):
+            body = json.dumps(state["sessions"]).encode()
         elif self.path in FILES:
             body = FILES[self.path]
         else:
@@ -53,6 +74,12 @@ class Mock(BaseHTTPRequestHandler):
         self.send_response(200)
         self.end_headers()
         self.wfile.write(body)
+
+    def do_POST(self):
+        assert 'Token="jk"' in self.headers.get("Authorization", ""), self.headers
+        state["posts"].append(self.path)
+        self.send_response(204)
+        self.end_headers()
 
     def log_message(self, *args):
         pass
@@ -66,10 +93,15 @@ def main():
     env = dict(os.environ, XDG_CONFIG_HOME=str(home / "config"), XDG_CACHE_HOME=str(home / "cache"))
     cache, config = home / "cache/tv-project", home / "config/tv-project"
 
-    def run():
-        res = subprocess.run([sys.executable, str(Path(__file__).with_name("jellyfin.py"))], env=env,
+    def run(*args):
+        res = subprocess.run([sys.executable, str(Path(__file__).with_name("jellyfin.py")), *args], env=env,
                              capture_output=True, text=True, timeout=60)
         return res
+
+    def play(title):
+        res = run("play", *title.split())
+        assert res.returncode == 0, res.stderr
+        return json.loads(res.stdout)
 
     # Not configured: nothing written.
     assert run().returncode == 0 and not (cache / "content.json").exists()
@@ -102,6 +134,25 @@ def main():
     state["new_api"] = False
     assert run().returncode == 0
     assert [i["id"] for i in json.loads((cache / "content.json").read_text())["jellyfinResume"]] == ["jellyfin-ep1"]
+
+    # Play by title. No Jellyfin Desktop connected: gives up after PLAY_WAIT (shortened via the env).
+    env["JELLYFIN_PLAY_WAIT"] = "1"
+    out = play("lord of the rings")
+    assert out == {"ok": False, "error": "Jellyfin Desktop is not connected to the server"}, out
+    state["sessions"] = [
+        {"Id": "phone", "Client": "Jellyfin Android", "DeviceName": "Pixel", "LastActivityDate": "2026-10-28T23:00:00Z"},
+        {"Id": "other", "Client": "Jellyfin Desktop", "DeviceName": "office-pc", "LastActivityDate": "2026-10-28T23:10:00Z"},
+        {"Id": "here", "Client": "Jellyfin Desktop", "DeviceName": socket.gethostname(), "LastActivityDate": "2026-10-28T22:00:00Z"},
+    ]
+    # Three close matches: the one in progress wins and resumes.
+    assert play("lord of the rings") == {"ok": True, "title": "The Lord of the Rings: The Fellowship of the Ring"}
+    assert state["posts"][-1] == "/Sessions/here/Playing?playCommand=PlayNow&itemIds=lotr1&startPositionTicks=%d" % (30 * TICKS)
+    # A series plays its next-up episode from the start.
+    assert play("breaking bad") == {"ok": True, "title": "Breaking Bad S2 E3"}
+    assert state["posts"][-1] == "/Sessions/here/Playing?playCommand=PlayNow&itemIds=bb-s2e3&startPositionTicks=0"
+    out = play("zzz qqq")
+    assert out["ok"] is False and "nothing called" in out["error"], out
+    assert len(state["posts"]) == 2
 
     # Server down: the last row stays.
     before = (cache / "content.json").read_text()
