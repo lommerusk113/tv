@@ -115,6 +115,28 @@ and theme.json / layout.json / apps.json edits all verified on the laptop panel.
 keymap.json verified 2026-10-28 in the container: Home key, F2/F4 launch logs, volume/mute action logs, warnings for
 an unknown key name and an unknown app id.
 
+## Bigscreen packaging (researched 2026-10-28 from the Fedora 44 6.7.5 RPMs, not yet tested on the host)
+- Session: `plasma-bigscreen-wayland` sources `plasma-bigscreen-common-env` (sets `PLASMA_DEFAULT_SHELL=org.kde.plasma.bigscreen`,
+  `PLASMA_PLATFORM=mediacenter`, prepends `~/.config/plasma-bigscreen` to `XDG_CONFIG_DIRS`), then `startplasma-wayland`.
+- Shell package `/usr/share/plasma/shells/org.kde.plasma.bigscreen` (fallback `org.kde.plasma.nano`); its `contents/defaults`
+  sets `[Desktop] Containment=org.kde.bigscreen.homescreen`.
+- Home screen = containment plasmoid `/usr/share/plasma/plasmoids/org.kde.bigscreen.homescreen/` (QML on disk, ~3.1k lines)
+  plus C++ plugin `/usr/lib64/qt6/plugins/plasma/applets/org.kde.bigscreen.homescreen.so` (no QML embedded in it).
+  - `ui/main.qml`: ContainmentItem; Meta/Back/controller home -> home overlay (task switcher, settings), Shortcuts.toggleHomeScreen
+    -> minimize all tasks, startup feedback, search, favorites, wallpaper blur/scrim, then `HomeScreen {}` = the visible page.
+  - `ui/HomeScreen.qml` (137 lines): header + app grid (`launcher/`). This is the part our prototype replaces.
+  - Useful C++ API: `Plasmoid.applicationListModel.runApplication(desktopId)`, `isApplicationRunning()`, `maximizeApplication()`,
+    `Plasmoid.executeCommand(cmd)`. Use these for Phase 3 launching (apps.json gets a desktop id; RiksTV needs its own .desktop file).
+- Plan: shadow copy at `~/.local/share/plasma/plasmoids/org.kde.bigscreen.homescreen/` (KPackage looks in the user dir first;
+  the .so keeps loading from /usr). Copy upstream 6.7.5 unchanged, swap `HomeScreen {}` in main.qml for our `Home`, keep
+  everything else upstream. Install via a script that copies from /usr/share + overlays our files, so a KDE update = re-run + diff.
+  Risk: a stale copy breaks when the .so API changes after a Bazzite update; the script should refuse on version mismatch.
+- Open questions to test on the host: does the user-dir copy win for a plasmoid with a C++ plugin; XHR config loading needs
+  `QML_XHR_ALLOW_FILE_READ=1` in plasmashell's env (e.g. `~/.config/plasma-workspace/env/*.sh`, outside ~/tv-project: ask);
+  QML cache (`~/.cache/plasmashell/qmlcache`) may hide edits until cleared; `Config.scale` must bind to the containment width.
+- No logout needed to try it: `/usr/bin/plasma-bigscreen-swap-session` runs `plasmashell --replace` with the Bigscreen env
+  inside the current session and toggles back on a second run. Still a session change: ask before running it.
+
 ## Rules
 - **Every UI change must be verified with a screenshot (and you must look at it) before you report it as done.**
 - In the container, the system rules below are about the Bazzite host; never run real app launches anywhere yet.

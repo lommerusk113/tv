@@ -17,7 +17,7 @@ Status and conventions: see CLAUDE.md. Do phases in order. Each phase ends with 
 - Find the remote's input device (`libinput list-devices` or /proc/bus/input/devices). Capture key codes with `evtest` (ask first if it needs sudo/group changes). Prompt me to press each button; save a button → key code table in CLAUDE.md. Note buttons that send nothing. The mic button is not expected to work on Linux (Google's voice protocol).
 
 ## Phase 2: Move the prototype into Plasma Bigscreen
-- Find how Bigscreen's home screen is packaged (shell/containment QML package) and whether a modified copy can live in ~/.local/share/plasma/ without touching the read-only system.
+- [x] (2026-10-28, see CLAUDE.md "Bigscreen packaging") Find how Bigscreen's home screen is packaged (shell/containment QML package) and whether a modified copy can live in ~/.local/share/plasma/ without touching the read-only system.
 - Port the prototype's QML into that package; keep the config files (theme.json, apps.json, layout.json) working. Keep changes modular to make upstream KDE updates easy to merge.
 - [ME] Log out, choose "Plasma Bigscreen", open Konsole, and restart Claude Code and the remote connection.
 - Verify navigation in the real session with ydotool + screenshots.
