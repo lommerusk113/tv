@@ -1,0 +1,37 @@
+{
+  "comment": "Global remote buttons: they work inside apps too. Keys come from scripts/remote/70-strong-remote.hwdb (evdev F13-F18 arrive as Tools and Launch (5)-(9)); remote.py install turns this into shortcuts. Actions as in keymap.json, plus tv_power (on/off) and tv_input (wake the TV on the laptop's input).",
+  "global": {
+    "Launch (5)": {
+      "button": "Off",
+      "action": "tv_power"
+    },
+    "Launch (6)": {
+      "button": "Input",
+      "action": "tv_input"
+    },
+    "Launch (7)": {
+      "button": "Mic",
+      "action": "voice"
+    },
+    "Launch (9)": {
+      "button": "YouTube",
+      "action": "launch:youtube"
+    },
+    "F19": {
+      "button": "Netflix",
+      "action": "launch:jellyfin"
+    },
+    "Launch (3)": {
+      "button": "Prime Video",
+      "action": "launch:moonlight"
+    },
+    "Launch (4)": {
+      "button": "Disney+",
+      "action": "launch:rikstv"
+    },
+    "Tools": {
+      "button": "TV",
+      "action": "launch:rikstv"
+    }
+  }
+}

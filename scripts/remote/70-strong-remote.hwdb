@@ -1,0 +1,14 @@
+# Strong Google TV remote (Bluetooth "RemoteG20", vendor 0957 product 000f).
+# Gives the buttons that Plasma would grab (power, keyboard light, search) or that have no key name (input, gear,
+# app buttons, TV) their own unused keys, so the home screen can bind them as global shortcuts. Installed by
+# scripts/install-remote-keys.sh into /etc/udev/hwdb.d/; delete it there and rerun `systemd-hwdb update` to undo.
+evdev:input:b0005v0957p000F*
+ KEYBOARD_KEY_c0030=f14
+ KEYBOARD_KEY_c01bb=f15
+ KEYBOARD_KEY_c0221=f16
+ KEYBOARD_KEY_c009f=f17
+ KEYBOARD_KEY_c0077=f18
+ KEYBOARD_KEY_c0078=f19
+ KEYBOARD_KEY_c0079=prog3
+ KEYBOARD_KEY_c007a=prog4
+ KEYBOARD_KEY_c008d=f13

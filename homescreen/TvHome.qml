@@ -78,6 +78,12 @@ FocusScope {
             loader.item.goHome();
     }
 
+    // Runs a keymap action (e.g. "launch:youtube", "voice") as if its key had been pressed.
+    function runAction(action) {
+        if (loader.item)
+            loader.item.runAction(action);
+    }
+
     // Re-read weather.json (written by weather.py); a missing or unreadable file keeps what is shown.
     function reloadWeather() {
         readFile(weatherUrl, text => {

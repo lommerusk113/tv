@@ -78,6 +78,28 @@ Item {
         }
     }
 
+    // Global remote buttons (config/remote.json, shortcuts installed by `remote.py install`) work inside apps too:
+    // remote.py send hands the action over through `remote.py wait`, which is rerun after every action.
+    function waitForRemote() {
+        exec.run("python3 '" + localPath(Qt.resolvedUrl("tv/remote.py")) + "' wait", data => {
+            const action = data.stdout.trim();
+            if (action === "voice" && !root.windowActive)
+                Shortcuts.toggleHomeScreen(); // the voice overlay lives on the home screen: show it first
+            if (action)
+                tv.runAction(action);
+            else if (data["exit code"] !== 0)
+                console.warn("tv: remote.py wait: " + data.stderr.trim());
+            // A short pause, so a failing wait cannot spin.
+            remoteRestart.restart();
+        });
+    }
+
+    Timer {
+        id: remoteRestart
+        interval: 200
+        onTriggered: root.waitForRemote()
+    }
+
     // weather.py itself skips the request until MET's Expires, so a short interval costs nothing.
     Timer {
         interval: 10 * 60 * 1000
@@ -167,8 +189,8 @@ Item {
                     "volume_down": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-",
                     "volume_mute": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
                 };
-                if (action === "tv_off")
-                    root.runScript("tvpower.py off", () => {});
+                if (action === "tv_off" || action === "tv_power" || action === "tv_input")
+                    root.runScript("tvpower.py " + {"tv_off": "off", "tv_power": "toggle", "tv_input": "on"}[action], () => {});
                 else if (commands[action])
                     exec.run(commands[action], () => {});
                 else
@@ -176,6 +198,7 @@ Item {
                 return true;
             };
             forceActiveFocus();
+            root.waitForRemote();
             // Wake the TV and switch it to this laptop's input (no-op without "tv" in secrets.json).
             root.runScript("tvpower.py on", () => {});
         }

@@ -3,6 +3,7 @@
 
   python3 tvpower.py on            wake the TV, then switch it to the laptop's HDMI input
   python3 tvpower.py off           turn the TV off
+  python3 tvpower.py toggle        off if the TV is on, otherwise on (the remote's power button)
   python3 tvpower.py pair          first connection: accept the prompt on the TV; the client key is saved
   python3 tvpower.py status        print the TV's power state
   python3 tvpower.py watch-sleep   for tv-sleep.service: TV off before the laptop sleeps, on after it wakes
@@ -110,6 +111,19 @@ async def off(tv):
         await client.disconnect()
 
 
+async def toggle(tv):
+    try:
+        client = await connect(tv)
+    except SystemExit:  # not answering: off (or still booting), so wake it
+        return await on(tv)
+    try:
+        state = (await client.get_power_state()).get("state")
+    finally:
+        await client.disconnect()
+    # "Active" is on; standby states ("Active Standby", "Suspend", "Screen Off") count as off.
+    await (off(tv) if state == "Active" else on(tv))
+
+
 async def pair(tv):
     print("tvpower: accept the connection request on the TV screen")
     client = await connect(tv, attempts=3)
@@ -145,7 +159,7 @@ def watch_sleep():
 
 
 def main():
-    commands = {"on": on, "off": off, "pair": pair, "status": status}
+    commands = {"on": on, "off": off, "toggle": toggle, "pair": pair, "status": status}
     if len(sys.argv) != 2 or sys.argv[1] not in [*commands, "watch-sleep"]:
         sys.exit(__doc__)
     tv = settings()
