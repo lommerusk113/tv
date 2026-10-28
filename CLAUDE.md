@@ -147,7 +147,7 @@ and theme.json / layout.json / apps.json edits all verified on the laptop panel.
 keymap.json verified 2026-10-28 in the container: Home key, F2/F4 launch logs, volume/mute action logs, warnings for
 an unknown key name and an unknown app id.
 
-## Bigscreen integration (built 2026-10-28, tested in the container only, not yet on the host)
+## Bigscreen integration (built 2026-10-28; host-verified 2026-10-28 via swap-session, see end of section)
 - Session: `plasma-bigscreen-wayland` sources `plasma-bigscreen-common-env` (`PLASMA_DEFAULT_SHELL=org.kde.plasma.bigscreen`),
   then `startplasma-wayland`. The shell's `contents/defaults` sets `Containment=org.kde.bigscreen.homescreen`.
 - That containment = QML package `/usr/share/plasma/plasmoids/org.kde.bigscreen.homescreen/` + C++ plugin
@@ -162,7 +162,17 @@ an unknown key name and an unknown app id.
   runApplication(desktopId), verified with a fake .desktop in the container); enables upstream's BackHandler only when
   Home is at the tabs; refocuses Home when the window becomes active.
 - Try without logging out: `/usr/bin/plasma-bigscreen-swap-session` = `plasmashell --replace` with the Bigscreen env in the
-  current session; run again to swap back. Ask before running it (session change).
+  current session. Ask before running it (session change). Run it detached: `(setsid nohup plasma-bigscreen-swap-session >log 2>&1 &)`.
+  **Swapping back** needs `PLASMA_BIGSCREEN_LAUNCH_REASON=swap` in the calling shell (the script checks the caller's env,
+  not plasmashell's); without it a second run just restarts Bigscreen. It restores `~/.cache/plasma-bigscreen/saved-env`.
+- On swap, `plasma-bigscreen-inputhandler` asks for "Remote Control: Konsole is asking for special privileges: Control input
+  devices" (labelled Konsole because Konsole started it). The user must answer it; not needed for keyboard/BT remote.
+- Focus: Konsole keeps keyboard focus after the swap and after an app closes. Before ydotool tests run
+  `scripts/focus-home.sh` (throwaway KWin script, activates the plasmashell desktop window, prints before/after).
+- Host-verified 2026-10-28 (laptop panel, swap-session, no secrets so placeholder rows): install script, navigation sequence,
+  Enter on YouTube starts VacuumTube via the app model, back to home after `flatpak kill` + focus-home. plasmashell log shows
+  no console.log (Fedora `*.debug=false`). Flatpak desktopIds exist on the host; tv-rikstv.desktop is installed by the script.
+  **Open issue:** launched apps open as normal windows, not fullscreen/maximized (swap-session; real Bigscreen login untested).
 
 ## Rules
 - **Every UI change must be verified with a screenshot (and you must look at it) before you report it as done.**

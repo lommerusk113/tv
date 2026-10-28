@@ -20,11 +20,12 @@ Status and conventions: see CLAUDE.md. Do phases in order. Each phase ends with 
 - [x] (2026-10-28, see CLAUDE.md "Bigscreen packaging") Find how Bigscreen's home screen is packaged (shell/containment QML package) and whether a modified copy can live in ~/.local/share/plasma/ without touching the read-only system.
 - [x] (2026-10-28, container-tested) Port the prototype's QML into that package; keep the config files (theme.json, apps.json, layout.json) working. Keep changes modular to make upstream KDE updates easy to merge.
 - [ME] Run `scripts/install-bigscreen.sh`, then either `plasma-bigscreen-swap-session` (no logout, Claude Code keeps running) or log out, choose "Plasma Bigscreen", open Konsole, and restart Claude Code.
-- Verify navigation in the real session with ydotool + screenshots.
+- [x] (2026-10-28, host, via plasma-bigscreen-swap-session) Verify navigation in the real session with ydotool + screenshots.
+- Launched apps open as normal windows, not fullscreen (seen with VacuumTube in swap-session). Check in a real Bigscreen login; if still windowed, maximize/fullscreen them on launch (KWin rule or the launcher hook).
 - [ME] Decide on auto-login to the Bigscreen session (System Settings → Login Screen). Recommended once Phase 3 works.
 
 ## Phase 3: Launching apps and the remote
-- [x] (2026-10-28, container-tested with a fake .desktop; real apps untested) Make Enter run the launch command from apps.json:
+- [x] (2026-10-28, container-tested with a fake .desktop; host: YouTube/VacuumTube launched from Bigscreen, others untested) Make Enter run the launch command from apps.json:
   - YouTube: `flatpak run rocks.shy.VacuumTube`
   - Jellyfin: `flatpak run org.jellyfin.JellyfinDesktop`
   - Moonlight: `flatpak run com.moonlight_stream.Moonlight`
