@@ -6,6 +6,7 @@
     { "id": "upnext", "title": "Up next", "source": ["jellyfinNextUp", "upNext"], "style": "landscape" },
     { "id": "continue", "title": "Continue watching", "source": "jellyfinResume", "style": "landscape" },
     { "id": "youtube", "title": "New from your channels", "source": "youtubeChannels", "style": "landscape" },
+    { "id": "youtubeRecommended", "title": "Recommended on YouTube", "source": "youtubeRecommended", "style": "landscape" },
     { "id": "trending", "title": "Trending", "source": "trending", "style": "poster" }
   ]
 }

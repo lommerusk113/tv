@@ -67,14 +67,15 @@ def main():
     home = Path(tempfile.mkdtemp())
     config = home / "conf"
     url = "http://127.0.0.1:%d" % server.server_port
+    # VacuumTube's debug port pointed at nothing: recommendations/history unavailable, like VacuumTube not running.
     env = dict(os.environ, XDG_CACHE_HOME=str(home / "cache"), XDG_CONFIG_HOME=str(config), YOUTUBE_URL=url,
-               YOUTUBE_THUMBNAILS=url)
+               YOUTUBE_THUMBNAILS=url, VACUUMTUBE_DEBUG_PORT="1")
     content = home / "cache/tv-project/content.json"
 
     # The real config lists other channels; point a copy of the script's directory at test channels instead.
     test_dir = home / "app"
     (test_dir / "config").mkdir(parents=True)
-    for f in ("youtube.py", "trakt.py"):
+    for f in ("youtube.py", "trakt.py", "youtube_tv.py", "youtube_tv.js"):
         (test_dir / f).write_text(Path(__file__).with_name(f).read_text())
     (test_dir / "config/youtube.json").write_text(json.dumps({"perChannel": 6, "maxItems": 20, "channels": [
         {"name": "Alpha", "id": "UCaaaaaaaaaaaaaaaaaaaaaa"}, {"name": "Beta", "id": "UCbbbbbbbbbbbbbbbbbbbbbb"}]}))
@@ -90,7 +91,18 @@ def main():
     # Newest first across channels; upcoming and non-video entries left out.
     assert [i["id"] for i in items] == ["youtube-aaaaaaaaaa1", "youtube-bbbbbbbbbb1", "youtube-aaaaaaaaaa2"], items
     assert items[0]["subtitle"] == "Alpha · 5h ago · 12:03" and items[0]["action"] == "youtube_watch:aaaaaaaaaa1"
-    assert items[0]["image"].endswith("youtube-aaaaaaaaaa1.jpg")
+    assert items[0]["image"].endswith("youtube-aaaaaaaaaa1.jpg") and "progress" not in items[0]
+    assert "youtubeRecommended" not in json.loads(content.read_text())
+
+    # With history/recommendations cached (as youtube_tv.py would have fetched them): progress bars and the row.
+    (home / "cache/tv-project/youtube-tv.json").write_text(json.dumps({"time": 9e12, "history": [
+        {"id": "bbbbbbbbbb1", "title": "Middle", "channel": "Beta", "watched": 0.5}], "recommended": [
+        {"id": "rrrrrrrrrr1", "title": "Picked for you", "channel": "Gamma", "watched": 0}]}))
+    run_test()
+    data = json.loads(content.read_text())
+    assert [i.get("progress") for i in data["youtubeChannels"]] == [None, 0.5, None], data["youtubeChannels"]
+    assert data["youtubeRecommended"][0]["subtitle"] == "Gamma"
+    assert data["youtubeRecommended"][0]["action"] == "youtube_watch:rrrrrrrrrr1"
 
     # Within MAX_AGE the cache is used (YouTube down does not matter); --force with YouTube down keeps the last videos.
     state["down"] = True

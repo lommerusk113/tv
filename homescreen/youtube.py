@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
-"""YouTube "New from your channels" row for the home screen. Standard library only, no API key.
+"""YouTube rows for the home screen. Standard library only, no API key.
 
-  python3 youtube.py   writes the youtubeChannels key (newest videos of the channels in config/youtube.json, newest
-                       first) into ~/.cache/tv-project/content.json; OK on a tile plays it in VacuumTube
+  python3 youtube.py   writes into ~/.cache/tv-project/content.json:
+                       youtubeChannels     newest videos of the channels in config/youtube.json, newest first
+                       youtubeRecommended  YouTube's own picks for the account (the TV app's start page)
+                       OK on a tile plays it in VacuumTube. Videos in the account's watch history get a progress bar.
+
+Recommendations and history come from the running VacuumTube with its login (youtube_tv.py, over its debug port);
+without it running, the last ones are kept (TV_MAX_AGE cache in ~/.cache/tv-project/youtube-tv.json).
 
 YouTube switched off its channel RSS feeds, so this reads the channel's /videos page (the ytInitialData JSON in it).
 That can break when YouTube changes the page; the official alternative is the YouTube Data API (needs a key).
@@ -12,6 +17,7 @@ When a channel cannot be read, its videos from the last run are kept.
 import json
 import os
 import re
+import subprocess
 import sys
 import time
 import urllib.request
@@ -23,7 +29,9 @@ HERE = Path(__file__).resolve().parent
 YOUTUBE = os.environ.get("YOUTUBE_URL", "https://www.youtube.com")
 THUMBNAILS = os.environ.get("YOUTUBE_THUMBNAILS", "https://i.ytimg.com")
 RAW = CACHE / "youtube-channels.json"
+TV_RAW = CACHE / "youtube-tv.json"
 MAX_AGE = 30 * 60
+TV_MAX_AGE = 10 * 60
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36",
     "Accept-Language": "en-US,en",
@@ -90,19 +98,45 @@ def ago(seconds):
     return "just now"
 
 
-def tile(channel, video, now):
-    age = video["age"] + int(now - video["fetched"])
+def tile(video_id, title, subtitle, watched=0):
     out = {
-        "id": "youtube-" + video["id"],
-        "title": video["title"],
-        "subtitle": " · ".join(p for p in (channel, ago(age), video.get("duration")) if p),
-        "colors": colors(video["id"]),
-        "action": "youtube_watch:" + video["id"],
+        "id": "youtube-" + video_id,
+        "title": title,
+        "subtitle": subtitle,
+        "colors": colors(video_id),
+        "action": "youtube_watch:" + video_id,
     }
-    image = download("%s/vi/%s/mqdefault.jpg" % (THUMBNAILS, video["id"]), "youtube-%s.jpg" % video["id"])
+    if watched:
+        out["progress"] = round(min(1, watched), 3)
+    image = download("%s/vi/%s/mqdefault.jpg" % (THUMBNAILS, video_id), "youtube-%s.jpg" % video_id)
     if image:
         out["image"] = image
     return out
+
+
+def tv_feeds(now):
+    """{"recommended": [...], "history": [...]} from VacuumTube (youtube_tv.py), cached for TV_MAX_AGE; the last
+    ones when VacuumTube is not running or fails."""
+    try:
+        cache = json.loads(TV_RAW.read_text())
+    except (OSError, ValueError):
+        cache = {}
+    if "--force" not in sys.argv and now - cache.get("time", 0) < TV_MAX_AGE:
+        return cache
+    fresh = {}
+    for feed in ("recommended", "history"):
+        res = subprocess.run([sys.executable, str(HERE / "youtube_tv.py"), feed], capture_output=True, text=True,
+                             timeout=60)
+        if res.returncode == 0:
+            fresh[feed] = json.loads(res.stdout)
+        elif res.returncode != 2:  # 2: VacuumTube not running, which is normal
+            print(f"youtube: {feed}: {res.stderr.strip()}", file=sys.stderr)
+    if not fresh:
+        return cache
+    cache.update(fresh, time=now)
+    TV_RAW.parent.mkdir(parents=True, exist_ok=True)
+    TV_RAW.write_text(json.dumps(cache, ensure_ascii=False))
+    return cache
 
 
 def main():
@@ -127,14 +161,24 @@ def main():
             channels[channel["id"]] = videos or cache.get("channels", {}).get(channel["id"], [])
         RAW.parent.mkdir(parents=True, exist_ok=True)
         RAW.write_text(json.dumps({"time": now, "channels": channels}))
+    feeds = tv_feeds(now)
+    watched = {v["id"]: v.get("watched") or 0 for v in feeds.get("history", [])}
     names = {c["id"]: c["name"] for c in conf["channels"]}
     entries = [(v["age"] + now - v["fetched"], names.get(cid, ""), v) for cid, vs in channels.items() for v in vs]
     entries.sort(key=lambda e: e[0])
-    items = [tile(name, v, now) for _, name, v in entries[:conf.get("maxItems", 20)]]
-    if not items:
+    rows = {}
+    channel_items = [tile(v["id"], v["title"], " · ".join(p for p in (name, ago(int(age)), v.get("duration")) if p),
+                          watched.get(v["id"], 0))
+                     for age, name, v in entries[:conf.get("maxItems", 20)]]
+    if channel_items:
+        rows["youtubeChannels"] = channel_items
+    if feeds.get("recommended"):
+        rows["youtubeRecommended"] = [tile(v["id"], v["title"], v.get("channel", ""), v.get("watched") or 0)
+                                      for v in feeds["recommended"][:conf.get("maxItems", 20)]]
+    if not rows:
         print("youtube: no videos; keeping content.json", file=sys.stderr)
         return
-    print(f"youtube: wrote {update_content({'youtubeChannels': items})}")
+    print(f"youtube: wrote {update_content(rows)}")
 
 
 if __name__ == "__main__":
