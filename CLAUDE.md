@@ -82,14 +82,17 @@ homescreen/
   run.py            PySide6 launcher (no app logic)
   qmldir            registers the Config singleton + components
   main.qml          prototype Window 1920x1080 containing TvHome
-  TvHome.qml        loads the JSON into Config (readFile: XHR by default), then loads Home.qml; atTop for Bigscreen's Back
+  TvHome.qml        loads the JSON into Config (readFile: XHR by default), then loads Home.qml; atTop for Bigscreen's Back;
+                    overlays ~/.cache/tv-project/content.json (live rows) on placeholder.json; reloadLive()
+  trakt.py          Trakt "Up next": `auth` (device code login), `sync` (writes content.json); stdlib only
+  test_trakt.py     runs trakt.py auth + sync against a local mock Trakt API: python3 homescreen/test_trakt.py
   Config.qml        singleton: theme, apps, layout, content, keymap, scale; px(v); withAlpha(); launch(appId) -> launcher hook
   Home.qml          page: top bar (profile, tabs, clock), vertical scrolling, ALL key handling
   HeroBanner.qml    full-bleed featured carousel (Left/Right switches item)
   TileRow.qml       titled horizontal row, animated horizontal scroll, focusNearest()
   Tile.qml          tile styles app / landscape / poster; focus = scale + white outline + blurred glow
   config/theme.json, config/apps.json, config/layout.json, config/keymap.json
-  data/placeholder.json   placeholder hero/continue/trending content (replace with real data later)
+  data/placeholder.json   placeholder featured/upNext/trending content; keys in content.json override it
   desktop/tv-rikstv.desktop  Chrome kiosk on rikstv.no; install-bigscreen.sh copies it to ~/.local/share/applications
 bigscreen/HomeScreen.qml    replaces the stock plasmoid's HomeScreen.qml (see Bigscreen below)
 scripts/install-bigscreen.sh  host: install/--remove the home screen in Bigscreen; container: used by bigscreen-start.sh
@@ -116,6 +119,13 @@ All sizes are in 1920x1080 reference px (scaled by `Config.px()`); colors are `#
   `Back`, `HomePage`, `VolumeUp`, `F1`...). Actions: `left right up down select back home`, `launch:<app-id>` (logged),
   anything else is logged as `action:<name>` (not implemented yet). Unknown key names / app ids are warned on stderr.
   Placeholder bindings until the remote's real key codes are captured (Phase 1).
+- Live content: `~/.cache/tv-project/content.json`, same shape as placeholder.json (currently only `upNext`).
+  Missing/unreadable = placeholders. Bigscreen runs `trakt.py sync` each time the home screen becomes active (start,
+  back from an app) and rebuilds the rows + goes home only if the content changed. The prototype only reads it.
+- Trakt: secrets in `~/.config/tv-project/secrets.json` `{"trakt": {"clientId", "clientSecret"}}`, token in
+  `~/.config/tv-project/trakt-token.json` (600, auto-refreshed). Up next = paused episodes (newest first, with progress),
+  then the next episode of recently watched shows; hidden/dropped shows skipped; max 15. No artwork yet (colors from a
+  hash of the show slug; TMDb next). Verified 2026-10-28 in the container against the mock only, not real Trakt.
 - `data/placeholder.json` items: `{id, title, meta | subtitle, description (hero), progress 0..1 (optional), colors: [c0, c1, c2]}`.
 
 ### Verified 2026-10-27 (screenshots)

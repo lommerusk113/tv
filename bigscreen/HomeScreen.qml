@@ -16,9 +16,24 @@ Item {
     readonly property bool blurBackground: false
     readonly property bool darkenBackground: false
 
-    // Give the home screen key focus whenever its window is active again (e.g. after an app closes).
+    // Whenever the home screen is active again (start, or back from an app): take key focus and refresh
+    // the Trakt rows (trakt.py sync, then reload; a no-op until `trakt.py auth` has been run).
     readonly property bool windowActive: Window.active
-    onWindowActiveChanged: if (windowActive) tv.forceActiveFocus()
+    onWindowActiveChanged: {
+        if (!windowActive)
+            return;
+        tv.forceActiveFocus();
+        exec.run("python3 '" + localPath(Qt.resolvedUrl("tv/trakt.py")) + "' sync", data => {
+            if (data["exit code"] === 0)
+                tv.reloadLive();
+            else
+                console.warn("tv: trakt sync: " + data.stderr.trim());
+        });
+    }
+
+    function localPath(url) {
+        return decodeURIComponent(url.toString().replace("file://", ""));
+    }
 
     // Upstream main.qml opens the Bigscreen overlay (tasks, search, settings) on Back. Let Home use Back for its own
     // navigation first and hand it to the overlay only once focus is on the tabs.
@@ -28,19 +43,22 @@ Item {
         value: tv.atTop
     }
 
-    // plasmashell has no QML_XHR_ALLOW_FILE_READ, so read the JSON files with cat instead.
+    // Runs shell commands; run(cmd, callback(data)) with data.stdout, data.stderr, data["exit code"].
     P5Support.DataSource {
         id: exec
         engine: "executable"
         property var callbacks: ({})
 
+        function run(cmd, callback) {
+            callbacks[cmd] = callback;
+            connectSource(cmd);
+        }
+
         onNewData: (source, data) => {
             const callback = callbacks[source];
             delete callbacks[source];
             disconnectSource(source);
-            if (data["exit code"] !== 0)
-                console.error("tv: " + source + " failed: " + data.stderr);
-            callback(data.stdout);
+            callback(data);
         }
     }
 
@@ -49,10 +67,10 @@ Item {
         anchors.fill: parent
         focus: true
 
+        // plasmashell has no QML_XHR_ALLOW_FILE_READ, so read the JSON files with cat instead.
+        // A missing file gives "" like XHR does (the optional live content file is often missing).
         readFile: function (url, callback) {
-            const cmd = "cat '" + decodeURIComponent(url.toString().replace("file://", "")) + "'";
-            exec.callbacks[cmd] = callback;
-            exec.connectSource(cmd);
+            exec.run("cat '" + root.localPath(url) + "'", data => callback(data.stdout));
         }
 
         Component.onCompleted: {

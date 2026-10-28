@@ -5,7 +5,7 @@
   "rows": [
     { "id": "hero", "type": "hero", "source": "featured" },
     { "id": "apps", "title": "Your apps", "source": "apps", "style": "app" },
-    { "id": "continue", "title": "Continue watching", "source": "continueWatching", "style": "landscape" },
+    { "id": "upnext", "title": "Up next", "source": "upNext", "style": "landscape" },
     { "id": "trending", "title": "Trending", "source": "trending", "style": "poster" }
   ]
 }

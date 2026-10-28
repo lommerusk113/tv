@@ -35,6 +35,7 @@ Status and conventions: see CLAUDE.md. Do phases in order. Each phase ends with 
 - [ME] Test RiksTV playback in Chrome (DRM shows black in screenshots). If needed: Chrome policies (URL allowlist) to keep the kiosk on RiksTV domains.
 
 ## Phase 4: Real data in the rows
+- [x] (2026-10-28, mock-tested; needs a Trakt API app + `python3 homescreen/trakt.py auth` on the host) Trakt "Up next" row (replaces the placeholder Continue watching row).
 - Jellyfin "Continue watching": the server's resume-items API with a user token from secrets.json; artwork from the server.
 - TMDb "Trending": TMDb API with the key from secrets.json; cache responses and images locally; show placeholders when offline.
 - Optional: "Because you watched X" using TMDb similar/recommendations based on recent Jellyfin history.

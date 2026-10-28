@@ -1,4 +1,5 @@
 import QtQuick
+import QtCore
 import "."
 
 // Loads the JSON config into Config, then shows Home. Shared by the prototype window (main.qml)
@@ -17,20 +18,56 @@ FocusScope {
         xhr.send();
     }
 
-    property int pending: 5
+    // Live rows written by trakt.py sync; their keys override data/placeholder.json. Optional.
+    readonly property string liveUrl: StandardPaths.writableLocation(StandardPaths.GenericCacheLocation) + "/tv-project/content.json"
+    property var placeholder: ({})
+    property string liveText: ""
+
+    property int pending: 6
     // True when Back has nothing left to do in Home (focus is on the tabs); Bigscreen then opens its overlay.
     readonly property bool atTop: loader.item ? loader.item.section === -1 : false
 
-    function loadJson(path, apply) {
+    function loadJson(path, apply, optional) {
         root.readFile(Qt.resolvedUrl(path), text => {
             try {
                 apply(JSON.parse(text));
             } catch (e) {
-                console.error("config: failed to load " + path + ": " + e);
-                return;
+                if (!optional) {
+                    console.error("config: failed to load " + path + ": " + e);
+                    return;
+                }
+                console.log("config: no " + path + ", using placeholders");
             }
-            if (--root.pending === 0)
+            if (--root.pending === 0) {
+                applyContent();
                 loader.source = "Home.qml";
+            }
+        });
+    }
+
+    function applyContent() {
+        let live = {};
+        try {
+            live = JSON.parse(liveText);
+        } catch (e) {}
+        Config.content = Object.assign({}, placeholder, live);
+    }
+
+    // Re-read the live content (after a sync). Only rebuilds the rows, and resets focus to the start, when it changed.
+    function reloadLive() {
+        readFile(liveUrl, text => {
+            let normalized;
+            try {
+                normalized = JSON.stringify(JSON.parse(text));
+            } catch (e) {
+                return; // missing or unreadable: keep what is shown
+            }
+            if (normalized === liveText)
+                return;
+            liveText = normalized;
+            applyContent();
+            Qt.callLater(loader.item.goHome);
+            console.log("config: live content updated");
         });
     }
 
@@ -44,8 +81,9 @@ FocusScope {
         loadJson("config/theme.json", v => Config.theme = v);
         loadJson("config/apps.json", v => Config.apps = v);
         loadJson("config/layout.json", v => Config.layout = v);
-        loadJson("data/placeholder.json", v => Config.content = v);
+        loadJson("data/placeholder.json", v => root.placeholder = v);
         loadJson("config/keymap.json", v => Config.keymap = v);
+        loadJson(liveUrl, v => root.liveText = JSON.stringify(v), true);
     }
 
     Loader {
