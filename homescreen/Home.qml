@@ -82,19 +82,16 @@ FocusScope {
         console.log("back:root");
     }
 
-    // Scroll the page just enough to keep the focused section visible below the top bar
-    // (measured from the top of the page instead of the current position when fromTop is set).
+    // Like Google TV: the focused row sits right below the top bar (no half-hidden row above it), unless it fits on
+    // the first screen (hero and apps), which then stays at the top. fromTop is kept for callers; the position no
+    // longer depends on the previous one.
     function scrollToSection(fromTop) {
         let target = 0;
         if (section > 0) {
             const it = sectionRepeater.itemAt(section);
             const top = column.y + it.y - Config.px(theme.topBar.height);
             const bottom = column.y + it.y + it.height + Config.px(theme.spacing.row);
-            target = fromTop ? 0 : page.contentY;
-            if (top < target)
-                target = top;
-            else if (bottom > target + page.height)
-                target = bottom - page.height;
+            target = bottom <= page.height ? 0 : top;
         }
         target = Math.max(0, Math.min(target, page.contentHeight - page.height));
         vScroll.stop();
@@ -196,7 +193,12 @@ FocusScope {
         anchors.fill: parent
         interactive: false
         contentWidth: width
-        contentHeight: column.height + Config.px(home.theme.spacing.page) / 2
+        // Room below the last row, so it too can scroll up to just below the top bar.
+        contentHeight: {
+            const last = sectionRepeater.count ? sectionRepeater.itemAt(sectionRepeater.count - 1) : null;
+            const tail = last ? height - Config.px(home.theme.topBar.height) - last.height : 0;
+            return column.height + Math.max(Config.px(home.theme.spacing.page) / 2, tail);
+        }
 
         NumberAnimation {
             id: vScroll

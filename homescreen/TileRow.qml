@@ -62,12 +62,9 @@ Item {
         const it = list.itemAtIndex(current);
         if (!it)
             return;
-        const pad = Config.px(theme.spacing.page);
-        let target = list.contentX;
-        if (it.x - pad < list.contentX)
-            target = it.x - pad;
-        else if (it.x + it.width + pad > list.contentX + list.width)
-            target = it.x + it.width + pad - list.width;
+        // Like Google TV: the focused tile stays at the row's left edge (no half tiles on the left); only the end of
+        // the row stops short, so the last tile ends at the right margin.
+        const target = it.x - list.leftMargin;
         const minX = -list.leftMargin;
         const maxX = Math.max(minX, list.contentWidth + list.rightMargin - list.width);
         hScroll.stop();
