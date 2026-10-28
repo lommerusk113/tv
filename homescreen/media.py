@@ -3,7 +3,7 @@
 
   python3 media.py pause             pause every media player that is playing (MPRIS: Jellyfin Desktop, VacuumTube,
                                      Chrome/RiksTV), so switching apps does not leave the old one playing
-  python3 media.py leave [app id]    pause, then send Jellyfin back to its start page (unless it is the given app,
+  python3 media.py leave [app id]    pause (except the given app, the one being opened), then send Jellyfin back to its start page (unless it is the given app,
                                      the one being opened), so it starts from there next time
   python3 media.py youtube-home      a running VacuumTube goes to YouTube's start page (and comes to the front: a
                                      link always raises VacuumTube, so this is done when opening it, not when leaving)
@@ -37,8 +37,14 @@ def players():
     return re.findall(r"'(" + re.escape(MPRIS) + r"[^']+)'", names)
 
 
-def pause():
+# The app being opened keeps playing (it may just have been started on purpose, e.g. a Jellyfin tile).
+PLAYER_OF_APP = {"jellyfin": "JellyfinDesktop"}
+
+
+def pause(keep=None):
     for player in players():
+        if keep in PLAYER_OF_APP and player[len(MPRIS):].startswith(PLAYER_OF_APP[keep]):
+            continue
         status = gdbus(player, "org.freedesktop.DBus.Properties.Get", "org.mpris.MediaPlayer2.Player", "PlaybackStatus")
         if "Playing" in status.stdout:
             gdbus(player, "org.mpris.MediaPlayer2.Player.Pause")
@@ -51,7 +57,7 @@ def running(flatpak_id):
 
 
 def leave(keep=None):
-    pause()
+    pause(keep)
     if keep != "jellyfin":
         subprocess.run([sys.executable, str(HERE / "jellyfin.py"), "home"], timeout=60)
 

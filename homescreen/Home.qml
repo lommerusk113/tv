@@ -142,6 +142,14 @@ FocusScope {
             console.log("action:" + action); // the prototype has no system hook: volume etc. are only logged
     }
 
+    // Status pill at the bottom ("Starting…"); an empty text hides it.
+    function showStatus(text) {
+        if (text)
+            voiceOverlay.show("busy", text);
+        else if (voiceOverlay.state === "busy")
+            voiceOverlay.hide();
+    }
+
     // Push-to-talk: record config/voice.json "seconds", transcribe (voice.py, Bigscreen only), run the action it maps to.
     function startVoice() {
         if (voiceOverlay.state === "listening" || voiceOverlay.state === "thinking")

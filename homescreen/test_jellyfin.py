@@ -107,7 +107,8 @@ def main():
     server = HTTPServer(("127.0.0.1", 0), Mock)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     home = Path(keep or tempfile.mkdtemp())
-    env = dict(os.environ, XDG_CONFIG_HOME=str(home / "config"), XDG_CACHE_HOME=str(home / "cache"))
+    # The mock never reports the video as playing, so do not wait for it.
+    env = dict(os.environ, XDG_CONFIG_HOME=str(home / "config"), XDG_CACHE_HOME=str(home / "cache"), JELLYFIN_START_WAIT="0")
     cache, config = home / "cache/tv-project", home / "config/tv-project"
 
     def run(*args):

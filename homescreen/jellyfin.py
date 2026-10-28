@@ -38,11 +38,13 @@ MAX_ITEMS = 15
 FEATURED = 6
 IMAGE_TYPES = "Primary,Backdrop,Thumb,Logo"
 PLAY_WAIT = float(os.environ.get("JELLYFIN_PLAY_WAIT", "40"))  # seconds for Jellyfin Desktop to start and connect
+START_WAIT = float(os.environ.get("JELLYFIN_START_WAIT", "10"))  # seconds for the video to start after PlayNow
 DESKTOP_CLIENTS = ("jellyfin desktop", "jellyfin media player")
 MIN_MATCH = 0.6   # below this a search hit is not what was asked for
 GOOD_MATCH = 0.85  # stop searching more terms once a hit is this close
 STOP_WORDS = {"the", "and", "of", "a", "an", "on", "in", "to", "for", "with", "og", "en", "et", "av", "på", "med", "til"}
 TICKS_PER_MINUTE = 600_000_000
+TICKS_PER_SECOND = 10_000_000
 
 
 def settings():
@@ -325,6 +327,16 @@ def start(conf, uid, item):
         return {"ok": False, "error": "Jellyfin Desktop is not connected to the server"}
     command = urllib.parse.urlencode({"playCommand": "PlayNow", "itemIds": target["Id"], "startPositionTicks": position})
     get(conf, "/Sessions/%s/Playing?%s" % (session["Id"], command), method="POST")
+    # Return once it plays, so the home screen raises Jellyfin straight into the video (not its start page first).
+    deadline = time.monotonic() + START_WAIT
+    while time.monotonic() < deadline:
+        now = next((s for s in get(conf, "/Sessions?" + urllib.parse.urlencode({"controllableByUserId": uid})) or []
+                    if s.get("Id") == session["Id"]), {})
+        # NowPlayingItem is set as soon as the command arrives; wait until the position moves (the video runs).
+        if ((now.get("NowPlayingItem") or {}).get("Id") == target["Id"]
+                and ((now.get("PlayState") or {}).get("PositionTicks") or 0) >= position + TICKS_PER_SECOND):
+            break
+        time.sleep(0.4)
     title = item.get("Name", "")
     if target is not item:
         title += " S%s E%s" % (target.get("ParentIndexNumber", "?"), target.get("IndexNumber", "?"))

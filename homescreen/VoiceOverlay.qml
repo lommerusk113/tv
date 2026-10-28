@@ -9,7 +9,7 @@ Rectangle {
     property string heard: ""
     property int secondsLeft: 0
     readonly property var theme: Config.theme
-    readonly property bool listening: state === "listening"
+    readonly property bool listening: state === "listening" || state === "busy"
 
     function show(newState, text) {
         state = newState;
@@ -18,7 +18,7 @@ Rectangle {
         if (newState === "listening") {
             secondsLeft = Config.voice.seconds || 4;
             countdown.restart();
-        } else if (newState !== "thinking") {
+        } else if (newState !== "thinking" && newState !== "busy") {
             hideTimer.restart();
         }
     }
@@ -31,6 +31,7 @@ Rectangle {
         case "unknown": return heard ? "Didn't understand “" + heard + "”" : "Didn't hear anything";
         case "unavailable": return "Voice control works in Bigscreen";
         case "error": return "Voice control failed";
+        case "busy": return heard;      // e.g. "Starting…" while a Jellyfin video loads (stays until hidden)
         }
         return "";
     }
@@ -56,6 +57,10 @@ Rectangle {
             if (overlay.state === "listening")
                 overlay.state = "thinking";
         }
+    }
+
+    function hide() {
+        state = "";
     }
 
     Timer {

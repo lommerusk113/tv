@@ -78,6 +78,11 @@ FocusScope {
             loader.item.goHome();
     }
 
+    function showStatus(text) {
+        if (loader.item)
+            loader.item.showStatus(text);
+    }
+
     // Runs a keymap action (e.g. "launch:youtube", "voice") as if its key had been pressed.
     function runAction(action) {
         if (loader.item)

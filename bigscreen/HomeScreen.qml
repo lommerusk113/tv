@@ -259,13 +259,24 @@ Item {
                         });
                     });
                 } else if (action.startsWith("jellyfin_play:") || action.startsWith("jellyfin_play_id:")) {
-                    // Voice "play <title> on Jellyfin" / OK on a Jellyfin tile or the banner: open Jellyfin Desktop,
-                    // then have the server start the item on it (jellyfin.py waits for the app to connect).
-                    Config.launch("jellyfin");
+                    // Voice "play <title> on Jellyfin" / OK on a Jellyfin tile or the banner: the server starts the
+                    // item on Jellyfin Desktop. When it already runs, that happens in the background and Jellyfin
+                    // is raised once the video plays, so it opens straight into the video; otherwise it starts first
+                    // (jellyfin.py waits for it to connect).
+                    const jellyfinApp = Config.apps.find(app => app.id === "jellyfin");
+                    const running = Plasmoid.applicationListModel.isApplicationRunning(jellyfinApp.desktopId);
+                    root.leaveApps("jellyfin");
+                    if (!running)
+                        Config.launch("jellyfin");
+                    else
+                        tv.showStatus("Starting…");
                     const byId = action.startsWith("jellyfin_play_id:");
                     const arg = action.slice(action.indexOf(":") + 1).replace(/'/g, "'\\''");
                     exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/jellyfin.py")) + "' " + (byId ? "play-id" : "play")
                              + " '" + arg + "'", data => {
+                        tv.showStatus("");
+                        if (running)
+                            Config.launch("jellyfin");
                         if (data["exit code"] !== 0 || data.stdout.indexOf('"ok": true') < 0)
                             console.warn("tv: jellyfin.py play: " + (data.stdout + data.stderr).trim());
                     });
