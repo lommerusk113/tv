@@ -49,7 +49,7 @@
       "skru av tv",
       "skru av tv-en"
     ],
-    "jellyfin_pull": [
+    "move_to_tv": [
       "move to tv",
       "move to the tv",
       "move it to tv",
@@ -69,6 +69,19 @@
       "spill her",
       "spill det her",
       "sett den på tv-en"
+    ],
+    "youtube_history": [
+      "move youtube to tv",
+      "move youtube to the tv",
+      "move the youtube video to the tv",
+      "continue youtube",
+      "continue youtube here",
+      "youtube history",
+      "flytt youtube til tv",
+      "flytt youtube til tv-en",
+      "fortsett youtube",
+      "fortsett youtube her",
+      "youtube historikk"
     ]
   },
   "open": [

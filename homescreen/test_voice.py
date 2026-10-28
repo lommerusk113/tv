@@ -41,9 +41,11 @@ CASES = {
     "Open YouTube.": "launch:youtube",
     "play moonlight": "launch:moonlight",
     "Play Deadman's Chest.": "jellyfin_play:deadmans chest",
-    "Move this to the TV.": "jellyfin_pull",
-    "Play it here please": "jellyfin_pull",
-    "Flytt den til TV-en.": "jellyfin_pull",
+    "Move this to the TV.": "move_to_tv",
+    "Play it here please": "move_to_tv",
+    "Flytt den til TV-en.": "move_to_tv",
+    "Move YouTube to the TV.": "youtube_history",
+    "fortsett youtube her": "youtube_history",
     "play here comes the boom": "jellyfin_play:here comes the boom",
 }
 

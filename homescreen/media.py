@@ -7,6 +7,8 @@
                                      the one being opened), so it starts from there next time
   python3 media.py youtube-home      a running VacuumTube goes to YouTube's start page (and comes to the front: a
                                      link always raises VacuumTube, so this is done when opening it, not when leaving)
+  python3 media.py youtube-history   open the YouTube account's watch history, newest first and highlighted: OK
+                                     continues the last video watched on any device (YouTube remembers the position)
   python3 media.py youtube <query>   open YouTube's search results for the query in VacuumTube (started if needed)
 """
 import re
@@ -19,6 +21,7 @@ YOUTUBE_FLATPAK = "rocks.shy.VacuumTube"
 # The deeplink YouTube's TV app (leanback) understands for a search; tested with VacuumTube 2026-10.
 YOUTUBE_SEARCH = "https://www.youtube.com/tv?launch=search&vq={}"
 YOUTUBE_HOME = "https://www.youtube.com/tv"
+YOUTUBE_HISTORY = "https://www.youtube.com/tv?c=FEhistory"
 HERE = __import__("pathlib").Path(__file__).resolve().parent
 
 
@@ -58,9 +61,9 @@ def youtube_home():
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30)
 
 
-def youtube(query):
+def youtube(query=None):
     pause()
-    url = YOUTUBE_SEARCH.format(urllib.parse.quote(query))
+    url = YOUTUBE_SEARCH.format(urllib.parse.quote(query)) if query else YOUTUBE_HISTORY
     # A running VacuumTube gets the link from the new process (single instance) and that process exits.
     subprocess.Popen(["flatpak", "run", YOUTUBE_FLATPAK, "--fullscreen", "--deeplink", url],
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
@@ -73,6 +76,8 @@ def main():
         leave(sys.argv[2] if len(sys.argv) == 3 else None)
     elif sys.argv[1:] == ["youtube-home"]:
         youtube_home()
+    elif sys.argv[1:] == ["youtube-history"]:
+        youtube()
     elif sys.argv[1:2] == ["youtube"] and len(sys.argv) > 2:
         youtube(" ".join(sys.argv[2:]))
     else:

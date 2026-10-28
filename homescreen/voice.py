@@ -7,8 +7,9 @@
   python3 voice.py parse <sentence>  only the text -> action step
 
 Actions are the keymap's: home, launch:<app id>, volume_up, volume_down, volume_mute, tv_off, plus
-jellyfin_play:<title> for "play <title> [on Jellyfin]" (jellyfin.py play) and youtube_search:<query> for
-"play <query> on YouTube" (media.py youtube). Phrases (English and Norwegian) are in
+jellyfin_play:<title> for "play <title> [on Jellyfin]" (jellyfin.py play), youtube_search:<query> for
+"play <query> on YouTube" (media.py youtube), move_to_tv (Jellyfin from another device, else YouTube history) and
+youtube_history. Phrases (English and Norwegian) are in
 config/voice.json; app names come from config/apps.json "name" plus optional "voiceNames".
 Needs whisper-cli (brew install whisper-cpp) and the model in config/voice.json (scripts/install-voice.sh).
 Standard library only.

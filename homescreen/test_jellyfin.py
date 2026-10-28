@@ -163,6 +163,9 @@ def main():
                               "LastActivityDate": "2026-10-28T23:20:00Z", "PlayState": {"PositionTicks": 12 * TICKS},
                               "NowPlayingItem": {"Id": "ep9", "Type": "Episode", "Name": "Pilot", "SeriesName": "Northern Lights",
                                                  "ParentIndexNumber": 1, "IndexNumber": 1}})
+    res = run("playing")
+    assert json.loads(res.stdout) == {"ok": True, "title": "Northern Lights S1 E1", "from": "Pixel"}, res.stdout
+    assert len(state["posts"]) == 4  # playing only looks
     res = run("pull")
     assert json.loads(res.stdout) == {"ok": True, "title": "Northern Lights S1 E1", "from": "Pixel"}, res.stdout
     assert state["posts"][-2:] == ["/Sessions/phone2/Playing/Stop",

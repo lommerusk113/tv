@@ -120,6 +120,12 @@ Item {
         return false;
     }
 
+    function openYoutube(mediaArgs) {
+        exec.run("python3 '" + localPath(Qt.resolvedUrl("tv/media.py")) + "' " + mediaArgs, () => {});
+        youtubeSearch = true;
+        raiseYoutube.restart();
+    }
+
     Timer {
         id: raiseYoutube
         interval: 1500
@@ -224,19 +230,27 @@ Item {
                     "volume_down": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-",
                     "volume_mute": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
                 };
-                if (action.startsWith("youtube_search:")) {
-                    // Voice "play <query> on YouTube": VacuumTube opens YouTube's search results (media.py pauses
-                    // other players first); then raise its window, which the deeplink alone does not do.
-                    const query = action.slice(15).replace(/'/g, "'\\''");
-                    exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/media.py")) + "' youtube '" + query + "'", () => {});
-                    root.youtubeSearch = true;
-                    raiseYoutube.restart();
-                } else if (action === "jellyfin_pull") {
-                    // Voice "move to TV": what plays on the phone (Jellyfin) stops there and continues here.
-                    Config.launch("jellyfin");
-                    exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/jellyfin.py")) + "' pull", data => {
-                        if (data["exit code"] !== 0 || data.stdout.indexOf('"ok": true') < 0)
-                            console.warn("tv: jellyfin.py pull: " + (data.stdout + data.stderr).trim());
+                if (action.startsWith("youtube_search:") || action === "youtube_history") {
+                    // Voice "play <query> on YouTube" / "move YouTube to the TV": VacuumTube opens the search results or
+                    // the watch history (media.py pauses other players first); then raise its window, which the
+                    // deeplink alone does not do.
+                    root.openYoutube(action === "youtube_history" ? "youtube-history"
+                                     : "youtube '" + action.slice(15).replace(/'/g, "'\\''") + "'");
+                } else if (action === "move_to_tv") {
+                    // Voice "move to TV": what plays on another Jellyfin device (phone) stops there and continues
+                    // here; with nothing playing on Jellyfin, the YouTube history (newest first, OK continues it).
+                    // First only look: Jellyfin must come to the front before the pull, as raising it pauses players.
+                    const jellyfin = "python3 '" + root.localPath(Qt.resolvedUrl("tv/jellyfin.py")) + "' ";
+                    exec.run(jellyfin + "playing", data => {
+                        if (data["exit code"] !== 0 || data.stdout.indexOf('"ok": true') < 0) {
+                            root.openYoutube("youtube-history");
+                            return;
+                        }
+                        Config.launch("jellyfin");
+                        exec.run(jellyfin + "pull", result => {
+                            if (result["exit code"] !== 0 || result.stdout.indexOf('"ok": true') < 0)
+                                console.warn("tv: jellyfin.py pull: " + (result.stdout + result.stderr).trim());
+                        });
                     });
                 } else if (action.startsWith("jellyfin_play:")) {
                     // Voice "play <title> on Jellyfin": open Jellyfin Desktop, then have the server start the title

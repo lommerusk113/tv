@@ -3,6 +3,7 @@
 
   python3 jellyfin.py               writes the jellyfinResume key (the user's resumable videos) into
                                     ~/.cache/tv-project/content.json
+  python3 jellyfin.py playing       what plays on another device of this user ({"ok", "title"}), without touching it
   python3 jellyfin.py pull          "move to TV": stops what this user is watching on another device (phone, browser)
                                     and continues it here from the same position. Prints {"ok", "title"} like play.
   python3 jellyfin.py home          sends Jellyfin Desktop on this computer to its start page (when leaving the app)
@@ -251,6 +252,33 @@ def wait_for_desktop(conf, uid):
     return session
 
 
+def elsewhere(conf, uid, here):
+    """The most recent session of this user, other than here, that is playing something; or None."""
+    sessions = get(conf, "/Sessions?" + urllib.parse.urlencode({"controllableByUserId": uid})) or []
+    playing = [s for s in sessions if s.get("NowPlayingItem") and (not here or s["Id"] != here["Id"])]
+    return max(playing, key=lambda s: s.get("LastActivityDate") or "") if playing else None
+
+
+def item_title(item):
+    if item.get("Type") == "Episode":
+        return "%s S%s E%s" % (item.get("SeriesName", ""), item.get("ParentIndexNumber", "?"), item.get("IndexNumber", "?"))
+    return item.get("Name", "")
+
+
+def playing():
+    conf = settings()
+    if not conf:
+        return {"ok": False, "error": "no \"jellyfin\" url/apiKey in secrets.json"}
+    try:
+        uid = user_id(conf)
+        source = elsewhere(conf, uid, desktop_session(conf, uid))
+    except (urllib.error.URLError, OSError, ValueError, SystemExit) as e:
+        return {"ok": False, "error": str(e)}
+    if not source:
+        return {"ok": False, "error": "nothing is playing on another device"}
+    return {"ok": True, "title": item_title(source["NowPlayingItem"]), "from": source.get("DeviceName", "")}
+
+
 def pull():
     conf = settings()
     if not conf:
@@ -258,11 +286,9 @@ def pull():
     try:
         uid = user_id(conf)
         here = desktop_session(conf, uid)
-        sessions = get(conf, "/Sessions?" + urllib.parse.urlencode({"controllableByUserId": uid})) or []
-        playing = [s for s in sessions if s.get("NowPlayingItem") and (not here or s["Id"] != here["Id"])]
-        if not playing:
+        source = elsewhere(conf, uid, here)
+        if not source:
             return {"ok": False, "error": "nothing is playing on another device"}
-        source = max(playing, key=lambda s: s.get("LastActivityDate") or "")
         item, position = source["NowPlayingItem"], (source.get("PlayState") or {}).get("PositionTicks") or 0
         # Stop (not pause) on the other device: it saves the position and leaves the player there.
         get(conf, "/Sessions/%s/Playing/Stop" % source["Id"], method="POST")
@@ -275,10 +301,7 @@ def pull():
         return {"ok": False, "error": "%s: %s" % (conf["url"], e)}
     except SystemExit as e:
         return {"ok": False, "error": str(e)}
-    title = item.get("Name", "")
-    if item.get("Type") == "Episode":
-        title = "%s S%s E%s" % (item.get("SeriesName", ""), item.get("ParentIndexNumber", "?"), item.get("IndexNumber", "?"))
-    return {"ok": True, "title": title, "from": source.get("DeviceName", "")}
+    return {"ok": True, "title": item_title(item), "from": source.get("DeviceName", "")}
 
 
 def home():
@@ -297,8 +320,8 @@ def home():
 def main():
     if sys.argv[1:] == ["home"]:
         return home()
-    if sys.argv[1:] == ["pull"]:
-        print(json.dumps(pull(), ensure_ascii=False))
+    if sys.argv[1:] in (["pull"], ["playing"]):
+        print(json.dumps((pull if sys.argv[1] == "pull" else playing)(), ensure_ascii=False))
         return
     if len(sys.argv) > 2 and sys.argv[1] == "play":
         print(json.dumps(play(" ".join(sys.argv[2:])), ensure_ascii=False))
