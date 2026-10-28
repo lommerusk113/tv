@@ -217,3 +217,30 @@ an unknown key name and an unknown app id.
 - In the container, the system rules below are about the Bazzite host; never run real app launches anywhere yet.
 - Ask before: any `rpm-ostree` change, any reboot, installing any package or Flatpak, editing anything outside `~/tv-project`, changing system or login settings, any use of sudo.
 - Report each step as ✅ (done + result) or ❌ (what failed + why).
+
+## Remote (Strong "RemoteG20", Bluetooth, vendor 0957 product 000f)
+
+| Button | HID scan | Kernel key (default) | After remap | Qt key | Action |
+|---|---|---|---|---|---|
+| Off | c0030 | POWER (PowerDevil would sleep) | F14 | Launch (5) | tv_power (global) |
+| Input | c01bb | UNKNOWN 240 | F15 | Launch (6) | tv_input (global) |
+| Mic | c0221 | SEARCH (KRunner) | F16 | Launch (7) | voice (global) |
+| Gear | c009f | UNKNOWN 240 | F17 | Launch (8) | unbound |
+| YouTube | c0077 | 588 | F18 | Launch (9) | launch:youtube (global) |
+| Netflix | c0078 | 589 | F19 | F19 | launch:jellyfin (global) |
+| Prime Video | c0079 | KBDILLUMUP (keyboard light) | PROG3 | Launch (3) | launch:moonlight (global) |
+| Disney+ | c007a | KBDILLUMDOWN (keyboard light) | PROG4 | Launch (4) | launch:rikstv (global) |
+| TV | c008d | PROGRAM 362 | PROG1 | Launch (1) | launch:rikstv (global) |
+| 0-9, red/green/yellow/blue, list (SUBTITLE), ⓘ (INFO 358), profile (LOGOFF), ch +/- (402/403) | | as named | unchanged | | keymap.json (ch +/- = up/down) |
+| arrows, OK (SELECT), back, home, vol +/-, mute | | as named | unchanged | | keymap.json / Plasma |
+
+- Remap: scripts/remote/70-strong-remote.hwdb → /etc/udev/hwdb.d (scripts/install-remote-keys.sh, pkexec). Afterwards the
+  remote must reconnect (turn off/on, or `bluetoothctl disconnect`, then press a key): libinput drops keys the device did
+  not declare when it appeared (PROG1-4).
+- Avoid F13 (xkb Tools = System Settings' shortcut), F20-F23 (mic mute / touchpad), KBDILLUM*, SEARCH, LOGOFF.
+- Global buttons: `python3 homescreen/remote.py install` writes hidden ~/.local/share/applications/tv-remote-*.desktop
+  with X-KDE-Shortcuts; Plasma runs `remote.py send <action>`, which hands it to the home screen through a FIFO
+  (HomeScreen.qml keeps `remote.py wait` running), or launches the app directly when no home screen is listening.
+- Capture codes without the input group: `pkexec evtest /dev/input/eventN` (password dialog). The Bigscreen "Tools"
+  clash and the libinput issue were found with a PySide6 key logger window (prints Qt key + nativeScanCode).
+- RiksTV's Chrome runs with `--class=tv-rikstv`, otherwise its window is "google-chrome" and Bigscreen cannot raise it.

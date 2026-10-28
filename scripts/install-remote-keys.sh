@@ -5,4 +5,4 @@
 set -euo pipefail
 src="$(cd "$(dirname "$0")" && pwd)/remote/70-strong-remote.hwdb"
 pkexec sh -c "install -m 0644 '$src' /etc/udev/hwdb.d/70-strong-remote.hwdb && systemd-hwdb update && udevadm trigger --subsystem-match=input --action=change"
-echo "installed; check with: udevadm info /dev/input/by-path/* | grep KEYBOARD_KEY (or reconnect the remote)"
+echo "installed. Turn the remote off and on (or: bluetoothctl disconnect <mac>, then press a button): keys the remote's input device did not have when it connected (PROG1-4) only work after it reconnects."

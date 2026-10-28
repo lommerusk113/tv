@@ -13,8 +13,8 @@ Status and conventions: see CLAUDE.md. Do phases in order. Each phase ends with 
 - [ME] Connect the LG 55UJ701V over HDMI. On the TV: set the aspect ratio to "Just Scan" (or "Original") to avoid overscan.
 - Run `kscreen-doctor -o` and report modes and refresh rates. If 3840x2160 is only available at 30 Hz (laptop HDMI 1.4), recommend 1920x1080 at 60 Hz. Propose resolution, scale, and whether to turn off eDP-1; apply only after I approve.
 - Check text size and tile size in the prototype on the TV. [ME] Judge readability from the couch.
-- [ME] Pair the Strong Bluetooth remote (Kjell p66355).
-- Find the remote's input device (`libinput list-devices` or /proc/bus/input/devices). Capture key codes with `evtest` (ask first if it needs sudo/group changes). Prompt me to press each button; save a button → key code table in CLAUDE.md. Note buttons that send nothing. The mic button is not expected to work on Linux (Google's voice protocol).
+- [x] (2026-10-28) [ME] Pair the Strong Bluetooth remote (Kjell p66355). It is "RemoteG20".
+- [x] (2026-10-28, host) Key codes captured; table in CLAUDE.md ("Remote"). Every button sends a key; the mic button sends KEY_SEARCH and is used for the laptop-mic voice control. Plasma-grabbed or nameless buttons are remapped (scripts/install-remote-keys.sh, sudo once) and become global shortcuts (homescreen/remote.py install, config/remote.json), so they work inside apps too. Verified with the real remote in a swap session: YouTube, Netflix, Disney+, TV. Off/Input need "tv" in secrets.json.
 
 ## Phase 2: Move the prototype into Plasma Bigscreen
 - [x] (2026-10-28, see CLAUDE.md "Bigscreen packaging") Find how Bigscreen's home screen is packaged (shell/containment QML package) and whether a modified copy can live in ~/.local/share/plasma/ without touching the read-only system.
