@@ -232,7 +232,9 @@ an unknown key name and an unknown app id.
 | Disney+ | c007a | KBDILLUMDOWN (keyboard light) | PROG4 | Launch (4) | launch:rikstv (global) |
 | TV | c008d | PROGRAM 362 | PROG1 | Launch (1) | launch:rikstv (global) |
 | 0-9, red/green/yellow/blue, list (SUBTITLE), ⓘ (INFO 358), profile (LOGOFF), ch +/- (402/403) | | as named | unchanged | | keymap.json (ch +/- = up/down) |
-| arrows, OK (SELECT), back, home, vol +/-, mute | | as named | unchanged | | keymap.json / Plasma |
+| OK | c0041 | SELECT (apps ignore it) | ENTER | Return | select |
+| Back | c0224 | BACK (VacuumTube quits on it) | ESC | Escape | back |
+| arrows, home, vol +/-, mute | | as named | unchanged | | keymap.json / Plasma |
 
 - Remap: scripts/remote/70-strong-remote.hwdb → /etc/udev/hwdb.d (scripts/install-remote-keys.sh, pkexec). Afterwards the
   remote must reconnect (turn off/on, or `bluetoothctl disconnect`, then press a key): libinput drops keys the device did
