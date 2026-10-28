@@ -295,7 +295,7 @@ FocusScope {
                     anchors.verticalCenter: parent.verticalCenter
 
                     Text {
-                        anchors.right: parent.right
+                        anchors.horizontalCenter: parent.horizontalCenter
                         text: Qt.formatTime(clock.now, "HH:mm")
                         color: home.theme.colors.text
                         font.family: home.theme.font.family
@@ -303,7 +303,7 @@ FocusScope {
                         font.weight: Font.DemiBold
                     }
                     Text {
-                        anchors.right: parent.right
+                        anchors.horizontalCenter: parent.horizontalCenter
                         text: Qt.locale("en_GB").toString(clock.now, "dddd d MMMM")
                         color: home.theme.colors.text
                         opacity: 0.8
