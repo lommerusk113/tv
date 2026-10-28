@@ -122,10 +122,13 @@ All sizes are in 1920x1080 reference px (scaled by `Config.px()`); colors are `#
 - Live content: `~/.cache/tv-project/content.json`, same shape as placeholder.json (currently only `upNext`).
   Missing/unreadable = placeholders. Bigscreen runs `trakt.py sync` each time the home screen becomes active (start,
   back from an app) and rebuilds the rows + goes home only if the content changed. The prototype only reads it.
-- Trakt: secrets in `~/.config/tv-project/secrets.json` `{"trakt": {"clientId", "clientSecret"}}`, token in
+- Trakt: secrets in `~/.config/tv-project/secrets.json` `{"trakt": {"clientId", "clientSecret"}, "tmdb": {"apiKey"}}`
+  (tmdb optional), token in
   `~/.config/tv-project/trakt-token.json` (600, auto-refreshed). Up next = paused episodes (newest first, with progress),
-  then the next episode of recently watched shows; hidden/dropped shows skipped; max 15. No artwork yet (colors from a
-  hash of the show slug; TMDb next). Verified 2026-10-28 in the container against the mock only, not real Trakt.
+  then the next episode of recently watched shows; hidden/dropped shows skipped; max 15. Artwork: the show's TMDb backdrop (w780), downloaded
+  once to `~/.cache/tv-project/images/tmdb-tv-<id>.jpg`, item field `image` (file URL); media tiles draw any `image`
+  cropped to the rounded card, over the fallback gradient (colors from a hash of the show slug).
+  Verified 2026-10-28 in the container against the mock + a generated image only, not real Trakt/TMDb.
 - `data/placeholder.json` items: `{id, title, meta | subtitle, description (hero), progress 0..1 (optional), colors: [c0, c1, c2]}`.
 
 ### Verified 2026-10-27 (screenshots)

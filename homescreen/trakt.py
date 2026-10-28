@@ -4,8 +4,9 @@
   python3 trakt.py auth   one-time login: shows a code to enter at trakt.tv/activate, saves the token
   python3 trakt.py sync   writes the upNext row to ~/.cache/tv-project/content.json (overrides data/placeholder.json)
 
-Needs ~/.config/tv-project/secrets.json: {"trakt": {"clientId": "...", "clientSecret": "..."}}
-(create an API app at https://trakt.tv/oauth/applications, redirect URI urn:ietf:wg:oauth:2.0:oob).
+Needs ~/.config/tv-project/secrets.json: {"trakt": {"clientId": "...", "clientSecret": "..."}, "tmdb": {"apiKey": "..."}}
+(create an API app at https://trakt.tv/oauth/applications, redirect URI urn:ietf:wg:oauth:2.0:oob; the TMDb v3 API key
+is optional and adds show backdrops, cached in ~/.cache/tv-project/images/).
 The token goes to ~/.config/tv-project/trakt-token.json (mode 600). Neither file is in the repo.
 """
 import colorsys
@@ -19,6 +20,8 @@ import urllib.request
 from pathlib import Path
 
 API = os.environ.get("TRAKT_API", "https://api.trakt.tv")
+TMDB_API = os.environ.get("TMDB_API", "https://api.themoviedb.org")
+TMDB_IMAGES = os.environ.get("TMDB_IMAGES", "https://image.tmdb.org")
 CONFIG = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "tv-project"
 CACHE = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "tv-project"
 TOKEN = CONFIG / "trakt-token.json"
@@ -26,7 +29,7 @@ MAX_ITEMS = 15
 
 
 def secrets():
-    return json.loads((CONFIG / "secrets.json").read_text())["trakt"]
+    return json.loads((CONFIG / "secrets.json").read_text())
 
 
 def request(path, body=None, token=None):
@@ -35,7 +38,7 @@ def request(path, body=None, token=None):
         "Content-Type": "application/json",
         "User-Agent": "tv-project/1.0",
         "trakt-api-version": "2",
-        "trakt-api-key": secrets()["clientId"],
+        "trakt-api-key": secrets()["trakt"]["clientId"],
     }
     if token:
         headers["Authorization"] = "Bearer " + token
@@ -49,6 +52,31 @@ def request(path, body=None, token=None):
         return e.code, None
 
 
+def backdrop(show):
+    """file:// URL of the show's TMDb backdrop, downloaded once; None without a TMDb key, id or backdrop."""
+    tmdb_id = show["ids"].get("tmdb")
+    key = secrets().get("tmdb", {}).get("apiKey")
+    if not tmdb_id or not key:
+        return None
+    path = CACHE / "images" / ("tmdb-tv-%d.jpg" % tmdb_id)
+    if not path.exists():
+        try:
+            with urllib.request.urlopen("%s/3/tv/%d?api_key=%s" % (TMDB_API, tmdb_id, key), timeout=20) as res:
+                backdrop_path = json.loads(res.read()).get("backdrop_path")
+            if not backdrop_path:
+                return None
+            with urllib.request.urlopen(TMDB_IMAGES + "/t/p/w780" + backdrop_path, timeout=30) as res:
+                data = res.read()
+        except (urllib.error.URLError, OSError, ValueError) as e:
+            print(f"trakt: no backdrop for tmdb {tmdb_id}: {e}", file=sys.stderr)
+            return None
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".tmp")
+        tmp.write_bytes(data)
+        tmp.replace(path)
+    return path.as_uri()
+
+
 def save_token(token):
     CONFIG.mkdir(parents=True, exist_ok=True)
     TOKEN.touch(mode=0o600)
@@ -56,7 +84,7 @@ def save_token(token):
 
 
 def auth():
-    s = secrets()
+    s = secrets()["trakt"]
     status, code = request("/oauth/device/code", {"client_id": s["clientId"]})
     if status != 200:
         sys.exit(f"trakt: device code request failed ({status})")
@@ -88,7 +116,7 @@ def access_token():
     if token["created_at"] + token["expires_in"] - time.time() > 86400:
         return token["access_token"]
 
-    s = secrets()
+    s = secrets()["trakt"]
     status, fresh = request("/oauth/token", {
         "refresh_token": token["refresh_token"], "client_id": s["clientId"], "client_secret": s["clientSecret"],
         "redirect_uri": "urn:ietf:wg:oauth:2.0:oob", "grant_type": "refresh_token",
@@ -110,7 +138,7 @@ def colors(seed):
     return [hex_color(hue, 0.4, 0.6), hex_color(hue + 0.05, 0.14, 0.6), hex_color(hue - 0.04, 0.68, 0.9)]
 
 
-def tile(show, episode, progress=None):
+def tile(show, episode, progress=None, image=None):
     item = {
         "id": "trakt-episode-%d" % episode["ids"]["trakt"],
         "title": show["title"],
@@ -120,28 +148,32 @@ def tile(show, episode, progress=None):
     }
     if progress is not None:
         item["progress"] = round(progress / 100, 3)
+    if image:
+        item["image"] = image
     return item
 
 
-def up_next(playback, watched, next_episodes, hidden):
+def up_next(playback, watched, next_episodes, hidden, image_for=lambda show: None):
     """Paused episodes first (newest first), then the next episode of each recently watched show.
 
     playback: /sync/playback/episodes, watched: /sync/watched/shows (newest first),
     next_episodes: show trakt id -> next_episode from /shows/{id}/progress/watched (None when caught up),
-    hidden: show trakt ids hidden from progress or dropped.
+    hidden: show trakt ids hidden from progress or dropped, image_for: show -> image URL or None.
     """
     items, seen = [], set()
     for p in sorted(playback, key=lambda p: p["paused_at"], reverse=True):
         show_id = p["show"]["ids"]["trakt"]
         if show_id not in seen and show_id not in hidden:
             seen.add(show_id)
-            items.append(tile(p["show"], p["episode"], p["progress"]))
+            items.append(tile(p["show"], p["episode"], p["progress"], image_for(p["show"])))
     for w in watched:
         show_id = w["show"]["ids"]["trakt"]
         episode = next_episodes.get(show_id)
         if show_id not in seen and show_id not in hidden and episode:
             seen.add(show_id)
-            items.append(tile(w["show"], episode))
+            items.append(tile(w["show"], episode, image=image_for(w["show"])))
+            if len(items) == MAX_ITEMS:
+                break
     return items[:MAX_ITEMS]
 
 
@@ -167,7 +199,7 @@ def sync():
     CACHE.mkdir(parents=True, exist_ok=True)
     out = CACHE / "content.json"
     tmp = out.with_suffix(".tmp")
-    tmp.write_text(json.dumps({"upNext": up_next(playback, watched, next_episodes, hidden)}, ensure_ascii=False, indent=1))
+    tmp.write_text(json.dumps({"upNext": up_next(playback, watched, next_episodes, hidden, backdrop)}, ensure_ascii=False, indent=1))
     tmp.replace(out)  # atomic, so the home screen never reads half a file
     print(f"trakt: wrote {out}")
 

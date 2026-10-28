@@ -88,6 +88,34 @@ Item {
             }
         }
 
+        // Media tiles: artwork (optional, e.g. TMDb backdrops from trakt.py), cropped to the rounded card.
+        // The gradient above stays visible while it loads or when there is none.
+        Image {
+            id: art
+            anchors.fill: parent
+            visible: false
+            source: tile.style !== "app" && tile.modelData.image ? Qt.resolvedUrl(tile.modelData.image) : ""
+            fillMode: Image.PreserveAspectCrop
+            asynchronous: true
+            sourceSize.width: tile.width * tile.theme.focus.scale
+        }
+        Rectangle {
+            id: artMask
+            anchors.fill: parent
+            radius: parent.radius
+            visible: false
+            layer.enabled: true
+        }
+        MultiEffect {
+            anchors.fill: parent
+            source: art
+            visible: art.status === Image.Ready
+            maskEnabled: true
+            maskSource: artMask
+            maskThresholdMin: 0.5
+            maskSpreadAtMin: 1.0
+        }
+
         // Media tiles: scrim + text at the bottom.
         Rectangle {
             visible: tile.style !== "app"

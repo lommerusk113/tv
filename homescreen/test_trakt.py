@@ -12,7 +12,10 @@ from pathlib import Path
 
 
 def show(trakt_id, title):
-    return {"title": title, "ids": {"trakt": trakt_id, "slug": title.lower().replace(" ", "-")}}
+    ids = {"trakt": trakt_id, "slug": title.lower().replace(" ", "-")}
+    if trakt_id in (1, 2):  # Kitchen Nights has no TMDb id
+        ids["tmdb"] = 1000 + trakt_id
+    return {"title": title, "ids": ids}
 
 
 def episode(trakt_id, season, number, title):
@@ -40,7 +43,13 @@ GET = {
     "/shows/3/progress/watched": {"next_episode": episode(301, 4, 2, None)},
     "/shows/5/progress/watched": {"next_episode": None},
 }
+TMDB = {
+    "/3/tv/1001?api_key=tk": {"backdrop_path": "/harbour.jpg"},
+    "/3/tv/1002?api_key=tk": {"backdrop_path": None},
+    "/t/p/w780/harbour.jpg": b"jpeg bytes",
+}
 polls = []
+tmdb_requests = []
 
 
 class MockTrakt(BaseHTTPRequestHandler):
@@ -51,6 +60,12 @@ class MockTrakt(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(body).encode())
 
     def do_GET(self):
+        if self.path in TMDB:
+            tmdb_requests.append(self.path)
+            body = TMDB[self.path]
+            self.send_response(200)
+            self.end_headers()
+            return self.wfile.write(body if isinstance(body, bytes) else json.dumps(body).encode())
         assert self.headers["trakt-api-key"] == "cid" and self.headers["trakt-api-version"] == "2"
         if self.headers["Authorization"] != "Bearer fresh-token":
             return self.reply(401)
@@ -82,8 +97,9 @@ def main():
     threading.Thread(target=server.serve_forever, daemon=True).start()
     home = Path(tempfile.mkdtemp())
     (home / "config/tv-project").mkdir(parents=True)
-    (home / "config/tv-project/secrets.json").write_text(json.dumps({"trakt": {"clientId": "cid", "clientSecret": "secret"}}))
-    env = dict(os.environ, TRAKT_API="http://127.0.0.1:%d" % server.server_port,
+    (home / "config/tv-project/secrets.json").write_text(json.dumps({"trakt": {"clientId": "cid", "clientSecret": "secret"}, "tmdb": {"apiKey": "tk"}}))
+    api = "http://127.0.0.1:%d" % server.server_port
+    env = dict(os.environ, TRAKT_API=api, TMDB_API=api, TMDB_IMAGES=api,
                XDG_CONFIG_HOME=str(home / "config"), XDG_CACHE_HOME=str(home / "cache"))
     script = Path(__file__).with_name("trakt.py")
 
@@ -104,6 +120,14 @@ def main():
     assert items[2]["subtitle"] == "S4 E2" and "progress" not in items[2]
     assert all(len(i["colors"]) == 3 and i["id"].startswith("trakt-episode-") for i in items)
     assert json.loads((home / "config/tv-project/trakt-token.json").read_text())["access_token"] == "fresh-token"
+
+    # TMDb backdrops: downloaded once and cached; none without a backdrop or a TMDb id
+    image = home / "cache/tv-project/images/tmdb-tv-1001.jpg"
+    assert items[1]["image"] == image.as_uri() and image.read_bytes() == b"jpeg bytes"
+    assert "image" not in items[0] and "image" not in items[2]
+    tmdb_requests.clear()
+    run("sync")
+    assert tmdb_requests == ["/3/tv/1002?api_key=tk"], tmdb_requests  # only the show without a cached image
     print("ok")
 
 
