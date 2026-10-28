@@ -12,7 +12,8 @@
   "font": {
     "family": "Noto Sans",
     "sizes": {
-      "clock": 30,
+      "clock": 44,
+      "clockDate": 22,
       "tab": 26,
       "heroMeta": 20,
       "heroTitle": 64,

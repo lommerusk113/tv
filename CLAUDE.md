@@ -116,7 +116,7 @@ scripts/install-voice.sh      host: brew whisper-cpp + ggml-base.bin (sha1-check
 ### Config format
 All sizes are in 1920x1080 reference px (scaled by `Config.px()`); colors are `#rrggbb`.
 - `theme.json`: `colors` {background, surface, text, textDim, accent, focusBorder, glow, onFocused},
-  `font` {family, sizes{clock, tab, heroMeta, heroTitle, heroBody, button, rowTitle, appName, tileTitle, tileMeta}},
+  `font` {family, sizes{clock, clockDate, tab, heroMeta, heroTitle, heroBody, button, rowTitle, appName, tileTitle, tileMeta}},
   `radius`, `animationMs` (focus anim; scrolls use 2x), `focus` {scale, borderWidth, glowOpacity},
   `spacing` {page, tile, row, titleGap}, `topBar` {height}, `hero` {height}, `tiles` {app|landscape|poster: [w, h]}.
 - `apps.json`: array of `{id, name, colors: [top, bottom], image: "" | path relative to homescreen/,

@@ -249,49 +249,75 @@ FocusScope {
         opacity: Math.max(0, 1 - page.contentY / Config.px(80))
         visible: opacity > 0
 
-        Text {
-            id: clock
-            property date now: new Date()
+        // Dark pill so the time stays readable on bright banner pictures: [weather] time over date.
+        Rectangle {
             anchors.right: parent.right
-            anchors.rightMargin: Config.px(home.theme.spacing.page)
-            anchors.verticalCenter: parent.verticalCenter
-            text: Qt.formatTime(now, "HH:mm")
-            color: home.theme.colors.text
-            style: Text.Raised  // readable on bright banner pictures
-            styleColor: Config.withAlpha("#000000", 0.6)
-            font.family: home.theme.font.family
-            font.pixelSize: Config.px(home.theme.font.sizes.clock)
+            anchors.rightMargin: Config.px(home.theme.spacing.page) - Config.px(24)
+            anchors.top: parent.top
+            anchors.topMargin: Config.px(28)
+            width: corner.implicitWidth + Config.px(48)
+            height: corner.implicitHeight + Config.px(24)
+            radius: Config.px(22)
+            color: Config.withAlpha("#000000", 0.45)
 
-            Timer {
-                interval: 5000
-                running: true
-                repeat: true
-                onTriggered: clock.now = new Date()
-            }
-        }
+            Row {
+                id: corner
+                anchors.centerIn: parent
+                spacing: Config.px(24)
 
-        // Weather (MET Norway / Yr, from weather.py) left of the clock; hidden until there is data.
-        Row {
-            visible: !!Config.weather
-            anchors.right: clock.left
-            anchors.rightMargin: Config.px(28)
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: Config.px(10)
+                // Weather (MET Norway / Yr, from weather.py); hidden until there is data.
+                Row {
+                    visible: !!Config.weather
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: Config.px(10)
 
-            Image {
-                visible: status === Image.Ready
-                anchors.verticalCenter: parent.verticalCenter
-                width: Config.px(44)
-                height: width
-                sourceSize: Qt.size(width * 2, height * 2)
-                source: Config.weather && Config.weather.icon ? Config.weather.icon : ""
-            }
-            Text {
-                anchors.verticalCenter: parent.verticalCenter
-                text: Config.weather ? Config.weather.temperature + "°" : ""
-                color: home.theme.colors.text
-                font.family: home.theme.font.family
-                font.pixelSize: Config.px(home.theme.font.sizes.clock)
+                    Image {
+                        visible: status === Image.Ready
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: Config.px(52)
+                        height: width
+                        sourceSize: Qt.size(width * 2, height * 2)
+                        source: Config.weather && Config.weather.icon ? Config.weather.icon : ""
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: Config.weather ? Config.weather.temperature + "°" : ""
+                        color: home.theme.colors.text
+                        font.family: home.theme.font.family
+                        font.pixelSize: Config.px(home.theme.font.sizes.clock)
+                        font.weight: Font.DemiBold
+                    }
+                }
+
+                Column {
+                    id: clock
+                    property date now: new Date()
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    Text {
+                        anchors.right: parent.right
+                        text: Qt.formatTime(clock.now, "HH:mm")
+                        color: home.theme.colors.text
+                        font.family: home.theme.font.family
+                        font.pixelSize: Config.px(home.theme.font.sizes.clock)
+                        font.weight: Font.DemiBold
+                    }
+                    Text {
+                        anchors.right: parent.right
+                        text: Qt.locale("en_GB").toString(clock.now, "dddd d MMMM")
+                        color: home.theme.colors.text
+                        opacity: 0.8
+                        font.family: home.theme.font.family
+                        font.pixelSize: Config.px(home.theme.font.sizes.clockDate)
+                    }
+
+                    Timer {
+                        interval: 5000
+                        running: true
+                        repeat: true
+                        onTriggered: clock.now = new Date()
+                    }
+                }
             }
         }
     }
