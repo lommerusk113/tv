@@ -10,7 +10,6 @@ from pathlib import Path
 import voice
 
 CASES = {
-    "Open YouTube.": "launch:youtube",
     "Åpne Jellyfin": "launch:jellyfin",
     "start riks tv": "launch:rikstv",
     "Play Moonlight please": "launch:moonlight",
@@ -36,7 +35,11 @@ CASES = {
     "Jellyfin, play The Martian": "jellyfin_play:the martian",
     "watch the office on jelly fin": "jellyfin_play:the office",
     "Open Jellyfin please": "launch:jellyfin",
-    "play cat videos on youtube": "launch:youtube",
+    "play cat videos on youtube": "youtube_search:cat videos",
+    "Play Asmongold on YouTube.": "youtube_search:asmongold",
+    "spill asmongold på youtube": "youtube_search:asmongold",
+    "Open YouTube.": "launch:youtube",
+    "play moonlight": "launch:moonlight",
     "Play Deadman's Chest.": "jellyfin_play:deadmans chest",
 }
 

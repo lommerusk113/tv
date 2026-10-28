@@ -36,6 +36,7 @@ Item {
     Connections {
         target: Shortcuts
         function onToggleHomeScreen() {
+            root.pauseMedia(); // like a TV box: going home pauses what was playing
             tv.goHome();
             tv.forceActiveFocus();
             // Minimizing everything leaves no active window, so the home screen would not get the next key.
@@ -98,6 +99,28 @@ Item {
         id: remoteRestart
         interval: 200
         onTriggered: root.waitForRemote()
+    }
+
+    function pauseMedia() {
+        exec.run("python3 '" + localPath(Qt.resolvedUrl("tv/media.py")) + "' pause", () => {});
+    }
+
+    // True when the app's window is the active one (then launching it again must not pause it).
+    function appIsActive(desktopId) {
+        const id = String(desktopId).replace(/\.desktop$/, "");
+        for (let i = 0; i < appWindows.count; ++i) {
+            const idx = appWindows.makeModelIndex(i);
+            if (String(appWindows.data(idx, TaskManager.AbstractTasksModel.AppId)).replace(/\.desktop$/, "") === id
+                    && appWindows.data(idx, TaskManager.AbstractTasksModel.IsActive))
+                return true;
+        }
+        return false;
+    }
+
+    Timer {
+        id: raiseYoutube
+        interval: 1500
+        onTriggered: Config.launch("youtube")
     }
 
     // weather.py itself skips the request until MET's Expires, so a short interval costs nothing.
@@ -164,6 +187,9 @@ Item {
         Component.onCompleted: {
             Config.launcher = app => {
                 const model = Plasmoid.applicationListModel;
+                // Switching to another app pauses whatever plays (Jellyfin keeps playing in the background otherwise).
+                if (!root.appIsActive(app.desktopId))
+                    root.pauseMedia();
                 if (model.isApplicationRunning(app.desktopId))
                     model.maximizeApplication(app.desktopId);
                 else
@@ -189,7 +215,13 @@ Item {
                     "volume_down": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-",
                     "volume_mute": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
                 };
-                if (action.startsWith("jellyfin_play:")) {
+                if (action.startsWith("youtube_search:")) {
+                    // Voice "play <query> on YouTube": VacuumTube opens YouTube's search results (media.py pauses
+                    // other players first); then raise its window, which the deeplink alone does not do.
+                    const query = action.slice(15).replace(/'/g, "'\\''");
+                    exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/media.py")) + "' youtube '" + query + "'", () => {});
+                    raiseYoutube.restart();
+                } else if (action.startsWith("jellyfin_play:")) {
                     // Voice "play <title> on Jellyfin": open Jellyfin Desktop, then have the server start the title
                     // on it (jellyfin.py play waits for the app to connect).
                     Config.launch("jellyfin");

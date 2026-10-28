@@ -63,7 +63,6 @@
     "se",
     "gå til"
   ],
-  "playApp": "jellyfin",
   "prepositions": [
     "on",
     "in",
@@ -87,5 +86,10 @@
     "for meg",
     "kan du",
     "vær så snill"
-  ]
+  ],
+  "titleActions": {
+    "jellyfin": "jellyfin_play",
+    "youtube": "youtube_search"
+  },
+  "defaultTitleApp": "jellyfin"
 }

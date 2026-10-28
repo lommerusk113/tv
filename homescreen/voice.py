@@ -7,7 +7,8 @@
   python3 voice.py parse <sentence>  only the text -> action step
 
 Actions are the keymap's: home, launch:<app id>, volume_up, volume_down, volume_mute, tv_off, plus
-jellyfin_play:<title> for "play <title> [on Jellyfin]" (jellyfin.py play). Phrases (English and Norwegian) are in
+jellyfin_play:<title> for "play <title> [on Jellyfin]" (jellyfin.py play) and youtube_search:<query> for
+"play <query> on YouTube" (media.py youtube). Phrases (English and Norwegian) are in
 config/voice.json; app names come from config/apps.json "name" plus optional "voiceNames".
 Needs whisper-cli (brew install whisper-cpp) and the model in config/voice.json (scripts/install-voice.sh).
 Standard library only.
@@ -75,13 +76,13 @@ def remove_phrases(words, phrases):
 
 
 def title_request(words, conf, app, start, end):
-    """The title in "play <title> [on <app>]", or None. Only for the play app (Jellyfin) or when no app is named."""
+    """The title in "play <title> [on <app>]", or None. Only for apps in titleActions, or when no app is named."""
     verbs = sorted((normalize(v).split() for v in conf.get("open", [])), key=len, reverse=True)
     at = next(((i, len(v)) for i in range(len(words)) for v in verbs if words[i:i + len(v)] == v), None)
     if at is None:
         return None
     if app:
-        if app["id"] != conf.get("playApp", "jellyfin"):
+        if app["id"] not in conf.get("titleActions", {}):
             return None
         if start > 0 and words[start - 1] in conf.get("prepositions", []):
             start -= 1
@@ -105,7 +106,8 @@ def parse(text, conf=None, apps=None):
     named = best if best and best_score >= conf.get("nameMatch", 0.75) else None
     title = title_request(words, conf, named, start, end)
     if title:
-        return "jellyfin_play:" + title
+        app_id = named["id"] if named else conf.get("defaultTitleApp", "jellyfin")
+        return conf["titleActions"][app_id] + ":" + title
     if named:
         return "launch:" + named["id"]
     # Longest phrase first, so "turn off the tv" is not read as something shorter.
