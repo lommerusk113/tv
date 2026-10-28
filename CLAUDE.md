@@ -246,3 +246,6 @@ an unknown key name and an unknown app id.
 - Capture codes without the input group: `pkexec evtest /dev/input/eventN` (password dialog). The Bigscreen "Tools"
   clash and the libinput issue were found with a PySide6 key logger window (prints Qt key + nativeScanCode).
 - RiksTV's Chrome runs with `--class=tv-rikstv`, otherwise its window is "google-chrome" and Bigscreen cannot raise it.
+- Jellyfin Desktop must be in TV layout or the arrows only scroll: in its profile's jellyfin-desktop.conf
+  (~/.var/app/org.jellyfin.JellyfinDesktop/data/jellyfin-desktop/profiles/<id>/), "main": "layout": "tv",
+  "webMode": "tv" (edit with Jellyfin closed; `--tv` does the same for one start). Set on the host 2026-10-28.
