@@ -7,6 +7,7 @@ import org.kde.plasma.plasmoid
 import org.kde.plasma.plasma5support as P5Support
 import org.kde.bigscreen as Bigscreen
 import org.kde.private.biglauncher
+import org.kde.taskmanager as TaskManager
 
 import "tv"
 
@@ -40,6 +41,40 @@ Item {
             // Minimizing everything leaves no active window, so the home screen would not get the next key.
             if (root.Window.window)
                 root.Window.window.requestActivate();
+        }
+    }
+
+    // Make the windows of our apps (apps.json) fullscreen when they open, like apps on a TV. Done here rather than
+    // relying on Bigscreen's KWin "Maximizing" placement, which only applies in a real Bigscreen login and still
+    // leaves a maximized window instead of a fullscreen one. Only once per window, so the app can leave fullscreen.
+    TaskManager.TasksModel {
+        id: appWindows
+        filterByVirtualDesktop: false
+        filterByActivity: false
+        filterByScreen: false
+        groupMode: TaskManager.TasksModel.GroupDisabled
+    }
+
+    Instantiator {
+        model: appWindows
+        delegate: QtObject {
+            required property int index
+            required property var model
+
+            // AppId is the desktop file name, e.g. "rocks.shy.VacuumTube.desktop" (".desktop" stripped on both sides to be safe).
+            readonly property bool ours: Config.apps.some(app => app.desktopId
+                && app.desktopId.replace(/\.desktop$/, "") === String(model.AppId).replace(/\.desktop$/, ""))
+
+            // Short delay: some apps (Electron, Qt) set up their window right after it appears.
+            property Timer fullscreen: Timer {
+                interval: 500
+                running: true
+                onTriggered: {
+                    const idx = appWindows.makeModelIndex(index);
+                    if (ours && !model.IsFullScreen)
+                        appWindows.requestToggleFullScreen(idx);
+                }
+            }
         }
     }
 

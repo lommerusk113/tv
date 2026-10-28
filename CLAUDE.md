@@ -201,8 +201,9 @@ an unknown key name and an unknown app id.
 - Host-verified 2026-10-28 (laptop panel, swap-session, no secrets so placeholder rows): install script, navigation sequence,
   Enter on YouTube starts VacuumTube via the app model, back to home after `flatpak kill` + focus-home. plasmashell log shows
   no console.log (Fedora `*.debug=false`). Flatpak desktopIds exist on the host; tv-rikstv.desktop is installed by the script.
-  Launched apps open as normal windows in swap-session only: a real login gives KWin `Placement=Maximizing` and
-  `BorderlessMaximizedWindows` from `~/.config/plasma-bigscreen/kwinrc` (envmanager); the running KWin never reads it.
+  Fullscreen: HomeScreen.qml has its own TaskManager.TasksModel + Instantiator; 500 ms after a window appears whose
+  `AppId` (= desktop file name incl. ".desktop") matches an apps.json `desktopId`, it calls requestToggleFullScreen once.
+  (Bigscreen's kwinrc `Placement=Maximizing` only maximizes, and only in a real login.) Host-verified 2026-10-28.
 - Home key: Bigscreen binds Home Page globally ("Toggle Bigscreen Home Screen", kglobalshortcutsrc; Menu = tasks overview,
   Settings = settings). Upstream minimizes all tasks; our HomeScreen.qml listens to the same `Shortcuts.toggleHomeScreen`
   signal (`import org.kde.private.biglauncher`) to call `tv.goHome()` and `Window.requestActivate()` (without it nothing
