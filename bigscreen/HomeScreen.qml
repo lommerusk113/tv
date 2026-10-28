@@ -120,37 +120,16 @@ Item {
         return false;
     }
 
-    // autoplay: once YouTube shows the page, press OK on its highlighted first item (the newest history video).
-    // Only when VacuumTube already ran: a fresh start first asks which account to use.
-    function openYoutube(mediaArgs, autoplay) {
-        const youtube = Config.apps.find(app => app.id === "youtube");
-        youtubeAutoplay = !!autoplay && Plasmoid.applicationListModel.isApplicationRunning(youtube.desktopId);
+    function openYoutube(mediaArgs) {
         exec.run("python3 '" + localPath(Qt.resolvedUrl("tv/media.py")) + "' " + mediaArgs, () => {});
         youtubeSearch = true;
         raiseYoutube.restart();
     }
 
-    property bool youtubeAutoplay: false
-
-    Timer {
-        id: autoplayYoutube
-        interval: 3000
-        onTriggered: {
-            const youtube = Config.apps.find(app => app.id === "youtube");
-            if (root.youtubeAutoplay && root.appIsActive(youtube.desktopId))
-                exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/media.py")) + "' enter", () => {});
-            root.youtubeAutoplay = false;
-        }
-    }
-
     Timer {
         id: raiseYoutube
         interval: 1500
-        onTriggered: {
-            Config.launch("youtube");
-            if (root.youtubeAutoplay)
-                autoplayYoutube.restart();
-        }
+        onTriggered: Config.launch("youtube")
     }
 
     // weather.py itself skips the request until MET's Expires, so a short interval costs nothing.
@@ -256,15 +235,17 @@ Item {
                     // the watch history (media.py pauses other players first); then raise its window, which the
                     // deeplink alone does not do.
                     root.openYoutube(action === "youtube_history" ? "youtube-history"
-                                     : "youtube '" + action.slice(15).replace(/'/g, "'\\''") + "'", action === "youtube_history");
+                                     : "youtube '" + action.slice(15).replace(/'/g, "'\\''") + "'");
                 } else if (action === "move_to_tv") {
                     // Voice "move to TV": what plays on another Jellyfin device (phone) stops there and continues
-                    // here; with nothing playing on Jellyfin, the YouTube history (newest first, OK continues it).
+                    // here; with nothing playing on Jellyfin, the YouTube history to pick from. Not started
+                    // automatically: YouTube's own previews on its start page land at the top of the history, and the
+                    // history's resume positions are rarely the PC's (the PC should use YouTube's "Play on TV").
                     // First only look: Jellyfin must come to the front before the pull, as raising it pauses players.
                     const jellyfin = "python3 '" + root.localPath(Qt.resolvedUrl("tv/jellyfin.py")) + "' ";
                     exec.run(jellyfin + "playing", data => {
                         if (data["exit code"] !== 0 || data.stdout.indexOf('"ok": true') < 0) {
-                            root.openYoutube("youtube-history", true);
+                            root.openYoutube("youtube-history");
                             return;
                         }
                         Config.launch("jellyfin");

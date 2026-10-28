@@ -7,16 +7,11 @@
                                      the one being opened), so it starts from there next time
   python3 media.py youtube-home      a running VacuumTube goes to YouTube's start page (and comes to the front: a
                                      link always raises VacuumTube, so this is done when opening it, not when leaving)
-  python3 media.py youtube-history   open the YouTube account's watch history, newest first and highlighted: OK
-                                     continues the last video watched on any device (YouTube remembers the position)
-  python3 media.py enter             press Enter (ydotool; starts ydotoold when needed), e.g. to start the highlighted
-                                     first video of the history; the home screen only does this when YouTube is active
+  python3 media.py youtube-history   open the YouTube account's watch history (newest first) to pick from
   python3 media.py youtube <query>   open YouTube's search results for the query in VacuumTube (started if needed)
 """
-import os
 import re
 import subprocess
-import time
 import sys
 import urllib.parse
 
@@ -27,23 +22,6 @@ YOUTUBE_SEARCH = "https://www.youtube.com/tv?launch=search&vq={}"
 YOUTUBE_HOME = "https://www.youtube.com/tv"
 YOUTUBE_HISTORY = "https://www.youtube.com/tv?c=FEhistory"
 HERE = __import__("pathlib").Path(__file__).resolve().parent
-
-
-YDOTOOL_SOCKET = "/run/user/%d/.ydotool_socket" % os.getuid()
-KEY_ENTER = 28
-
-
-def enter():
-    env = dict(os.environ, YDOTOOL_SOCKET=YDOTOOL_SOCKET)
-    if not os.path.exists(YDOTOOL_SOCKET):
-        subprocess.Popen(["ydotoold", "-p", YDOTOOL_SOCKET, "-P", "0600"], stdout=subprocess.DEVNULL,
-                         stderr=subprocess.DEVNULL, start_new_session=True)
-        for _ in range(20):
-            if os.path.exists(YDOTOOL_SOCKET):
-                break
-            time.sleep(0.1)
-        time.sleep(0.3)  # the virtual keyboard needs a moment before the compositor takes its keys
-    subprocess.run(["ydotool", "key", "%d:1" % KEY_ENTER, "%d:0" % KEY_ENTER], env=env, capture_output=True, timeout=10)
 
 
 def gdbus(dest, method, *args):
@@ -95,8 +73,6 @@ def main():
         pause()
     elif sys.argv[1:2] == ["leave"] and len(sys.argv) <= 3:
         leave(sys.argv[2] if len(sys.argv) == 3 else None)
-    elif sys.argv[1:] == ["enter"]:
-        enter()
     elif sys.argv[1:] == ["youtube-home"]:
         youtube_home()
     elif sys.argv[1:] == ["youtube-history"]:
