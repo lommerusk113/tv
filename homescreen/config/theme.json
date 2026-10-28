@@ -30,7 +30,7 @@
   "focus": { "scale": 1.08, "borderWidth": 3, "glowOpacity": 0.8 },
   "spacing": { "page": 96, "tile": 28, "row": 36, "titleGap": 16 },
   "topBar": { "height": 72 },
-  "hero": { "height": 700 },
+  "hero": { "height": 700, "rotateMs": 8000 },
   "tiles": {
     "app": [300, 170],
     "landscape": [400, 226],

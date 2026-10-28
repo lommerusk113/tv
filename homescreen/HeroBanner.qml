@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Window
 import "."
 
 // Full-bleed featured banner. Left/Right switches between featured items.
@@ -21,6 +22,17 @@ Item {
         const n = current + d;
         if (n >= 0 && n < items.length)
             current = n;
+        rotate.restart(); // a full interval on the title just picked
+    }
+
+    // Like Google TV, the banner moves on to the next title by itself (back to the first after the last);
+    // only while the home screen is in front.
+    Timer {
+        id: rotate
+        interval: hero.theme.hero.rotateMs || 8000
+        running: hero.items.length > 1 && hero.Window.active
+        repeat: true
+        onTriggered: hero.current = (hero.current + 1) % hero.items.length
     }
 
     // "Watch now": the entry's action (Jellyfin banner items play), else only logged.
