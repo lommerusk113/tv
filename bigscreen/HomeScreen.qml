@@ -112,6 +112,34 @@ Item {
                 else
                     model.runApplication(app.desktopId);
             };
+            // Record + transcribe + map to an action (voice.py listen prints {"text", "action"}).
+            Config.voiceListener = callback => {
+                exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/voice.py")) + "' listen", data => {
+                    let result = null;
+                    try {
+                        if (data["exit code"] === 0)
+                            result = JSON.parse(data.stdout);
+                    } catch (e) {}
+                    if (!result)
+                        console.warn("tv: voice.py: " + data.stderr.trim());
+                    callback(result);
+                });
+            };
+            // Actions the home screen cannot do itself (from the keymap or voice).
+            Config.system = action => {
+                const commands = {
+                    "volume_up": "wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+",
+                    "volume_down": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-",
+                    "volume_mute": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
+                };
+                if (action === "tv_off")
+                    root.runScript("tvpower.py off", () => {});
+                else if (commands[action])
+                    exec.run(commands[action], () => {});
+                else
+                    return false;
+                return true;
+            };
             forceActiveFocus();
             // Wake the TV and switch it to this laptop's input (no-op without "tv" in secrets.json).
             root.runScript("tvpower.py on", () => {});

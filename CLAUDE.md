@@ -88,6 +88,9 @@ homescreen/
                     update_content() = locked, atomic merge into content.json (each script owns its keys)
   tmdb.py           TMDb "trending" key (posters); test_tmdb.py = mock test (`--keep DIR` to view it in the prototype)
   jellyfin.py       Jellyfin "jellyfinResume" key (Continue watching); test_jellyfin.py = mock test (`--keep DIR`)
+  voice.py          `listen` (arecord 4 s -> whisper-cli -> action), `file <wav>`, `parse <text>`; config/voice.json;
+                    test_voice.py (`--whisper` also transcribes whisper.cpp's jfk.wav)
+  VoiceOverlay.qml  push-to-talk feedback pill (bottom centre)
   tvpower.py        LG TV on/off: WOL + bscpylgtv (venv ~/.local/share/tv-project/venv, reruns itself there);
                     `on|off|pair|status|watch-sleep`; settings "tv": {ip, mac, input}; test_tvpower.py (no TV needed)
   test_trakt.py     runs trakt.py auth + sync against a local mock Trakt API: python3 homescreen/test_trakt.py
@@ -105,6 +108,7 @@ scripts/install-bigscreen.sh  host: install/--remove the home screen in Bigscree
 scripts/install-tv-power.sh   host: bscpylgtv venv + tv-sleep.service (systemd user unit, systemd-inhibit delay lock + gdbus
                               PrepareForSleep -> tvpower off/on); --remove. NOT run yet (auto mode refused; user runs it)
 scripts/focus-home.sh         host: give keyboard focus to Bigscreen's home screen before ydotool tests
+scripts/install-voice.sh      host: brew whisper-cpp + ggml-base.bin (sha1-checked) in ~/.local/share/tv-project/whisper; --remove
 ```
 
 ### Config format
@@ -151,6 +155,13 @@ All sizes are in 1920x1080 reference px (scaled by `Config.px()`); colors are `#
   title, "S2 E5 · <name> · 30 min left" (films: year), progress, 16:9 art (Thumb, parent Thumb, Backdrop, parent
   Backdrop, Primary) cached as `images/jellyfin-<id>-<type>-<tag>.jpg`, `"app": "jellyfin"`. Server down / not configured
   = content.json untouched. The layout's "continue" row has no placeholder data, so it is hidden until configured.
+- Voice: keymap action `voice` (F5 for now). Home.startVoice -> `Config.voiceListener` (Bigscreen: `voice.py listen` via
+  the executable engine; prototype: overlay says it needs Bigscreen) -> runAction(action). `config/voice.json`: seconds,
+  language (auto), model path, nameMatch (fuzzy app-name threshold, difflib ratio over runs of up to 3 words joined),
+  phrases per action (longest match wins; app names checked first), open words (informational). App names come from
+  apps.json `name` + optional `voiceNames`. whisper gets `--prompt` with the app names to bias recognition.
+- `Config.system(action)`: Bigscreen hook for actions the page can't do; volume_up/down/mute = `wpctl ... @DEFAULT_AUDIO_SINK@`
+  (5 %, capped at 100 %), tv_off = `tvpower.py off`. Prototype: logged as action:<name>.
 - Items may carry `"app": "<apps.json id>"`: Enter logs open:<id> and launches that app (TileRow.activate).
 - Weather: `secrets.json` `"location": {"lat", "lon"}`. weather.py uses Locationforecast 2.0 compact, the forecast step
   for the current hour, honours Expires/If-Modified-Since, downloads Yr's SVG symbol once (`~/.cache/tv-project/weather-icons/`).

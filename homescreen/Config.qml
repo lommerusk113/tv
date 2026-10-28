@@ -12,6 +12,10 @@ QtObject {
     property var weather: null    // ~/.cache/tv-project/weather.json (weather.py); null until there is one
     property real scale: 1        // window width / 1920
     property var launcher: null   // function(app); set by the Bigscreen plasmoid, null in the prototype (log only)
+    property var voice: ({})      // config/voice.json (recording seconds etc.; phrases are used by voice.py)
+    // Set by the Bigscreen plasmoid, null in the prototype:
+    property var voiceListener: null  // function(callback({text, action} or null)): record + transcribe (voice.py)
+    property var system: null         // function(action) -> true if handled: volume_*, tv_off
 
     function launch(appId) {
         const app = apps.find(a => a.id === appId);

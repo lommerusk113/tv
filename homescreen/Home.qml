@@ -132,10 +132,34 @@ FocusScope {
         case "back": back(); return;
         case "home": goHome(); return;
         }
-        if (action.startsWith("launch:"))
+        if (action === "voice")
+            startVoice();
+        else if (action.startsWith("launch:"))
             Config.launch(action.slice(7));
-        else
-            console.log("action:" + action); // ponytail: volume etc. logged only, implement when the remote is mapped
+        else if (!(Config.system && Config.system(action)))
+            console.log("action:" + action); // the prototype has no system hook: volume etc. are only logged
+    }
+
+    // Push-to-talk: record config/voice.json "seconds", transcribe (voice.py, Bigscreen only), run the action it maps to.
+    function startVoice() {
+        if (voiceOverlay.state === "listening" || voiceOverlay.state === "thinking")
+            return;
+        if (!Config.voiceListener) {
+            console.log("action:voice (voice control needs Bigscreen)");
+            voiceOverlay.show("unavailable", "");
+            return;
+        }
+        voiceOverlay.show("listening", "");
+        Config.voiceListener(result => {
+            if (!result) {
+                voiceOverlay.show("error", "");
+                return;
+            }
+            console.log("voice: \"" + result.text + "\" -> " + result.action);
+            voiceOverlay.show(result.action ? "heard" : "unknown", result.text);
+            if (result.action)
+                runAction(result.action);
+        });
     }
 
     Keys.onPressed: event => {
@@ -339,5 +363,12 @@ FocusScope {
                 font.pixelSize: Config.px(home.theme.font.sizes.clock)
             }
         }
+    }
+
+    VoiceOverlay {
+        id: voiceOverlay
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: Config.px(72)
     }
 }

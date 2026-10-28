@@ -66,10 +66,14 @@ Status and conventions: see CLAUDE.md. Do phases in order. Each phase ends with 
 - Fallback if Wake-on-LAN is unreliable: ESP32 IR blaster over USB serial (LG uses NEC IR codes with discrete power on/off).
 
 ## Phase 6: Voice control
-- Push-to-talk on a mapped remote button, recording from the laptop mic (or a USB mic).
-- whisper.cpp locally for speech-to-text (ask before building or installing).
-- Intent parsing into actions ("open YouTube", "play X on Jellyfin", "volume up"). Start with simple rules; optionally the Claude API later.
-- On-screen feedback while listening and when a command is recognized.
+- [x] (2026-10-28, host, Bigscreen) Push-to-talk: keymap action `voice` (placeholder key F5 until the remote is mapped),
+  records 4 s from the laptop mic. Verified: F5 + "Open YouTube" (spoken by espeak-ng through the speakers) started VacuumTube.
+- [x] (2026-10-28) whisper.cpp 1.9.5 from Homebrew + multilingual base model (`scripts/install-voice.sh`); ~4 s per command
+  on the i7-1255U. Not tested with a real human voice or Norwegian speech yet [ME: try "åpne YouTube", "skru opp"].
+- [x] (2026-10-28) Intent rules in `config/voice.json` + `voice.py` (English + Norwegian phrases, fuzzy app names).
+  Not done: "play X on Jellyfin" (needs a Jellyfin search + deep link), Claude API fallback.
+- [x] (2026-10-28) On-screen feedback: VoiceOverlay pill (Listening… countdown, Recognizing…, heard text / not understood).
+- [x] (2026-10-28, host) Volume actions (`volume_up/down/mute`) via wpctl in Bigscreen; voice `tv_off` -> tvpower.py off.
 
 ## Backlog (optional)
 - Casting alternatives (no real Google Cast possible on Linux): YouTube "Link with TV code" in VacuumTube, Jellyfin "Play On", UxPlay (AirPlay), DLNA renderer, spotifyd, KDE Connect. A cheap Google TV stick on a second HDMI input if real casting is needed.

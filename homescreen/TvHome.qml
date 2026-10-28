@@ -24,7 +24,7 @@ FocusScope {
     property var placeholder: ({})
     property string liveText: ""
 
-    property int pending: 6
+    property int pending: 7
     // True when Back has nothing left to do in Home (focus is on the tabs); Bigscreen then opens its overlay.
     readonly property bool atTop: loader.item ? loader.item.section === -1 : false
 
@@ -107,6 +107,7 @@ FocusScope {
         loadJson("config/layout.json", v => Config.layout = v);
         loadJson("data/placeholder.json", v => root.placeholder = v);
         loadJson("config/keymap.json", v => Config.keymap = v);
+        loadJson("config/voice.json", v => Config.voice = v);
         loadJson(liveUrl, v => root.liveText = JSON.stringify(v), true);
     }
 

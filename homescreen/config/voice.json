@@ -1,0 +1,66 @@
+{
+  "seconds": 4,
+  "language": "auto",
+  "model": "~/.local/share/tv-project/whisper/ggml-base.bin",
+  "nameMatch": 0.75,
+  "phrases": {
+    "home": [
+      "go home",
+      "home screen",
+      "home",
+      "gå hjem",
+      "hjem",
+      "startsiden"
+    ],
+    "volume_up": [
+      "volume up",
+      "louder",
+      "turn it up",
+      "turn up",
+      "skru opp",
+      "høyere",
+      "mer lyd",
+      "øk volumet"
+    ],
+    "volume_down": [
+      "volume down",
+      "quieter",
+      "turn it down",
+      "turn down",
+      "skru ned",
+      "lavere",
+      "mindre lyd",
+      "senk volumet"
+    ],
+    "volume_mute": [
+      "unmute",
+      "mute",
+      "sound off",
+      "demp",
+      "lyd av",
+      "skru av lyden"
+    ],
+    "tv_off": [
+      "turn off the tv",
+      "turn the tv off",
+      "tv off",
+      "slå av tv",
+      "slå av tv-en",
+      "skru av tv",
+      "skru av tv-en"
+    ]
+  },
+  "open": [
+    "open",
+    "start",
+    "launch",
+    "play",
+    "show",
+    "watch",
+    "åpne",
+    "spill",
+    "vis",
+    "se",
+    "gå til"
+  ]
+}
