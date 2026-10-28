@@ -72,6 +72,12 @@ FocusScope {
         });
     }
 
+    // Same as the keymap's "home" action: every row back to tile 0, scroll to the top, focus the initial row.
+    function goHome() {
+        if (loader.item)
+            loader.item.goHome();
+    }
+
     // Re-read weather.json (written by weather.py); a missing or unreadable file keeps what is shown.
     function reloadWeather() {
         readFile(weatherUrl, text => {

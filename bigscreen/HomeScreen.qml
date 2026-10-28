@@ -6,6 +6,7 @@ import QtQuick.Window
 import org.kde.plasma.plasmoid
 import org.kde.plasma.plasma5support as P5Support
 import org.kde.bigscreen as Bigscreen
+import org.kde.private.biglauncher
 
 import "tv"
 
@@ -25,6 +26,19 @@ Item {
         tv.forceActiveFocus();
         runScript("trakt.py sync", tv.reloadLive);
         runScript("weather.py", tv.reloadWeather);
+    }
+
+    // Home Page is Bigscreen's global "Toggle Bigscreen Home Screen" shortcut: upstream main.qml minimizes all apps,
+    // and the key never reaches TvHome. Also reset the home screen, like the keymap's "home" action does in the prototype.
+    Connections {
+        target: Shortcuts
+        function onToggleHomeScreen() {
+            tv.goHome();
+            tv.forceActiveFocus();
+            // Minimizing everything leaves no active window, so the home screen would not get the next key.
+            if (root.Window.window)
+                root.Window.window.requestActivate();
+        }
     }
 
     // weather.py itself skips the request until MET's Expires, so a short interval costs nothing.

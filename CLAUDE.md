@@ -172,7 +172,15 @@ an unknown key name and an unknown app id.
 - Host-verified 2026-10-28 (laptop panel, swap-session, no secrets so placeholder rows): install script, navigation sequence,
   Enter on YouTube starts VacuumTube via the app model, back to home after `flatpak kill` + focus-home. plasmashell log shows
   no console.log (Fedora `*.debug=false`). Flatpak desktopIds exist on the host; tv-rikstv.desktop is installed by the script.
-  **Open issue:** launched apps open as normal windows, not fullscreen/maximized (swap-session; real Bigscreen login untested).
+  Launched apps open as normal windows in swap-session only: a real login gives KWin `Placement=Maximizing` and
+  `BorderlessMaximizedWindows` from `~/.config/plasma-bigscreen/kwinrc` (envmanager); the running KWin never reads it.
+- Home key: Bigscreen binds Home Page globally ("Toggle Bigscreen Home Screen", kglobalshortcutsrc; Menu = tasks overview,
+  Settings = settings). Upstream minimizes all tasks; our HomeScreen.qml listens to the same `Shortcuts.toggleHomeScreen`
+  signal (`import org.kde.private.biglauncher`) to call `tv.goHome()` and `Window.requestActivate()` (without it nothing
+  is active after minimizing, so the next key is lost). Host-verified with Moonlight.
+- Swap without the inputhandler permission dialog (for unattended tests):
+  `( . /usr/bin/plasma-bigscreen-common-env; export PLASMA_BIGSCREEN_LAUNCH_REASON=swap; setsid nohup plasmashell --replace >log 2>&1 & )`;
+  back: `(setsid nohup plasmashell --replace >log 2>&1 &)` from a normal shell.
 
 ## Rules
 - **Every UI change must be verified with a screenshot (and you must look at it) before you report it as done.**
