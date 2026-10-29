@@ -163,11 +163,23 @@ def transcribe(wav, conf):
     return " ".join(res.stdout.split())
 
 
+LAST = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "tv-project/last-voice.wav"
+
+
 def record(path, seconds):
+    """The remote's own mic when it is connected (remote_mic.py: stops when you stop talking), else the laptop's.
+    A copy goes to ~/.cache/tv-project/last-voice.wav for checking what was heard."""
+    res = subprocess.run([sys.executable, str(HERE / "remote_mic.py"), "record", str(path), str(seconds + 4)],
+                         capture_output=True, text=True, timeout=seconds + 15)
+    if res.returncode == 0:
+        shutil.copy(path, LAST)
+        return
+    print("voice: remote mic: " + res.stderr.strip(), file=sys.stderr)
     res = subprocess.run(["arecord", "-q", "-d", str(seconds), "-f", "S16_LE", "-r", "16000", "-c", "1", str(path)],
                          capture_output=True, text=True, timeout=seconds + 10)
     if res.returncode != 0:
         sys.exit("voice: arecord failed: " + res.stderr.strip())
+    shutil.copy(path, LAST)
 
 
 # Rule results the AI step may improve: titles ("dead mans chest") and searches; everything else is final.

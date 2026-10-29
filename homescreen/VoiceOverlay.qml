@@ -16,7 +16,7 @@ Rectangle {
         heard = text || "";
         hideTimer.stop();
         if (newState === "listening") {
-            secondsLeft = Config.voice.seconds || 4;
+            secondsLeft = (Config.voice.seconds || 4) + 4;  // the remote mic stops earlier, when you stop talking
             countdown.restart();
         } else if (newState !== "thinking" && newState !== "busy") {
             hideTimer.restart();
@@ -25,7 +25,7 @@ Rectangle {
 
     readonly property string message: {
         switch (state) {
-        case "listening": return "Listening… " + secondsLeft;
+        case "listening": return "Listening…";
         case "thinking": return "Recognizing…";
         case "heard": return "“" + heard + "”";
         case "unknown": return heard ? "Didn't understand “" + heard + "”" : "Didn't hear anything";

@@ -146,6 +146,11 @@ homescreen/
                     jellyfinResume / jellyfinNextUp; play/play-id/pull/playing/home; test_jellyfin.py (`--keep DIR`)
   voice.py          `listen` (arecord 4 s -> whisper-cli -> action), `file <wav>`, `parse <text>`; config/voice.json;
                     test_voice.py (`--whisper` also transcribes whisper.cpp's jfk.wav); `rules <text>` = no AI step
+  remote_mic.py     the remote's OWN mic (2026-10-29): the RemoteG20 has Google's ATV Voice GATT service (ab5e0001);
+                    v0.4 protocol (v1.0 MIC_OPEN is refused with 0c 0f 02): GET_CAPS 0a00040001, MIC_OPEN 0c0001, 134-byte
+                    IMA ADPCM 8 kHz frames on ab5e0003 in 20-byte pieces, MIC_CLOSE 0d. Stops 0.9 s after speech (or 4 s of
+                    nothing), writes 16 kHz normalized WAV. voice.py record uses it, falls back to arecord (laptop mic);
+                    last recording kept in ~/.cache/tv-project/last-voice.wav. dbus-python + PyGObject.
   agent.py          AI step for voice (2026-10-29, OpenAI; key in secrets "openai": {"apiKey"}, none = rules only):
                     speech-to-text gpt-4o-mini-transcribe (whisper.cpp fallback), then when the rules give nothing or a
                     title/search, chat/completions with JSON schema, models tried in order (voice.json "agent": nano,
