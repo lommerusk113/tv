@@ -4,9 +4,9 @@
     { "id": "hero", "type": "hero", "source": ["jellyfinFeatured", "featured"] },
     { "id": "apps", "title": "Your apps", "source": "apps", "style": "app" },
     { "id": "continue", "title": "Continue watching", "source": ["jellyfinContinue", "upNext"], "style": "landscape" },
+    { "id": "latest", "title": "Recently added", "source": ["jellyfinLatest", "trending"], "style": "poster" },
     { "id": "youtube", "title": "New from your channels", "source": "youtubeChannels", "style": "landscape" },
     { "id": "youtubeRecommended", "title": "Recommended on YouTube", "source": "youtubeRecommended", "style": "landscape" },
-    { "id": "latest", "title": "Recently added", "source": ["jellyfinLatest", "trending"], "style": "poster" },
     { "id": "moreApps", "title": "More apps", "source": "installedApps", "style": "app" }
   ]
 }
