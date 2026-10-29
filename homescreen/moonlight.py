@@ -7,6 +7,8 @@
                                        once the picture arrives (Moonlight's output goes to ~/.cache/tv-project/moonlight.log)
   python3 moonlight.py pair <host> <pin>   pairs once: type the PIN on Sunshine's web page (https://<host>:47990, PIN);
                                        on success the host is saved in config/moonlight.json
+  python3 moonlight.py stop            Home: quits the app on the host (Wolf stops its container) and closes Moonlight
+  python3 moonlight.py wake            mouse wiggle into the stream (wakes Steam's screensaver; done after a start)
   python3 moonlight.py quit            ends the stream on this computer (Ctrl+Alt+Shift+Q via ydotool, the remote's
                                        exit button); the game keeps running on the PC
 
@@ -24,6 +26,7 @@ from trakt import colors, update_content
 HERE = Path(__file__).resolve().parent
 CONFIG = HERE / "config/moonlight.json"
 MOONLIGHT = ["flatpak", "run", "com.moonlight_stream.Moonlight"]
+WAITER = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "tv-project/moonlight-wait.pid"
 LOG = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "tv-project/moonlight.log"
 WAIT_SECONDS = 120  # Wolf starts the app's container first: Steam takes 15-40 s
 YDOTOOL_SOCKET = "/run/user/%d/.ydotool_socket" % os.getuid()
@@ -64,6 +67,7 @@ def stream(app=None, wait=False):
     proc = launch()
     if not wait:
         return
+    WAITER.write_text(str(os.getpid()))
     deadline, retried = time.monotonic() + WAIT_SECONDS, False
     while time.monotonic() < deadline:
         text = LOG.read_text(errors="replace")
@@ -107,6 +111,35 @@ def quit_stream():
     subprocess.run(["ydotool", "key", *down, *up], env=env, capture_output=True, timeout=10)
 
 
+def cancel_waiter():
+    """Ends a `stream --wait` that is still waiting (pid in WAITER), so its retry does not start Moonlight again."""
+    try:
+        pid = int(WAITER.read_text())
+        if pid != os.getpid():
+            os.kill(pid, 15)
+    except (OSError, ValueError):
+        pass
+    WAITER.unlink(missing_ok=True)
+
+
+def wake():
+    """A tiny mouse wiggle into the stream: Steam's idle screensaver ignores keys (the remote) but wakes on the mouse."""
+    env = dict(os.environ, YDOTOOL_SOCKET=YDOTOOL_SOCKET)
+    for dx, dy in ((12, 8), (-12, -8)):
+        subprocess.run(["ydotool", "mousemove", "--", str(dx), str(dy)], env=env, capture_output=True, timeout=10)
+        time.sleep(0.15)
+
+
+def stop():
+    """Home: end the app on the host (Wolf stops its container, e.g. Steam; unsaved game progress is lost) and close
+    Moonlight here. The red button (quit) only ends the stream and leaves the app running."""
+    host = config().get("host")
+    cancel_waiter()  # a start still waiting for its picture must not retry once Moonlight is gone
+    subprocess.run(["flatpak", "kill", "com.moonlight_stream.Moonlight"], capture_output=True, timeout=15)
+    if host:
+        subprocess.run(MOONLIGHT + ["quit", host], capture_output=True, timeout=60)
+
+
 def main():
     args = sys.argv[1:]
     wait = "--wait" in args
@@ -117,6 +150,13 @@ def main():
         return pair(args[1], args[2])
     if args == ["quit"]:
         return quit_stream()
+    if args == ["stop"]:
+        return stop()
+    if args == ["cancel"]:
+        cancel_waiter()
+        return subprocess.run(["flatpak", "kill", "com.moonlight_stream.Moonlight"], capture_output=True, timeout=15)
+    if args == ["wake"]:
+        return wake()
     if args:
         sys.exit(__doc__)
     host = config().get("host")

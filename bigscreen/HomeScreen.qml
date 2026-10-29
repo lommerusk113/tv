@@ -132,7 +132,10 @@ Item {
                 streamStarting = false;
                 exec.run(tvdir + "kwin_script.py' unload hide-moonlight", () => {
                     if (data["exit code"] === 0) {
-                        exec.run(tvdir + "kwin_script.py' once show-moonlight", () => streamShown.restart());
+                        exec.run(tvdir + "kwin_script.py' once show-moonlight", () => {
+                            streamShown.restart();
+                            exec.run(tvdir + "moonlight.py' wake", () => {});  // Steam's screensaver ignores keys
+                        });
                         return;
                     }
                     tv.hideLoading();
@@ -154,7 +157,7 @@ Item {
         streamStarting = false;
         tv.hideLoading();
         exec.run("python3 '" + localPath(Qt.resolvedUrl("tv/kwin_script.py")) + "' unload hide-moonlight", () => {});
-        exec.run("flatpak kill com.moonlight_stream.Moonlight", () => {});
+        exec.run("python3 '" + localPath(Qt.resolvedUrl("tv/moonlight.py")) + "' cancel", () => {});  // no retry
     }
 
     // Lets Moonlight's stream window cover the screen before the loading screen fades out.
