@@ -217,7 +217,11 @@ homescreen/
   jellyfin_back.py  Back on Jellyfin's start page -> home screen (see DevTools ports)
   jellyfin_curtain.py  loading screen over Jellyfin's page while a tile starts a video (`on [item id]`/`off`): built
                     in the page with its ApiClient (backdrop, logo, episode line, bar), fades out
-  tvpower.py        LG TV on/off: WOL + bscpylgtv (venv ~/.local/share/tv-project/venv, reruns itself there);
+  tvpower.py        (set up 2026-10-29: TV 192.168.0.83 found via SSDP webos-second-screen, MAC e0:51:63:8c:93:ba,
+                    laptop on HDMI_3, paired; off -> unreachable, WOL on -> Active in ~9 s on HDMI 3. Remote Off =
+                    tv_power toggle, Input = tv_input, voice "turn off the TV" = tv_off. tv-sleep.service not needed:
+                    the laptop no longer sleeps)
+                    LG TV on/off: WOL + bscpylgtv (venv ~/.local/share/tv-project/venv, reruns itself there);
                     `on|off|pair|status|watch-sleep`; settings "tv": {ip, mac, input}; test_tvpower.py (no TV needed)
   test_trakt.py     runs trakt.py auth + sync against a local mock Trakt API: python3 homescreen/test_trakt.py
   weather.py        MET Norway (Yr) current weather -> ~/.cache/tv-project/weather.json; test_weather.py = mock test

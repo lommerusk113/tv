@@ -53,10 +53,10 @@ Status and conventions: see CLAUDE.md. Do phases in order. Each phase ends with 
 - [x] (2026-10-28) Yr weather next to the clock (MET Norway, `location` in secrets.json).
 
 ## Phase 5: Turning the TV on and off
-- [ME] On the TV: enable "Mobile TV On → Turn On Via WiFi" and "LG Connect Apps" (Network settings). Connect the TV to the router with an Ethernet cable (Wake-on-LAN is unreliable over Wi-Fi after long standby).
+- [x] (2026-10-29, user: TV online, WOL on) On the TV: enable "Mobile TV On → Turn On Via WiFi" and "LG Connect Apps" (Network settings). Connect the TV to the router with an Ethernet cable (Wake-on-LAN is unreliable over Wi-Fi after long standby).
 - [ME] In the router: reserve a fixed IP for the TV's MAC, block all its internet traffic (IPv4 and IPv6, including DNS), and allow local traffic to the laptop. Set this up before the TV first connects. Verify nothing goes out (TV browser, router logs).
 - [x] (2026-10-28) bscpylgtv 0.5.5 installed in the venv `~/.local/share/tv-project/venv`. Pairing still to do with the TV
-  [ME]: add `"tv": {"ip", "mac", "input"}` to secrets.json, run `python3 homescreen/tvpower.py pair`, accept on the TV
+  [x] 2026-10-29 done by Claude (192.168.0.83, HDMI_3, paired; off/WOL-on tested, ~9 s): add `"tv": {"ip", "mac", "input"}` to secrets.json, run `python3 homescreen/tvpower.py pair`, accept on the TV
   (key -> `~/.config/tv-project/lgtv-keys.sqlite`).
 - [x] (2026-10-28, tested without a TV: test_tvpower.py) `homescreen/tvpower.py on|off|pair|status|watch-sleep`: WOL to
   broadcast + TV IP, retry until the API answers (40 s), set input; off via the API. Bigscreen runs `tvpower.py on` when
