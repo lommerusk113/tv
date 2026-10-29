@@ -45,6 +45,10 @@ CASES = {
     "Play it here please": "move_to_tv",
     "Flytt den til TV-en.": "move_to_tv",
     "Move YouTube to the TV.": "youtube_history",
+    "Search for star wars": "jellyfin_search:star wars",
+    "søk etter ringenes herre på jellyfin": "jellyfin_search:ringenes herre",
+    "search for cat videos on youtube": "youtube_search:cat videos",
+    "Find Breaking Bad.": "jellyfin_search:breaking bad",
     "fortsett youtube her": "youtube_history",
     "play here comes the boom": "jellyfin_play:here comes the boom",
 }

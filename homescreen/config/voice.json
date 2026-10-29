@@ -125,5 +125,17 @@
     "jellyfin": "jellyfin_play",
     "youtube": "youtube_search"
   },
-  "defaultTitleApp": "jellyfin"
+  "defaultTitleApp": "jellyfin",
+  "search": [
+    "search for",
+    "search",
+    "find",
+    "look for",
+    "look up",
+    "søk etter",
+    "søk på",
+    "søk",
+    "finn",
+    "let etter"
+  ]
 }

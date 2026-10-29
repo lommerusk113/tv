@@ -141,8 +141,8 @@ Item {
                   sub: c === "shutdown" ? "Press OK again to shut down" : "", warn: c === "shutdown" }
             ];
         case "password":
-            return [{ key: "password", label: passwordFor, icon: "lock", kind: "input" },
-                    { key: "join", label: "Connect", kind: "button", enabled: true }];
+            // Typed with the on-screen keyboard below (its OK connects) or a real keyboard.
+            return [{ key: "password", label: passwordFor, icon: "lock", kind: "input" }];
         }
         return [];
     }
@@ -179,8 +179,12 @@ Item {
         current = index || 0;
         while (current < entries.length - 1 && !focusable(current))
             ++current;
-        if (newPage === "password")
+        if (newPage === "password") {
+            keyboard.row = 1;
+            keyboard.col = 0;
+            keyboard.shift = keyboard.symbols = false;
             passwordInput.forceActiveFocus();
+        }
         else if (passwordInput.activeFocus)
             panel.parent.forceActiveFocus();  // keys back to Home
     }
@@ -341,6 +345,8 @@ Item {
     function handle(action) {
         if (busy && action !== "back")
             return true;
+        if (page === "password" && action !== "back" && action !== "settings")
+            return keyboard.handle(action) || true;  // everything else stays on the password page
         switch (action) {
         case "up": move(-1); return true;
         case "down": move(1); return true;
@@ -570,7 +576,7 @@ Item {
             id: list
             anchors.top: status.bottom
             anchors.topMargin: Config.px(20)
-            anchors.bottom: parent.bottom
+            anchors.bottom: keyboard.visible ? keyboard.top : parent.bottom
             x: sheet.pad - Config.px(12)
             width: sheet.width - sheet.pad * 2 + Config.px(24)
             clip: true
@@ -775,7 +781,21 @@ Item {
         }
     }
 
-    // Receives the typing on the password page (drawn as dots in the row above). Enter connects, Escape goes back.
+    // Password page: remote-friendly keyboard at the bottom of the sheet.
+    OnScreenKeyboard {
+        id: keyboard
+        parent: sheet
+        visible: panel.page === "password"
+        x: sheet.pad
+        width: sheet.width - sheet.pad * 2
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: Config.px(48)
+        onTyped: text => passwordInput.insert(passwordInput.cursorPosition, text)
+        onBackspace: passwordInput.remove(Math.max(0, passwordInput.cursorPosition - 1), passwordInput.cursorPosition)
+        onDone: panel.joinWifi()
+    }
+
+    // Receives the typing on the password page (drawn as dots in the row above).
     TextInput {
         id: passwordInput
         width: 1
@@ -783,8 +803,15 @@ Item {
         opacity: 0  // not visible: false, which could not take keyboard focus
         echoMode: TextInput.Password
         inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText
-        Keys.onReturnPressed: panel.joinWifi()
-        Keys.onEnterPressed: panel.joinWifi()
-        Keys.onEscapePressed: panel.handle("back")
+        // Arrows and OK (the remote's OK sends Enter) drive the on-screen keyboard; letters from a real keyboard type.
+        Keys.onPressed: event => {
+            const action = { [Qt.Key_Left]: "left", [Qt.Key_Right]: "right", [Qt.Key_Up]: "up", [Qt.Key_Down]: "down",
+                             [Qt.Key_Return]: "select", [Qt.Key_Enter]: "select", [Qt.Key_Select]: "select",
+                             [Qt.Key_Escape]: "back", [Qt.Key_Back]: "back" }[event.key];
+            if (action) {
+                panel.handle(action);
+                event.accepted = true;
+            }
+        }
     }
 }

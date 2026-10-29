@@ -9,7 +9,7 @@
 Actions are the keymap's: home, launch:<app id>, volume_up, volume_down, volume_mute, tv_off, plus
 jellyfin_play:<title> for "play <title> [on Jellyfin]" (jellyfin.py play), youtube_search:<query> for
 "play <query> on YouTube" (media.py youtube), move_to_tv (Jellyfin from another device, else YouTube history) and
-youtube_history. Phrases (English and Norwegian) are in
+youtube_history, jellyfin_search:<text> / youtube_search:<text> for "search (for) <text> [on YouTube]". Phrases (English and Norwegian) are in
 config/voice.json; app names come from config/apps.json "name" plus optional "voiceNames".
 Needs whisper-cli (brew install whisper-cpp) and the model in config/voice.json (scripts/install-voice.sh).
 Standard library only.
@@ -76,6 +76,20 @@ def remove_phrases(words, phrases):
     return text.split()
 
 
+def search_request(words, conf, app, start, end):
+    """The text in "search (for) <text> [on <app>]" (a search word first), or None."""
+    verbs = sorted((normalize(v).split() for v in conf.get("search", [])), key=len, reverse=True)
+    verb = next((v for v in verbs if words[:len(v)] == v), None)
+    if not verb:
+        return None
+    if app and start >= len(verb):  # drop "[on] <app name>"
+        if start > 0 and words[start - 1] in conf.get("prepositions", []):
+            start -= 1
+        words = words[:start] + words[end:]
+    rest = remove_phrases(words[len(verb):], [normalize(f) for f in conf.get("fillers", [])])
+    return " ".join(rest) or None
+
+
 def title_request(words, conf, app, start, end):
     """The title in "play <title> [on <app>]", or None. Only for apps in titleActions, or when no app is named."""
     verbs = sorted((normalize(v).split() for v in conf.get("open", [])), key=len, reverse=True)
@@ -105,6 +119,10 @@ def parse(text, conf=None, apps=None):
     words = text.split()
     best, best_score, start, end = best_app(words, apps)
     named = best if best and best_score >= conf.get("nameMatch", 0.75) else None
+    # "search (for) X [on YouTube|Jellyfin]": opens that app's search with X (Jellyfin unless YouTube is named).
+    query = search_request(words, conf, named, start, end)
+    if query:
+        return ("youtube_search:" if named and named["id"] == "youtube" else "jellyfin_search:") + query
     # A sentence that is exactly one of the fixed phrases wins ("play it here" is not a title called "it here").
     exact = remove_phrases(words, [normalize(f) for f in conf.get("fillers", [])])
     for action, ps in conf["phrases"].items():

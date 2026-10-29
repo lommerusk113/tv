@@ -114,4 +114,8 @@ Status and conventions: see CLAUDE.md. Do phases in order. Each phase ends with 
   Bigscreen login after a reboot. Possible later: Chrome/KWallet may ask for a password without a login password.
 - [x] (2026-10-29, host) Jellyfin deinterlacing on (scripts/install-jellyfin-video.sh). FSRCNNX upscaling tried and
   removed (no visible gain, laggier). If playback still feels laggy, try `--remove` (deinterlace off) to compare.
+- [x] (2026-10-29, host) Typing with the remote: Jellyfin/YouTube search have their own keyboards; voice "search for
+  X [on YouTube]" fills the search in; own OnScreenKeyboard for the Wi-Fi password. "More apps" row removed.
+- Typing elsewhere (RiksTV login in Chrome, Moonlight): idea: a global version of OnScreenKeyboard (gear menu or a
+  remote button) that types into the focused app with `ydotool type`. Until then a USB/BT keyboard once for logins.
 

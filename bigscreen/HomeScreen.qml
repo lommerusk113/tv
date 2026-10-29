@@ -29,7 +29,6 @@ Item {
         runScript("tmdb.py", tv.reloadLive);
         runScript("jellyfin.py", tv.reloadLive);
         runScript("youtube.py", tv.reloadLive);
-        runScript("apps.py", tv.reloadLive);
         runScript("weather.py", tv.reloadWeather);
     }
 
@@ -297,6 +296,15 @@ Item {
                             if (result["exit code"] !== 0 || result.stdout.indexOf('"ok": true') < 0)
                                 console.warn("tv: jellyfin.py pull: " + (result.stdout + result.stderr).trim());
                         });
+                    });
+                } else if (action.startsWith("jellyfin_search:")) {
+                    // Voice "search for X": Jellyfin's search page with X typed in (its letter row edits it further).
+                    root.leaveApps("jellyfin");
+                    Config.launch("jellyfin");
+                    exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/jellyfin_nav.py")) + "' search '"
+                             + action.slice(16).replace(/'/g, "'\\''") + "'", data => {
+                        if (data["exit code"] !== 0)
+                            console.warn("tv: jellyfin_nav.py: " + data.stderr.trim());
                     });
                 } else if (action.startsWith("jellyfin_play:")) {
                     // Voice "play <title> on Jellyfin": look the title up first, so it gets the same loading screen

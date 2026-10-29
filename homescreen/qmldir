@@ -6,3 +6,4 @@ Tile 1.0 Tile.qml
 TvHome 1.0 TvHome.qml
 VoiceOverlay 1.0 VoiceOverlay.qml
 SettingsPanel 1.0 SettingsPanel.qml
+OnScreenKeyboard 1.0 OnScreenKeyboard.qml

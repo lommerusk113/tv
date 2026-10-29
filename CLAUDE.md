@@ -104,9 +104,14 @@ homescreen/
                     Home routes keys to it and atRoot is false (Back does not open Bigscreen's overlay). Look: cards
                     with Breeze icons (icons/settings/, copied from breeze-dark, tinted with MultiEffect), toggles,
                     sliders, section headers. Avoid property names Item already has (`top` is FINAL: page fails to load)
+  OnScreenKeyboard.qml  remote-driven keyboard (arrows + OK; æøå, ⇧, #+=, space, ⌫, OK) on the Wi-Fi password page.
+                    Plasma Keyboard (plasma-keyboard, KWin /VirtualKeyboard mode 2 = any input) does pop up for text
+                    fields, but arrow keys go to the app, so it cannot be used with the remote; left at mode 1.
+                    Jellyfin (TV layout) and YouTube TV have their own remote keyboards in search.
+  jellyfin_nav.py   `search <text>`: Jellyfin's search page with the text typed in (voice "search for X")
   system.py         backend for those pages: nmcli, bluetoothctl, kscreen-doctor; JSON out ({"error"} + exit 1);
                     refuses to disable the last screen
-  apps.py           "More apps" row (installedApps): every exported Flatpak .desktop not pinned in apps.json, with its
+  apps.py           (not in the layout since 2026-10-29) "More apps" row (installedApps): every exported Flatpak .desktop not pinned in apps.json, with its
                     hicolor icon; action launch_desktop:<id>; test_apps.py
   youtube.py        "New from your channels" (channel /videos pages, config/youtube.json) + "Recommended on YouTube"
                     and history progress (youtube_tv.py + youtube_tv.js, VacuumTube's DevTools port); test_youtube.py
