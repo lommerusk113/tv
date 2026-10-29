@@ -60,6 +60,22 @@ Item {
         filterByActivity: false
         filterByScreen: false
         groupMode: TaskManager.TasksModel.GroupDisabled
+        // An app closed by itself (Moonlight via the red button, a dropped stream, a crash): if no other window has
+        // the focus now, take it, or the remote's keys go nowhere until something is clicked (seen 2026-10-29).
+        onRowsRemoved: focusCheck.restart()
+    }
+
+    Timer {
+        id: focusCheck
+        interval: 400
+        onTriggered: {
+            for (let i = 0; i < appWindows.count; ++i)
+                if (appWindows.data(appWindows.makeModelIndex(i), TaskManager.AbstractTasksModel.IsActive))
+                    return;  // an app still has the focus: leave it
+            tv.forceActiveFocus();
+            if (root.Window.window)
+                root.Window.window.requestActivate();
+        }
     }
 
     Instantiator {
