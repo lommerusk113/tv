@@ -213,8 +213,12 @@ FocusScope {
                 voiceOverlay.show("error", "");
                 return;
             }
-            console.log("voice: \"" + result.text + "\" -> " + result.action);
-            voiceOverlay.show(result.action ? "heard" : "unknown", result.text);
+            console.log("voice: \"" + result.text + "\" -> " + result.action + " (" + result.by + ")");
+            // say = the AI step's short answer ("12° and cloudy"), shown instead of the sentence it heard
+            if (result.say)
+                voiceOverlay.show("message", result.say);
+            else
+                voiceOverlay.show(result.action ? "heard" : "unknown", result.text);
             if (result.action)
                 runAction(result.action);
         });

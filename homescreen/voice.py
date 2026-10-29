@@ -4,7 +4,8 @@
   python3 voice.py listen            record config/voice.json "seconds" from the default mic, print JSON
                                      {"text": "open youtube", "action": "launch:youtube"} (action null if not understood)
   python3 voice.py file <wav>        the same for a 16 kHz mono WAV file
-  python3 voice.py parse <sentence>  only the text -> action step
+  python3 voice.py parse <sentence>  only the text -> action step (rules + AI step)
+  python3 voice.py rules <sentence>  only the fixed rules
 
 Actions are the keymap's: home, launch:<app id>, volume_up, volume_down, volume_mute, tv_off, plus
 jellyfin_play:<title> for "play <title> [on Jellyfin]" (jellyfin.py play), youtube_search:<query> for
@@ -12,6 +13,8 @@ jellyfin_play:<title> for "play <title> [on Jellyfin]" (jellyfin.py play), youtu
 youtube_history, jellyfin_search:<text> / youtube_search:<text> for "search (for) <text> [on YouTube]". Phrases (English and Norwegian) are in
 config/voice.json; app names come from config/apps.json "name" plus optional "voiceNames".
 Needs whisper-cli (brew install whisper-cpp) and the model in config/voice.json (scripts/install-voice.sh).
+With an OpenAI key (agent.py) the speech goes to OpenAI's speech-to-text instead (whisper.cpp when that fails), and
+sentences the rules do not understand, or "play <title>" ones (misheard titles), go to the AI step in agent.py.
 Standard library only.
 """
 import difflib
@@ -23,6 +26,8 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+
+import agent
 
 HERE = Path(__file__).resolve().parent
 WHISPER = shutil.which("whisper-cli") or "/home/linuxbrew/.linuxbrew/bin/whisper-cli"
@@ -143,10 +148,13 @@ def parse(text, conf=None, apps=None):
 
 
 def transcribe(wav, conf):
-    model = os.path.expanduser(conf["model"])
     # The prompt biases whisper toward the words it should expect (app names, a few commands).
     apps = json.loads((HERE / "config/apps.json").read_text())
     prompt = ", ".join([a["name"] for a in apps] + ["open", "home", "volume up", "volume down", "mute"])
+    text = agent.transcribe(wav, prompt)
+    if text is not None:
+        return text
+    model = os.path.expanduser(conf["model"])
     res = subprocess.run([WHISPER, "-m", model, "-f", str(wav), "-l", conf.get("language", "auto"),
                           "--prompt", prompt, "-np", "-nt", "-t", str(min(8, os.cpu_count() or 4))],
                          capture_output=True, text=True, timeout=120)
@@ -162,16 +170,27 @@ def record(path, seconds):
         sys.exit("voice: arecord failed: " + res.stderr.strip())
 
 
-def result(text, conf):
-    return {"text": normalize(text), "action": parse(text, conf)}
+# Rule results the AI step may improve: titles ("dead mans chest") and searches; everything else is final.
+AGENT_FIXES = ("jellyfin_play:", "jellyfin_search:", "youtube_search:")
+
+
+def result(text, conf, use_agent=True):
+    """{"text", "action", "say" (a short answer to show, or null), "by" ("rules" or the model)}."""
+    action = parse(text, conf)
+    out = {"text": normalize(text), "action": action, "say": None, "by": "rules"}
+    if use_agent and out["text"] and (action is None or action.startswith(AGENT_FIXES)):
+        answer = agent.ask(text, action)
+        if answer:
+            out.update(action=answer["action"] or action, say=answer["say"], by=answer["model"])
+    return out
 
 
 def main():
-    if len(sys.argv) < 2 or sys.argv[1] not in ("listen", "file", "parse"):
+    if len(sys.argv) < 2 or sys.argv[1] not in ("listen", "file", "parse", "rules"):
         sys.exit(__doc__)
     conf = config()
-    if sys.argv[1] == "parse":
-        print(json.dumps(result(" ".join(sys.argv[2:]), conf), ensure_ascii=False))
+    if sys.argv[1] in ("parse", "rules"):
+        print(json.dumps(result(" ".join(sys.argv[2:]), conf, sys.argv[1] == "parse"), ensure_ascii=False))
         return
     if sys.argv[1] == "file":
         print(json.dumps(result(transcribe(sys.argv[2], conf), conf), ensure_ascii=False))

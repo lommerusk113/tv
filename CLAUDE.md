@@ -145,7 +145,13 @@ homescreen/
                     next episode of followed series; one tile per series), jellyfinFeatured (banner), also
                     jellyfinResume / jellyfinNextUp; play/play-id/pull/playing/home; test_jellyfin.py (`--keep DIR`)
   voice.py          `listen` (arecord 4 s -> whisper-cli -> action), `file <wav>`, `parse <text>`; config/voice.json;
-                    test_voice.py (`--whisper` also transcribes whisper.cpp's jfk.wav)
+                    test_voice.py (`--whisper` also transcribes whisper.cpp's jfk.wav); `rules <text>` = no AI step
+  agent.py          AI step for voice (2026-10-29, OpenAI; key in secrets "openai": {"apiKey"}, none = rules only):
+                    speech-to-text gpt-4o-mini-transcribe (whisper.cpp fallback), then when the rules give nothing or a
+                    title/search, chat/completions with JSON schema, models tried in order (voice.json "agent": nano,
+                    then mini). Context = apps, home-screen tiles (content.json), weather, time. Returns
+                    {action, say}; actions checked against an allow-list (ids only from tiles; no restart/shutdown).
+                    `say` is shown in the voice pill. Could later be exposed as an MCP server (user idea).
   VoiceOverlay.qml  push-to-talk feedback pill (bottom centre) (also "busy" status: showStatus("Starting…"))
   SettingsPanel.qml slide-in from the right (Settings tile, gear button, "open settings"), pages: main (volume
                     left/right; links), Wi-Fi (on/off, rescan, networks: OK connects/disconnects, unknown secured ->

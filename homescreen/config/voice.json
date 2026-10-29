@@ -137,5 +137,14 @@
     "søk",
     "finn",
     "let etter"
-  ]
+  ],
+  "agent": {
+    "enabled": true,
+    "models": [
+      "gpt-5-nano",
+      "gpt-5-mini"
+    ],
+    "transcribeModel": "gpt-4o-mini-transcribe",
+    "timeout": 10
+  }
 }
