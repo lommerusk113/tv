@@ -20,6 +20,8 @@ def main():
         {"title": "Slow Horses again", "ids": {"imdb": "tt5875444"}},
     ]
     assert [i["Id"] for i in recommend.matches(recs, library)] == ["s1", "m1"]
+    recs[1]["_kind"] = "movies"
+    assert recommend.missing(recs, library) == [{"type": "movie", "tmdb": 999, "title": "Not on the server", "year": None}]
     print("ok")
 
 

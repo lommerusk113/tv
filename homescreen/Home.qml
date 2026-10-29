@@ -16,7 +16,7 @@ FocusScope {
     // its overlay).
     readonly property bool atRoot: {
         const loader = sectionRepeater.count > section ? sectionRepeater.itemAt(section) : null;
-        return !settingsPanel.open && section === initialSection
+        return !settingsPanel.open && !requestDialog.open && section === initialSection
                 && (!loader || !loader.item || loader.item.current === 0);
     }
 
@@ -151,6 +151,12 @@ FocusScope {
     }
 
     function runAction(action) {
+        if (requestDialog.open && requestDialog.handle(action))
+            return;
+        if (action.startsWith("request:")) {  // a "Get more" tile: ask first
+            requestDialog.ask(action);
+            return;
+        }
         if (settingsPanel.open && settingsPanel.handle(action))
             return;
         if (action === "settings") {
@@ -373,6 +379,10 @@ FocusScope {
 
     SettingsPanel {
         id: settingsPanel
+    }
+
+    RequestDialog {
+        id: requestDialog
     }
 
     VoiceOverlay {

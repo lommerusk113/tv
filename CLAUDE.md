@@ -94,6 +94,12 @@ homescreen/
                     activation (instead of `trakt.py sync`). test_recommend.py. Login done 2026-10-29: new Trakt apps
                     are PKCE-only (no client secret, redirect must be localhost); the device-code login needs only
                     clientId. Free accounts have a limit on connected apps.
+  jellyseerr.py     "Get more" row (traktMissing): Trakt picks NOT on the server (recommend.py writes
+                    trakt-missing.json) with Jellyseerr 3.1's poster (TMDb w342, no TMDb key needed), year, status
+                    ("Requested"/"Downloading"; available/blacklisted left out); `request movie|tv <tmdb>` POSTs
+                    /api/v1/request (tv: seasons "all"). secrets "jellyseerr": {url, apiKey}; the key's user is
+                    admin, so requests are auto-approved. Tile action request:<kind>:<tmdb>:<title> -> RequestDialog.qml
+                    (Request/Cancel) -> Config.system("jellyseerr_request:...") -> message on the home screen.
   trakt.py          Trakt "Up next": `auth` (device code login), `sync` (writes content.json); stdlib only;
                     update_content() = locked, atomic merge into content.json (each script owns its keys)
   tmdb.py           TMDb "trending" key (posters); test_tmdb.py = mock test (`--keep DIR` to view it in the prototype)

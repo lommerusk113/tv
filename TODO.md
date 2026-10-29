@@ -121,4 +121,6 @@ Status and conventions: see CLAUDE.md. Do phases in order. Each phase ends with 
 - [x] (2026-10-29, host) Trakt connected (device code, clientId only) and "Recommended for you" row (recommend.py):
   Trakt picks that are on the Jellyfin server, OK plays. Possible next: Trakt picks in the banner too; a row of picks
   that are NOT on the server (needs a TMDb key for posters; could feed a Jellyseerr request later).
+- [x] (2026-10-29, host) "Get more" row: Trakt picks not on the server, request through Jellyseerr with a confirm
+  dialog. Dialog verified (Cancel); a real request not sent by Claude (it starts a download) -> user tries one.
 

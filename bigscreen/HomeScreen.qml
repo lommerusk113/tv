@@ -25,7 +25,11 @@ Item {
         if (!windowActive)
             return;
         tv.forceActiveFocus();
-        runScript("recommend.py", tv.reloadLive);  // Trakt recommendations on the Jellyfin server
+        // Trakt recommendations on the Jellyfin server, then the ones that are not ("Get more", via Jellyseerr).
+        runScript("recommend.py", () => {
+            tv.reloadLive();
+            root.runScript("jellyseerr.py", tv.reloadLive);
+        });
         runScript("tmdb.py", tv.reloadLive);
         runScript("jellyfin.py", tv.reloadLive);
         runScript("youtube.py", tv.reloadLive);
@@ -261,6 +265,26 @@ Item {
                     "restart": "systemctl reboot",
                     "shutdown": "systemctl poweroff"
                 };
+                if (action.startsWith("jellyseerr_request:")) {
+                    // "Get more" tile, confirmed in RequestDialog: Jellyseerr requests it (Sonarr/Radarr download it).
+                    const [, kind, tmdb, ...rest] = action.split(":");
+                    const title = rest.join(":");
+                    exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/jellyseerr.py")) + "' request "
+                             + (kind === "tv" ? "tv" : "movie") + " " + tmdb.replace(/[^0-9]/g, ""), data => {
+                        let res = null;
+                        try {
+                            res = JSON.parse(data.stdout);
+                        } catch (e) {}
+                        if (res && res.ok) {
+                            tv.showMessage("Requested “" + title + "”");
+                            root.runScript("jellyseerr.py", tv.reloadLive);  // the tile now says "Requested"
+                        } else {
+                            tv.showMessage("Could not request “" + title + "”");
+                            console.warn("tv: jellyseerr.py request: " + (data.stdout + data.stderr).trim());
+                        }
+                    });
+                    return true;
+                }
                 if (action.startsWith("launch_desktop:")) {
                     // A "More apps" tile: any installed app, by its desktop file (apps.py).
                     Config.launcher({ id: action.slice(15), desktopId: action.slice(15) });

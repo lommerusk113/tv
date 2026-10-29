@@ -20,6 +20,7 @@ import trakt
 from trakt import CACHE, update_content
 
 RAW = CACHE / "trakt-recommendations.json"
+MISSING = CACHE / "trakt-missing.json"  # picks NOT on the server, for jellyseerr.py ("Get more" row)
 MAX_AGE = 6 * 3600
 MAX_ITEMS = 20
 HERO_ITEMS = 8
@@ -74,6 +75,19 @@ def matches(recs, library):
     return out
 
 
+def missing(recs, library):
+    """Recommendations (interleaved order) that match nothing in the library: [{type: movie|tv, tmdb, title, year}]."""
+    ids = {(k.lower(), str(v)) for item in library for k, v in (item.get("ProviderIds") or {}).items()}
+    out = []
+    for rec in recs:
+        rid = rec.get("ids") or {}
+        if any(rid.get(k) and (k, str(rid[k])) in ids for k in ("tmdb", "imdb", "tvdb")) or not rid.get("tmdb"):
+            continue
+        out.append({"type": "tv" if rec.get("_kind") == "shows" else "movie", "tmdb": rid["tmdb"],
+                    "title": rec.get("title", ""), "year": rec.get("year")})
+    return out
+
+
 def main():
     conf = jellyfin.settings()
     if not conf:
@@ -92,7 +106,12 @@ def main():
     except (urllib.error.URLError, OSError, ValueError) as e:
         print(f"recommend: {conf['url']}: {e}; keeping content.json", file=sys.stderr)
         return
-    items = matches(interleave(recs.get("movies") or [], recs.get("shows") or []), library)[:MAX_ITEMS]
+    for kind in ("movies", "shows"):
+        for rec in recs.get(kind) or []:
+            rec["_kind"] = kind
+    ordered = interleave(recs.get("movies") or [], recs.get("shows") or [])
+    MISSING.write_text(json.dumps(missing(ordered, library)))
+    items = matches(ordered, library)[:MAX_ITEMS]
     tiles = []
     for item in items:
         tile = jellyfin.tile(conf, item)

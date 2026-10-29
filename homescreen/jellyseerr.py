@@ -1,0 +1,143 @@
+#!/usr/bin/env python3
+""""Get more" row and requests through Jellyseerr/Overseerr. Standard library only.
+
+  python3 jellyseerr.py                      writes the traktMissing key into ~/.cache/tv-project/content.json:
+                                             Trakt picks NOT on the server (recommend.py's trakt-missing.json) with
+                                             Jellyseerr's poster, year and status; OK asks "Request X?"
+  python3 jellyseerr.py request movie|tv <tmdb id>   requests it (series: all seasons); prints {"ok", "status"}
+
+Settings in ~/.config/tv-project/secrets.json: "jellyseerr": {"url": "http://...:5055", "apiKey": "..."} (Settings ->
+General -> API Key). Requests are made as the API key's user (admin = approved at once, then Sonarr/Radarr).
+Details are cached for a day in ~/.cache/tv-project/jellyseerr-details.json (status for an hour).
+"""
+import json
+import sys
+import time
+import urllib.error
+import urllib.request
+
+from trakt import CACHE, colors, download, secrets, update_content
+
+MISSING = CACHE / "trakt-missing.json"
+DETAILS = CACHE / "jellyseerr-details.json"
+TMDB_IMAGES = "https://image.tmdb.org/t/p/w342"
+MAX_ITEMS = 20
+STATUS_AGE = 3600
+DETAILS_AGE = 86400
+# Jellyseerr media status: 1 unknown, 2 pending, 3 processing, 4 partially available, 5 available, 6 blacklisted
+LABEL = {2: "Requested", 3: "Downloading", 4: "Partly on the server", 5: "On the server"}
+
+
+def settings():
+    try:
+        conf = secrets().get("jellyseerr") or {}
+    except (OSError, ValueError):
+        return None
+    return conf if conf.get("url") and conf.get("apiKey") else None
+
+
+def api(conf, path, body=None):
+    req = urllib.request.Request(conf["url"].rstrip("/") + "/api/v1" + path, method="POST" if body is not None else "GET",
+                                 data=json.dumps(body).encode() if body is not None else None,
+                                 headers={"X-Api-Key": conf["apiKey"], "Content-Type": "application/json",
+                                          "Accept": "application/json"})
+    with urllib.request.urlopen(req, timeout=20) as res:
+        text = res.read()
+        return json.loads(text) if text else None
+
+
+def details(conf, kind, tmdb, cache):
+    """{title, year, poster, status} for a title, from the cache when fresh enough."""
+    key = "%s:%s" % (kind, tmdb)
+    old = cache.get(key)
+    now = time.time()
+    if old and now - old["fetched"] < DETAILS_AGE and now - old.get("checked", 0) < STATUS_AGE:
+        return old
+    d = api(conf, "/%s/%s" % (kind, tmdb))
+    date = d.get("releaseDate") or d.get("firstAirDate") or ""
+    cache[key] = {"title": d.get("title") or d.get("name") or "", "year": date[:4], "poster": d.get("posterPath"),
+                  "status": (d.get("mediaInfo") or {}).get("status") or 1, "fetched": now, "checked": now}
+    return cache[key]
+
+
+def tile(kind, tmdb, info):
+    status = LABEL.get(info["status"])
+    out = {
+        "id": "seerr-%s-%s" % (kind, tmdb),
+        "title": info["title"],
+        "meta": " · ".join(p for p in ("Series" if kind == "tv" else "Film", info["year"], status) if p),
+        "colors": colors("%s%s" % (kind, tmdb)),
+        "action": "request:%s:%s:%s" % (kind, tmdb, info["title"]),
+    }
+    if info.get("poster"):
+        image = download(TMDB_IMAGES + info["poster"], "tmdb-%s-%s-w342.jpg" % (kind, tmdb))
+        if image:
+            out["image"] = image
+    return out
+
+
+def build(conf):
+    try:
+        missing = json.loads(MISSING.read_text())
+    except (OSError, ValueError):
+        print("jellyseerr: no trakt-missing.json yet (run recommend.py); keeping content.json", file=sys.stderr)
+        return
+    try:
+        cache = json.loads(DETAILS.read_text())
+    except (OSError, ValueError):
+        cache = {}
+    tiles = []
+    for rec in missing:
+        try:
+            info = details(conf, rec["type"], rec["tmdb"], cache)
+        except (urllib.error.URLError, OSError, ValueError) as e:
+            print(f"jellyseerr: {rec['title']}: {e}", file=sys.stderr)
+            continue
+        if info["status"] in (5, 6):  # already there (recommend.py will show it) or blacklisted
+            continue
+        tiles.append(tile(rec["type"], rec["tmdb"], info))
+        if len(tiles) == MAX_ITEMS:
+            break
+    DETAILS.write_text(json.dumps(cache))
+    if tiles:
+        print(f"jellyseerr: wrote {update_content({'traktMissing': tiles})}")
+
+
+def request(conf, kind, tmdb):
+    body = {"mediaType": kind, "mediaId": int(tmdb)}
+    if kind == "tv":
+        body["seasons"] = "all"
+    try:
+        res = api(conf, "/request", body) or {}
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode(errors="replace")[:200]
+        return {"ok": False, "error": "HTTP %d %s" % (e.code, detail)}
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        return {"ok": False, "error": str(e)}
+    # Mark it at once, so the row shows "Requested" without waiting an hour.
+    try:
+        cache = json.loads(DETAILS.read_text())
+        key = "%s:%s" % (kind, tmdb)
+        if key in cache:
+            cache[key]["status"] = max(cache[key]["status"], 2)
+            DETAILS.write_text(json.dumps(cache))
+    except (OSError, ValueError):
+        pass
+    return {"ok": True, "status": res.get("status")}
+
+
+def main():
+    conf = settings()
+    if not conf:
+        print("jellyseerr: no \"jellyseerr\" url/apiKey in secrets.json", file=sys.stderr)
+        return
+    if len(sys.argv) == 4 and sys.argv[1] == "request" and sys.argv[2] in ("movie", "tv") and sys.argv[3].isdigit():
+        print(json.dumps(request(conf, sys.argv[2], sys.argv[3])))
+        return
+    if len(sys.argv) > 1:
+        sys.exit(__doc__)
+    build(conf)
+
+
+if __name__ == "__main__":
+    main()
