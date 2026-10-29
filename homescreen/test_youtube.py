@@ -96,11 +96,14 @@ def main():
 
     # With history/recommendations cached (as youtube_tv.py would have fetched them): progress bars and the row.
     (home / "cache/tv-project/youtube-tv.json").write_text(json.dumps({"time": 9e12, "history": [
-        {"id": "bbbbbbbbbb1", "title": "Middle", "channel": "Beta", "watched": 0.5}], "recommended": [
+        {"id": "bbbbbbbbbb1", "title": "Middle", "channel": "Beta", "watched": 0.5},
+        {"id": "aaaaaaaaaa2", "title": "Older", "channel": "Alpha", "watched": 1}], "recommended": [
         {"id": "rrrrrrrrrr1", "title": "Picked for you", "channel": "Gamma", "watched": 0}]}))
     run_test()
     data = json.loads(content.read_text())
-    assert [i.get("progress") for i in data["youtubeChannels"]] == [None, 0.5, None], data["youtubeChannels"]
+    # The finished one (aaaaaaaaaa2) is gone, the started one has its progress.
+    assert [(i["id"], i.get("progress")) for i in data["youtubeChannels"]] == [
+        ("youtube-aaaaaaaaaa1", None), ("youtube-bbbbbbbbbb1", 0.5)], data["youtubeChannels"]
     assert data["youtubeRecommended"][0]["subtitle"] == "Gamma"
     assert data["youtubeRecommended"][0]["action"] == "youtube_watch:rrrrrrrrrr1"
 

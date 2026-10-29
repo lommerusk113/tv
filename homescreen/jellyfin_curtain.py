@@ -19,6 +19,7 @@ from jellyfin_back import VENV_PYTHON, page_socket
 
 # Loading screen: the item's backdrop (a series' for an episode), darkened, its logo (else the title), the episode line
 # and a sliding bar. Built inside Jellyfin's page with its own ApiClient; without an item id only the bar and text.
+# It goes away by itself when Jellyfin's player emits `playing` (window.api.player), `off` is the fallback.
 ON = r"""
 ((itemId) => {
     clearTimeout(window.__tvProjectCurtainTimer);
@@ -72,6 +73,19 @@ ON = r"""
             if (it.UserData && it.UserData.PlaybackPositionTicks)
                 c.querySelector(".kicker").textContent = "Continuing";
         }).catch(() => text(""));
+    }
+    // Fades out the moment Jellyfin's player starts (the server's position updates come seconds later, so waiting for
+    // them let the sound start under the loading screen).
+    const player = window.api && window.api.player;
+    if (player && player.playing && !window.__tvProjectCurtainHooked) {
+        window.__tvProjectCurtainHooked = true;
+        player.playing.connect(() => {
+            const cur = document.getElementById("tvProjectCurtain");
+            if (cur) {
+                cur.classList.remove("shown");
+                setTimeout(() => cur.remove(), 400);
+            }
+        });
     }
     // Removes itself after 20 s whatever happens, so it can never hide Jellyfin for good.
     window.__tvProjectCurtainTimer = setTimeout(() => c.remove(), 20000);

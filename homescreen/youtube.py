@@ -4,7 +4,8 @@
   python3 youtube.py   writes into ~/.cache/tv-project/content.json:
                        youtubeChannels     newest videos of the channels in config/youtube.json, newest first
                        youtubeRecommended  YouTube's own picks for the account (the TV app's start page)
-                       OK on a tile plays it in VacuumTube. Videos in the account's watch history get a progress bar.
+                       OK on a tile plays it in VacuumTube. Videos in the account's watch history get a progress bar;
+                       finished ones (config hideWatchedFrom, default 0.9) are left out of the channels row.
 
 Recommendations and history come from the running VacuumTube with its login (youtube_tv.py, over its debug port);
 without it running, the last ones are kept (TV_MAX_AGE cache in ~/.cache/tv-project/youtube-tv.json).
@@ -164,7 +165,10 @@ def main():
     feeds = tv_feeds(now)
     watched = {v["id"]: v.get("watched") or 0 for v in feeds.get("history", [])}
     names = {c["id"]: c["name"] for c in conf["channels"]}
-    entries = [(v["age"] + now - v["fetched"], names.get(cid, ""), v) for cid, vs in channels.items() for v in vs]
+    # Finished videos (watch history, any device) are left out; started ones stay with their progress bar.
+    seen = conf.get("hideWatchedFrom", 0.9)
+    entries = [(v["age"] + now - v["fetched"], names.get(cid, ""), v) for cid, vs in channels.items() for v in vs
+               if watched.get(v["id"], 0) < seen]
     entries.sort(key=lambda e: e[0])
     rows = {}
     channel_items = [tile(v["id"], v["title"], " · ".join(p for p in (name, ago(int(age)), v.get("duration")) if p),
