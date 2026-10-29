@@ -42,21 +42,6 @@
     "desktopId": "com.moonlight_stream.Moonlight.desktop"
   },
   {
-    "id": "store",
-    "name": "App Store",
-    "colors": [
-      "#2c3e50",
-      "#1a252f"
-    ],
-    "image": "icons/store.svg",
-    "desktopId": "io.github.kolunmi.Bazaar.desktop",
-    "voiceNames": [
-      "app store",
-      "store",
-      "bazaar"
-    ]
-  },
-  {
     "id": "settings",
     "name": "Settings",
     "colors": [
