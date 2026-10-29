@@ -122,7 +122,10 @@ homescreen/
   Config.qml        singleton: theme, apps, layout, content, keymap, scale; px(v); withAlpha(); launch(appId) -> launcher hook
   Home.qml          page: corner clock/weather, vertical scrolling, ALL key handling
   HeroBanner.qml    full-bleed featured carousel (Left/Right switches item)
-  TileRow.qml       titled horizontal row, animated horizontal scroll, focusNearest()
+  TileRow.qml       titled horizontal row, animated horizontal scroll (focused tile at the left margin), focusNearest();
+                    tiles scrolled past the margin fade out; round ‹ › arrows in the margins when tiles are hidden
+                    (› only on the focused row). Note: QT_QPA_PLATFORM=offscreen does not draw MultiEffect (tinted icons
+                    look empty there); check those in Bigscreen
   Tile.qml          tile styles app / landscape / poster; focus = scale + white outline + blurred glow
   config/theme.json, config/apps.json, config/layout.json, config/keymap.json
   data/placeholder.json   placeholder featured/upNext/trending content; keys in content.json override it

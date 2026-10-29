@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Effects
 import "."
 
 // A titled horizontal row of tiles. Scrolls horizontally to keep the focused tile visible.
@@ -14,6 +15,58 @@ Item {
     readonly property int glowPad: Config.px(32)   // room for the focus scale and glow
 
     implicitHeight: list.y + list.height - glowPad / 2
+
+    // Where the horizontal scroll is (or is heading): for the fade of passed tiles and the scroll arrows.
+    readonly property real scrollX: hScroll.running ? hScroll.to : list.contentX
+    readonly property bool moreLeft: scrollX > -list.leftMargin + 1
+    readonly property bool moreRight: scrollX + list.width < list.contentWidth + list.rightMargin - 1
+
+    // Round chevron in the page margin: shown when tiles are hidden that way (right: only on the focused row, where
+    // the peeking tile alone is easy to miss). Dimmed on rows without focus.
+    component ScrollArrow: Rectangle {
+        id: arrow
+        property bool show
+        property bool pointsLeft
+        width: Config.px(52)
+        height: width
+        radius: width / 2
+        y: list.y + row.glowPad + Config.px(row.theme.tiles[row.style][1]) / 2 - height / 2
+        color: Config.withAlpha(row.theme.colors.surface, 0.9)
+        border.width: Config.px(1)
+        border.color: Config.withAlpha(row.theme.colors.text, 0.15)
+        opacity: show ? (row.focused ? 1 : 0.55) : 0
+        visible: opacity > 0
+        z: 2
+        Behavior on opacity { NumberAnimation { duration: row.theme.animationMs * 2 } }
+        Image {
+            id: chevron
+            anchors.centerIn: parent
+            width: Config.px(26)
+            height: width
+            source: Qt.resolvedUrl("icons/settings/next.svg")
+            sourceSize: Qt.size(width * 2, height * 2)
+            rotation: arrow.pointsLeft ? 180 : 0
+            visible: false
+        }
+        MultiEffect {
+            anchors.fill: chevron
+            source: chevron
+            rotation: chevron.rotation
+            colorization: 1
+            colorizationColor: row.theme.colors.text
+            brightness: 1
+        }
+    }
+
+    ScrollArrow {
+        x: (list.leftMargin - width) / 2
+        show: row.moreLeft
+        pointsLeft: true
+    }
+    ScrollArrow {
+        x: row.width - list.rightMargin / 2 - width / 2
+        show: row.moreRight && row.focused
+    }
 
     function move(d) {
         const n = current + d;
@@ -110,7 +163,7 @@ Item {
             z: tile.focused ? 1 : 0
             // Tiles scrolled past the left page margin fade out, so every row starts at the same edge (the next tile
             // still peeks in on the right). Measured against where the scroll ends, so it does not flicker meanwhile.
-            opacity: cell.x < (hScroll.running ? hScroll.to : list.contentX) + list.leftMargin - 1 ? 0 : 1
+            opacity: cell.x < row.scrollX + list.leftMargin - 1 ? 0 : 1
             Behavior on opacity { NumberAnimation { duration: row.theme.animationMs * 2 } }
 
             Tile {
