@@ -100,6 +100,30 @@ FocusScope {
         vScroll.start();
     }
 
+    // Where focus is ({row id, item id, tile index}), so a rebuild of the rows (new live content) can put it back.
+    function focusState() {
+        const s = sections[section];
+        const row = sectionAt(section);
+        const at = row ? row.current : 0;
+        return { id: s ? s.id : "", item: s && s.items[at] ? s.items[at].id : "", index: at };
+    }
+
+    // Back to that row and the same item (it may have moved), else the same position; the start if the row is gone.
+    function restoreFocus(state) {
+        const i = sections.findIndex(s => s.id === state.id);
+        if (i < 0)
+            return goHome();
+        section = i;
+        const items = sections[i].items;
+        let at = items.findIndex(item => item.id === state.item);
+        if (at < 0)
+            at = Math.min(state.index, items.length - 1);
+        const row = sectionAt(i);
+        if (row)
+            row.current = Math.max(0, at);
+        scrollToSection();
+    }
+
     // Back to the start state: every row at its first tile, focus on layout.initialFocus.
     function goHome() {
         for (let i = 0; i < sections.length; i++)

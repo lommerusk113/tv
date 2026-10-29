@@ -54,7 +54,8 @@ FocusScope {
         Config.content = Object.assign({}, placeholder, live);
     }
 
-    // Re-read the live content (after a sync). Only rebuilds the rows, and resets focus to the start, when it changed.
+    // Re-read the live content (after a sync). Only rebuilds the rows when it changed, keeping focus where it was
+    // (the syncs run when the home screen comes back, often while the user is already moving).
     function reloadLive() {
         readFile(liveUrl, text => {
             let normalized;
@@ -66,8 +67,9 @@ FocusScope {
             if (normalized === liveText)
                 return;
             liveText = normalized;
+            const focus = loader.item ? loader.item.focusState() : null;
             applyContent();
-            Qt.callLater(loader.item.goHome);
+            Qt.callLater(() => focus ? loader.item.restoreFocus(focus) : loader.item.goHome());
             console.log("config: live content updated");
         });
     }
