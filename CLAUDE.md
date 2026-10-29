@@ -264,7 +264,9 @@ an unknown key name and an unknown app id.
 - The remote can NOT wake the laptop (tested 2026-10-29, s2idle, Intel AX211): with USB wakeup enabled on the adapter
   (3-10) a connected remote wakes it instantly (the link drops at suspend: "ACL packet for unknown connection
   handle"; GPE wake via IRQ 9), a disconnected one never ("Controller resume with wake event 0x0"). Rule removed again.
-  So the laptop does not sleep on AC (powerdevilrc [AC][SuspendAndShutdown] AutoSuspendAction=0); Off = TV off only.
+  So the laptop does not sleep on AC (powerdevilrc [AC][SuspendAndShutdown] AutoSuspendAction=0, LidAction=0: a
+  closed lid with the TV off would otherwise suspend); Off = TV off only. Used ~once a week: battery sits at 100 % on
+  AC (ThinkPad, BAT0 charge_control_end_threshold supported) -> user sets a charge limit (System Settings > Power).
   Screen lock off (kscreenlockerrc Autolock/LockOnResume=false; needs `qdbus org.freedesktop.ScreenSaver /ScreenSaver
   configure` to take effect). Autologin into Bigscreen: scripts/install-autologin.sh (Plasma Login Manager drop-in;
   user runs it).
