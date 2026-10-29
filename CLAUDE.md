@@ -93,9 +93,14 @@ homescreen/
   voice.py          `listen` (arecord 4 s -> whisper-cli -> action), `file <wav>`, `parse <text>`; config/voice.json;
                     test_voice.py (`--whisper` also transcribes whisper.cpp's jfk.wav)
   VoiceOverlay.qml  push-to-talk feedback pill (bottom centre) (also "busy" status: showStatus("Starting…"))
-  SettingsPanel.qml slide-in from the right (Settings tile, gear button, "open settings"): volume (left/right),
-                    turn off TV, System Settings, sleep, restart, shut down (power ones need a second OK); while open,
-                    Home routes keys to it and atRoot is false, so Back closes it instead of opening Bigscreen's overlay
+  SettingsPanel.qml slide-in from the right (Settings tile, gear button, "open settings"), pages: main (volume
+                    left/right; links), Wi-Fi (on/off, rescan, networks: OK connects/disconnects, unknown secured ->
+                    password page), Bluetooth (on/off, search 8 s, OK connects/disconnects/pairs), Display (per screen:
+                    use it (2+ screens), resolution left/right then OK -> "Keep?" 15 s auto-revert, size 100-200 %),
+                    Power (TV off, sleep, restart/shut down need a second OK). Back = up a page / close. While open,
+                    Home routes keys to it and atRoot is false (Back does not open Bigscreen's overlay)
+  system.py         backend for those pages: nmcli, bluetoothctl, kscreen-doctor; JSON out ({"error"} + exit 1);
+                    refuses to disable the last screen
   apps.py           "More apps" row (installedApps): every exported Flatpak .desktop not pinned in apps.json, with its
                     hicolor icon; action launch_desktop:<id>; test_apps.py
   youtube.py        "New from your channels" (channel /videos pages, config/youtube.json) + "Recommended on YouTube"

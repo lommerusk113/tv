@@ -17,6 +17,7 @@ QtObject {
     property var voiceListener: null  // function(callback({text, action} or null)): record + transcribe (voice.py)
     property var system: null         // function(action) -> true if handled: volume_*, tv_off, sleep, restart...
     property var volumeReader: null   // function(callback(volume 0..1)): current output volume (Settings panel)
+    property var systemQuery: null    // function(args, callback(json)): system.py <args> (Wi-Fi, Bluetooth, display)
 
     property var actionRunner: null   // function(action); set by Home.qml (its runAction), for tiles with an "action"
 

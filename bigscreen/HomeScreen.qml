@@ -230,6 +230,19 @@ Item {
                     callback(result);
                 });
             };
+            // Wi-Fi, Bluetooth and display for the Settings panel: system.py prints one JSON object.
+            Config.systemQuery = (args, callback) => {
+                const quoted = args.map(a => "'" + String(a).replace(/'/g, "'\\''") + "'").join(" ");
+                exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/system.py")) + "' " + quoted, data => {
+                    let result = null;
+                    try {
+                        result = JSON.parse(data.stdout);
+                    } catch (e) {
+                        result = { error: (data.stderr || data.stdout).trim().slice(-200) || "no answer" };
+                    }
+                    callback(result);
+                });
+            };
             // Current output volume for the Settings panel ("Volume: 0.75" or "Volume: 0.75 [MUTED]").
             Config.volumeReader = callback => {
                 exec.run("wpctl get-volume @DEFAULT_AUDIO_SINK@", data => {
