@@ -51,6 +51,7 @@ def main():
     except (OSError, ValueError):
         location = None
     if not location:
+        OUT.unlink(missing_ok=True)  # "Use my location" switched off: the home screen hides the weather
         sys.exit('weather: no "location": {"lat", "lon"} in secrets.json')
     old = json.loads(OUT.read_text()) if OUT.exists() else {}
     now = datetime.now(timezone.utc)

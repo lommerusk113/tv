@@ -34,7 +34,7 @@ Item {
         runScript("jellyfin.py", tv.reloadLive);
         runScript("moonlight.py", tv.reloadLive);  // Games row (nothing until a PC is paired)
         runScript("youtube.py", tv.reloadLive);
-        runScript("weather.py", tv.reloadWeather);
+        runScript("location.py", () => runScript("weather.py", tv.reloadWeather));  // location: daily, if switched on
     }
 
     // Home Page is Bigscreen's global "Toggle Bigscreen Home Screen" shortcut: upstream main.qml minimizes all apps,
@@ -362,6 +362,10 @@ Item {
                 if (action.startsWith("launch_desktop:")) {
                     // A "More apps" tile: any installed app, by its desktop file (apps.py).
                     Config.launcher({ id: action.slice(15), desktopId: action.slice(15) });
+                    return true;
+                }
+                if (action === "weather_refresh") {  // Settings > Use my location
+                    exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/weather.py")) + "'", () => tv.reloadWeather());
                     return true;
                 }
                 if (action === "system_settings") {

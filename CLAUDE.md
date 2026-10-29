@@ -159,6 +159,11 @@ homescreen/
                     fields, but arrow keys go to the app, so it cannot be used with the remote; left at mode 1.
                     Jellyfin (TV layout) and YouTube TV have their own remote keyboards in search.
   jellyfin_nav.py   `search <text>`: Jellyfin's search page with the text typed in (voice "search for X")
+  location.py       weather location without GPS (user chose BeaconDB, 2026-10-29): nearby Wi-Fi BSSIDs (nmcli) +
+                    considerIp to api.beacondb.net; BeaconDB did not know the home networks yet, so it is the IP
+                    fallback (~25 km). Settings "Use my location" switch (system.py location on|off|status); on =
+                    look up now + daily (HomeScreen runs location.py before weather.py); off = location removed,
+                    weather.py deletes weather.json, the clock pill hides the weather.
   system.py         backend for those pages: nmcli, bluetoothctl, kscreen-doctor; JSON out ({"error"} + exit 1);
                     refuses to disable the last screen
   apps.py           (not in the layout since 2026-10-29) "More apps" row (installedApps): every exported Flatpak .desktop not pinned in apps.json, with its

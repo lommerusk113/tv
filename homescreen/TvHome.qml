@@ -109,6 +109,10 @@ FocusScope {
     // Re-read weather.json (written by weather.py); a missing or unreadable file keeps what is shown.
     function reloadWeather() {
         readFile(weatherUrl, text => {
+            if (!text.trim()) {  // no weather.json (location switched off): hide the weather
+                Config.weather = null;
+                return;
+            }
             try {
                 Config.weather = JSON.parse(text);
             } catch (e) {}

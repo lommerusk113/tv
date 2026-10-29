@@ -19,6 +19,7 @@ Item {
     property var wifi: null          // system.py wifi
     property var bt: null            // system.py bt / bt-scan
     property var display: null       // system.py display
+    property var place: null         // system.py location (status of "Use my location")
     property var pending: ({})       // display: "<output id>:mode" / ":scale" -> chosen slider index, not applied yet
     property var revert: null        // display: {undo: [[args, busy text]], seconds} while "Keep?" counts down
     property string passwordFor: ""  // Wi-Fi network the password page is for
@@ -70,6 +71,10 @@ Item {
                   sub: b ? (!b.powered ? "Off" : devs ? devs + " connected" : "On") : " " },
                 { key: "display", label: "Display", icon: "display", kind: "link",
                   sub: out ? out.modeLabel + " · " + Math.round(out.scale * 100) + " %" : " " },
+                { key: "location", label: "Use my location", icon: "location", kind: "toggle", on: !!(place && place.auto),
+                  sub: !place ? " " : !place.auto ? "For the weather. Off" : place.source === "wifi"
+                       ? "From Wi-Fi · about " + Math.max(1, Math.round(place.accuracy)) + " m"
+                       : "Approximate · about " + Math.round(place.accuracy / 1000) + " km" },
                 { key: "power", label: "Power", icon: "power", kind: "link", sub: "TV, sleep, restart, shut down" }
             ];
         }
@@ -160,6 +165,7 @@ Item {
         query(["wifi"], r => wifi = r);
         query(["bt"], r => bt = r);
         query(["display"], r => display = r);
+        query(["location", "status"], r => place = r);
     }
 
     function close() {
@@ -273,6 +279,12 @@ Item {
         case "wifi-rescan": query(["wifi-rescan"], r => wifi = r, "Searching…"); return;
         case "bt-power": query(["bt-power", e.on ? "off" : "on"], r => bt = r, e.on ? "Turning off…" : "Turning on…"); return;
         case "bt-scan": query(["bt-scan", "8"], r => bt = r, "Searching for devices…"); return;
+        case "location":
+            query(["location", e.on ? "off" : "on"], r => {
+                place = r;
+                system("weather_refresh");  // show (or hide) the weather right away
+            }, e.on ? "Turning off…" : "Finding your location…");
+            return;
         case "apply": applyDisplay(); return;
         case "keep": revert = null; revertTimer.stop(); go("display", 0); return;
         case "undo": undoDisplay(); return;

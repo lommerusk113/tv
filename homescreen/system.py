@@ -12,10 +12,12 @@ Standard library only. Every command prints one JSON object; {"error": "..."} (e
   python3 system.py bt-power on|off
   python3 system.py bt-connect|bt-disconnect|bt-pair|bt-forget <mac>   bt-pair also trusts and connects
   python3 system.py display                    {"outputs": [{id, name, enabled, mode, modes: [{id, label}], scale}]}
+  python3 system.py location [status|on|off]   weather location switch (location.py)
   python3 system.py display-set <output> mode <mode id> | scale <factor> | enable | disable
 """
 import json
 import re
+from pathlib import Path
 import subprocess
 import sys
 
@@ -166,6 +168,18 @@ def display_set(output, what, value=None):
     return display()
 
 
+def location(cmd):
+    """Settings' "Use my location" switch: location.py status|on|off (JSON)."""
+    if cmd not in ("status", "on", "off"):
+        raise Failed("status, on or off")
+    res = subprocess.run([sys.executable, str(Path(__file__).with_name("location.py")), cmd], capture_output=True,
+                         text=True, timeout=90)
+    out = json.loads(res.stdout or "{}")
+    if res.returncode != 0 or "error" in out:
+        raise Failed(out.get("error") or res.stderr.strip()[-200:] or "location lookup failed")
+    return out
+
+
 def power(command, args, status):
     if args[:1] not in (["on"], ["off"]):
         raise Failed("on or off")
@@ -189,6 +203,7 @@ def main():
         "bt-pair": lambda: bt_action("pair", args[0]),
         "bt-forget": lambda: bt_action("forget", args[0]),
         "display": display,
+        "location": lambda: location(args[0] if args else "status"),
         "display-set": lambda: display_set(args[0], args[1], args[2] if len(args) > 2 else None),
     }
     if cmd not in commands:
