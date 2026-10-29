@@ -86,6 +86,12 @@ homescreen/
   main.qml          prototype Window 1920x1080 containing TvHome
   TvHome.qml        loads the JSON into Config (readFile: XHR by default), then loads Home.qml; atTop for Bigscreen's Back;
                     overlays ~/.cache/tv-project/content.json (live rows) on placeholder.json; reloadLive()
+  recommend.py      "Recommended for you" (traktRecommended): Trakt /recommendations/movies+shows (100 each, cached 6 h
+                    in trakt-recommendations.json), interleaved, matched to Jellyfin by tmdb/imdb/tvdb ProviderIds,
+                    finished/started left out, max 20, Jellyfin tiles ("Film · 2025"). Run on every home-screen
+                    activation (instead of `trakt.py sync`). test_recommend.py. Login done 2026-10-29: new Trakt apps
+                    are PKCE-only (no client secret, redirect must be localhost); the device-code login needs only
+                    clientId. Free accounts have a limit on connected apps.
   trakt.py          Trakt "Up next": `auth` (device code login), `sync` (writes content.json); stdlib only;
                     update_content() = locked, atomic merge into content.json (each script owns its keys)
   tmdb.py           TMDb "trending" key (posters); test_tmdb.py = mock test (`--keep DIR` to view it in the prototype)

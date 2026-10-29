@@ -19,13 +19,13 @@ Item {
     readonly property bool darkenBackground: false
 
     // Whenever the home screen is active again (start, or back from an app): take key focus and refresh
-    // the rows (Trakt: a no-op until `trakt.py auth`; TMDb, Jellyfin, YouTube channels) and the weather.
+    // the rows (Trakt recommendations, TMDb, Jellyfin, YouTube channels) and the weather.
     readonly property bool windowActive: Window.active
     onWindowActiveChanged: {
         if (!windowActive)
             return;
         tv.forceActiveFocus();
-        runScript("trakt.py sync", tv.reloadLive);
+        runScript("recommend.py", tv.reloadLive);  // Trakt recommendations on the Jellyfin server
         runScript("tmdb.py", tv.reloadLive);
         runScript("jellyfin.py", tv.reloadLive);
         runScript("youtube.py", tv.reloadLive);

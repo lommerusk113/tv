@@ -6,8 +6,10 @@
                           ~/.cache/tv-project/content.json (overrides data/placeholder.json)
 
 Needs ~/.config/tv-project/secrets.json:
-  {"trakt": {"clientId": "...", "clientSecret": "..."}, "tmdb": {"apiKey": "..."}, "fanart": {"apiKey": "...", "clientKey": "..."}}
-(create an API app at https://trakt.tv/oauth/applications, redirect URI urn:ietf:wg:oauth:2.0:oob).
+  {"trakt": {"clientId": "..."}, "tmdb": {"apiKey": "..."}, "fanart": {"apiKey": "...", "clientKey": "..."}}
+(create an API app at https://trakt.tv/oauth/applications/new, redirect URI http://localhost: new apps only allow
+localhost and get no client secret; the device-code login used here needs only the client id. "clientSecret" is
+still sent when an older app has one.)
 tmdb (v3 API key) is optional: backdrops, and the hero needs it. fanart (fanart.tv key, clientKey optional) is optional:
 title logos in the hero. Images are cached in ~/.cache/tv-project/images/.
 The token goes to ~/.config/tv-project/trakt-token.json (mode 600). Neither file is in the repo.
@@ -167,9 +169,9 @@ def auth():
     deadline = time.time() + code["expires_in"]
     while time.time() < deadline:
         time.sleep(interval)
-        status, token = request("/oauth/device/token", {
-            "code": code["device_code"], "client_id": s["clientId"], "client_secret": s["clientSecret"],
-        })
+        status, token = request("/oauth/device/token", with_secret(s, {
+            "code": code["device_code"], "client_id": s["clientId"],
+        }))
         if status == 200:
             save_token(token)
             print(f"trakt: logged in, token saved to {TOKEN}")
@@ -181,6 +183,13 @@ def auth():
     sys.exit("trakt: code expired, run auth again")
 
 
+def with_secret(s, body):
+    """Adds client_secret for older Trakt apps; apps created since 2026 are PKCE-only and get no secret."""
+    if s.get("clientSecret"):
+        body["client_secret"] = s["clientSecret"]
+    return body
+
+
 def access_token():
     """The saved access token, refreshed when it expires within a day."""
     if not TOKEN.exists():
@@ -190,10 +199,10 @@ def access_token():
         return token["access_token"]
 
     s = secrets()["trakt"]
-    status, fresh = request("/oauth/token", {
-        "refresh_token": token["refresh_token"], "client_id": s["clientId"], "client_secret": s["clientSecret"],
-        "redirect_uri": "urn:ietf:wg:oauth:2.0:oob", "grant_type": "refresh_token",
-    })
+    status, fresh = request("/oauth/token", with_secret(s, {
+        "refresh_token": token["refresh_token"], "client_id": s["clientId"],
+        "redirect_uri": s.get("redirectUri", "http://localhost"), "grant_type": "refresh_token",
+    }))
     if status != 200:
         sys.exit(f"trakt: token refresh failed ({status}), run: python3 trakt.py auth")
     save_token(fresh)

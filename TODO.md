@@ -118,4 +118,7 @@ Status and conventions: see CLAUDE.md. Do phases in order. Each phase ends with 
   X [on YouTube]" fills the search in; own OnScreenKeyboard for the Wi-Fi password. "More apps" row removed.
 - Typing elsewhere (RiksTV login in Chrome, Moonlight): idea: a global version of OnScreenKeyboard (gear menu or a
   remote button) that types into the focused app with `ydotool type`. Until then a USB/BT keyboard once for logins.
+- [x] (2026-10-29, host) Trakt connected (device code, clientId only) and "Recommended for you" row (recommend.py):
+  Trakt picks that are on the Jellyfin server, OK plays. Possible next: Trakt picks in the banner too; a row of picks
+  that are NOT on the server (needs a TMDb key for posters; could feed a Jellyseerr request later).
 
