@@ -84,3 +84,15 @@ Status and conventions: see CLAUDE.md. Do phases in order. Each phase ends with 
   HomeScreen.qml opens Jellyfin Desktop and runs `jellyfin.py play <title>` (server search, in-progress/next-up pick,
   PlayNow on this computer's Jellyfin Desktop session). Verified: "lord of the rings" resumed Fellowship of the Ring.
   The API key in secrets.json is temporary; replace it later (Dashboard -> API Keys).
+
+## Next (written 2026-10-29, end of day)
+- Trakt: user creates an API app (trakt.tv/oauth/applications/new, redirect urn:ietf:wg:oauth:2.0:oob), puts
+  clientId/clientSecret in secrets.json, runs `python3 homescreen/trakt.py auth`. Then: "Recommended for you" row from
+  Trakt recommendations, limited to titles on the Jellyfin server (playable), maybe also the banner.
+- Voice with an LLM (idea, not started): whisper text -> small model with the available actions as tools (launch,
+  jellyfin_play, youtube_search, volume, settings, move_to_tv...) instead of fixed phrases; fall back to voice.py rules
+  offline. Needs an API key from the user and a decision on which model/provider.
+- Untested on the host: Wi-Fi connect/disconnect, Bluetooth pairing, sleep/restart/shut down, the TV itself (Phase 1),
+  "move to TV" from a real other Jellyfin device, weather (needs location), install-tv-power.sh (user runs it).
+- Small: "S? E?" on episodes without numbers; Trending row is still placeholder (TMDb key or replace it).
+
