@@ -105,10 +105,10 @@ Status and conventions: see CLAUDE.md. Do phases in order. Each phase ends with 
 - Voice feedback: say/show what was understood more clearly (e.g. "Playing Breaking Bad S2 E3"), errors visible on
   the TV ("Nothing called X on Jellyfin") instead of only in the log.
 - Remote: red/green/yellow/blue and number keys are still unused (shortcuts? jump to rows?).
-- Moonlight TV mode built (2026-10-29, moonlight.py): tile streams tileApp ("Steam Big Picture") directly, Games row,
-  red button = end stream. Still needed: [ME] gaming PC on with Sunshine + its name/IP, then `moonlight.py pair <host>
-  <pin>` (PIN typed on https://<host>:47990), then test streaming, the Games row, the red button inside a stream, and
-  a game controller (pair it in Settings > Bluetooth).
+- [x] (2026-10-29, host) Moonlight TV mode with Wolf: paired, tile streams Wolf UI directly, Games row, red button ends
+  a stream (tested during a stream). Wolf on the server repaired (NVIDIA driver volume rebuilt for 580.178.04).
+  Left: [ME] a game controller (Settings > Bluetooth), Wolf UI apps marked red need "Download" first (images were
+  removed by Coolify's cleanup), turn off Coolify's Docker cleanup for this server.
 - [x] (2026-10-29) Remote waking the laptop: not possible here (see CLAUDE.md "Remote"); instead no automatic sleep on
   AC, screen lock off. Autologin into Bigscreen ready (scripts/install-autologin.sh, user runs it), then test a real
   Bigscreen login after a reboot. Possible later: Chrome/KWallet may ask for a password without a login password.

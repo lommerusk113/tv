@@ -11,8 +11,6 @@
 
 Moonlight is the Flatpak com.moonlight_stream.Moonlight (CLI: list/stream/pair/quit).
 """
-import csv
-import io
 import json
 import os
 import subprocess
@@ -33,12 +31,11 @@ def config():
 
 
 def apps(host):
-    """App names on the host, from `moonlight list --csv` (first column, header skipped)."""
-    res = subprocess.run(MOONLIGHT + ["list", host, "--csv"], capture_output=True, text=True, timeout=60)
+    """App names on the host, one per line from `moonlight list` (its --csv mode hangs against Wolf)."""
+    res = subprocess.run(MOONLIGHT + ["list", host], capture_output=True, text=True, timeout=180)  # Wolf is slow
     if res.returncode != 0:
         raise RuntimeError((res.stderr.strip().splitlines() or ["moonlight list failed"])[-1])
-    rows = list(csv.reader(io.StringIO(res.stdout)))
-    return [r[0] for r in rows[1:] if r and r[0]]
+    return [line.strip() for line in res.stdout.splitlines() if line.strip()]
 
 
 def tile(name):
@@ -55,7 +52,7 @@ def stream(app=None):
 
 
 def pair(host, pin):
-    res = subprocess.run(MOONLIGHT + ["pair", host, "--pin", pin], capture_output=True, text=True, timeout=180)
+    res = subprocess.run(MOONLIGHT + ["pair", host, "--pin", pin], capture_output=True, text=True, timeout=600)  # time to find Wolf's link and type the PIN
     out = (res.stdout + res.stderr).strip()
     if res.returncode != 0:
         sys.exit("moonlight: pairing failed: " + (out.splitlines() or ["?"])[-1])

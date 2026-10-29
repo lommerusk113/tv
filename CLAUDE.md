@@ -101,11 +101,21 @@ homescreen/
                     admin, so requests are auto-approved. Tile action request:<kind>:<tmdb>:<title> -> RequestDialog.qml
                     (Request/Cancel) -> Config.system("jellyseerr_request:...") -> message on the home screen.
   moonlight.py      Moonlight (Flatpak CLI list/stream/pair/quit), config/moonlight.json {host, tileApp, options}:
-                    "Games" row (moonlightApps from `list --csv`), `stream [app]` (the Moonlight tile does this when a
-                    host is paired, else opens Moonlight), `pair <host> <pin>` (PIN typed on Sunshine's web page,
-                    saves host), `quit` = Ctrl+Alt+Shift+Q via ydotool (red button, global shortcut "Red"). No host
-                    paired yet (2026-10-29: Sunshine PC not found on the LAN). Untested: whether the red global
-                    shortcut still fires while Moonlight grabs the keyboard in fullscreen.
+                    "Games" row (moonlightApps, plain `list` output: `--csv` hangs against Wolf), `stream [app]` (the
+                    Moonlight tile does this; without a host it opens Moonlight), `pair <host> <pin>`, `quit` =
+                    Ctrl+Alt+Shift+Q via ydotool (red button, global shortcut "Red"; verified to work during a stream).
+                    Host: Wolf (games-on-whales) on 192.168.0.100, run by Coolify (service usnnqk2hwn9yjp419cdp8zd0),
+                    paired 2026-10-29, tileApp "Wolf UI". Pairing: Wolf logs "Insert pin at http://..:47989/pin/#.."
+                    (`docker logs <wolf> | grep -i pin`). Wolf ignores Moonlight's "quit app" prompt: a leftover
+                    session blocks other apps (`moonlight quit <host>`).
+                    Wolf/NVIDIA "no video": driver files live in a Docker volume built for one host driver version;
+                    after a host driver update -> CUDA_ERROR_SYSTEM_DRIVER_MISMATCH + EGL failure. Fix: rebuild
+                    gow/nvidia-driver for `cat /sys/module/nvidia/version` (docker build from an EMPTY dir), remove
+                    the containers using the volume, `docker volume rm <volume>`, `docker create --mount
+                    source=<volume>,...` (only fills an EMPTY volume), then restart Wolf. Coolify prefixes volume
+                    names (usnnqk..._nvidia-driver-vol, see NVIDIA_DRIVER_VOLUME_NAME) and its Docker cleanup deletes
+                    unused images (Wolf app images too). Recreate Wolf: sudo docker compose -p <uuid> -f
+                    /data/coolify/services/<uuid>/docker-compose.yml --project-directory <same> up -d.
   trakt.py          Trakt "Up next": `auth` (device code login), `sync` (writes content.json); stdlib only;
                     update_content() = locked, atomic merge into content.json (each script owns its keys)
   tmdb.py           TMDb "trending" key (posters); test_tmdb.py = mock test (`--keep DIR` to view it in the prototype)
