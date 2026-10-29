@@ -290,10 +290,9 @@ an unknown key name and an unknown app id.
 - Jellyfin Desktop 2.0 ignores mpv.conf (tested: ~/.var/app/.../config/mpv, data/jellyfin-desktop, profile dir).
   Extra mpv options go in the profile's jellyfin-desktop.conf "other": {"other_conf": "key=value\n..."} (tested with
   vf=hflip); "video": {"deinterlace": true} turns on bwdif (SD TV recordings were combed).
-- scripts/install-jellyfin-video.sh (--remove): deinterlace + FSRCNNX_x2_8-0-4-1.glsl (igv, LGPL, sha256-checked,
-  in ~/.var/app/org.jellyfin.JellyfinDesktop/data/shaders) + scale/cscale=ewa_lanczossharp. Host-verified on a 700x574
-  episode: no comb lines, no errors/drops in profiles/<id>/logs/jellyfin-desktop.log. Not yet checked on the 4K TV
-  (heavier: if it stutters, drop scale/cscale or the shader). The .before-upscaling backup of the conf is next to it.
+- scripts/install-jellyfin-video.sh: deinterlace only (current setting). `--upscale` adds FSRCNNX_x2_8-0-4-1.glsl
+  (igv, LGPL, sha256-checked) + scale/cscale=ewa_lanczossharp: tried 2026-10-29, the user saw no gain and laggier
+  playback, so it is off and the shader deleted. `--remove` = everything off. Backup: jellyfin-desktop.conf.before-upscaling.
 
 ## DevTools ports (127.0.0.1 only; the user accepted this on 2026-10-29: "its just youtube, its not that sensitive")
 - VacuumTube: `--remote-debugging-port=9231` in its flags.txt (scripts/install-youtube-debug.sh). homescreen/youtube_tv.py

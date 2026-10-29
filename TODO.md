@@ -110,6 +110,6 @@ Status and conventions: see CLAUDE.md. Do phases in order. Each phase ends with 
 - [x] (2026-10-29) Remote waking the laptop: not possible here (see CLAUDE.md "Remote"); instead no automatic sleep on
   AC, screen lock off. Autologin into Bigscreen ready (scripts/install-autologin.sh, user runs it), then test a real
   Bigscreen login after a reboot. Possible later: Chrome/KWallet may ask for a password without a login password.
-- [x] (2026-10-29, host) Jellyfin deinterlacing + FSRCNNX upscaling (scripts/install-jellyfin-video.sh). Check on the
-  4K TV that playback stays smooth; YouTube/RiksTV (Chromium) cannot use mpv shaders.
+- [x] (2026-10-29, host) Jellyfin deinterlacing on (scripts/install-jellyfin-video.sh). FSRCNNX upscaling tried and
+  removed (no visible gain, laggier). If playback still feels laggy, try `--remove` (deinterlace off) to compare.
 
