@@ -264,6 +264,10 @@ All sizes are in 1920x1080 reference px (scaled by `Config.px()`); colors are `#
   title, "S2 E5 · <name> · 30 min left" (films: year), progress, 16:9 art (Thumb, parent Thumb, Backdrop, parent
   Backdrop, Primary) cached as `images/jellyfin-<id>-<type>-<tag>.jpg`, `"app": "jellyfin"`. Server down / not configured
   = content.json untouched. The layout's "continue" row has no placeholder data, so it is hidden until configured.
+- Voice inside an app (2026-10-29): the mic button no longer shows the home screen (that paused the app):
+  HomeScreen.voiceInApp() listens and shows "Listening…"/the result in Plasma's OSD (qdbus org.kde.plasmashell
+  /org/kde/osdService showText, shows over fullscreen apps, ~2 s, repeated while listening) and runs the action;
+  only home/settings/request: show the home screen.
 - Voice: keymap action `voice` (F5 for now). Home.startVoice -> `Config.voiceListener` (Bigscreen: `voice.py listen` via
   the executable engine; prototype: overlay says it needs Bigscreen) -> runAction(action). `config/voice.json`: seconds,
   language (auto), model path, nameMatch (fuzzy app-name threshold, difflib ratio over runs of up to 3 words joined),

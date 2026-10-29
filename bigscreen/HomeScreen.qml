@@ -113,6 +113,44 @@ Item {
         }
     }
 
+    // Plasma's on-screen popup (the volume one): shows over fullscreen apps, hides itself after ~2 s.
+    function osd(icon, text) {
+        exec.run("qdbus org.kde.plasmashell /org/kde/osdService org.kde.osdService.showText " + icon + " '"
+                 + text.replace(/'/g, "'\\''") + "'", () => {});
+    }
+
+    // Voice while an app is in front: listen and act without going to the home screen (which would pause the app).
+    // Only actions that need the home screen itself (home, settings, request dialog, a spoken answer) show it.
+    function voiceInApp() {
+        osd("audio-input-microphone", "Listening…");
+        osdRepeat.restart();
+        Config.voiceListener(result => {
+            osdRepeat.stop();
+            const action = result ? result.action : null;
+            if (!result)
+                osd("dialog-error", "Voice control failed");
+            else if (result.say)
+                osd("audio-input-microphone", result.say);
+            else
+                osd("audio-input-microphone", action ? "“" + result.text + "”"
+                    : result.text ? "Didn't understand “" + result.text + "”" : "Didn't hear anything");
+            if (!action)
+                return;
+            if (action === "home" || action === "settings" || action.startsWith("request:")) {
+                Shortcuts.toggleHomeScreen();
+                if (action === "home")
+                    return;
+            }
+            tv.runAction(action);
+        });
+    }
+    Timer {
+        id: osdRepeat
+        interval: 1800
+        repeat: true
+        onTriggered: root.osd("audio-input-microphone", "Listening…")
+    }
+
     // Global remote buttons (config/remote.json, shortcuts installed by `remote.py install`) work inside apps too:
     // remote.py send hands the action over through `remote.py wait`, which is rerun after every action.
     function waitForRemote() {
@@ -123,9 +161,12 @@ Item {
                 remoteRestart.restart();
                 return;
             }
-            if ((action === "voice" || action === "settings") && !root.windowActive)
-                Shortcuts.toggleHomeScreen(); // the voice overlay / settings live on the home screen: show it first
-            if (action)
+            if (action === "voice" && !root.windowActive)
+                root.voiceInApp();  // stay in the app: feedback in Plasma's on-screen popup
+            else if (action === "settings" && !root.windowActive) {
+                Shortcuts.toggleHomeScreen(); // the settings panel lives on the home screen: show it first
+                tv.runAction(action);
+            } else if (action)
                 tv.runAction(action);
             else if (data["exit code"] !== 0)
                 console.warn("tv: remote.py wait: " + data.stderr.trim());
