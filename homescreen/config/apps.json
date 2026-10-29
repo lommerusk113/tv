@@ -32,6 +32,19 @@
     "desktopId": "tv-rikstv.desktop"
   },
   {
+    "id": "steam",
+    "name": "Steam",
+    "colors": [
+      "#1b2838",
+      "#0e1a2b"
+    ],
+    "image": "icons/steam.svg",
+    "action": "moonlight_stream:Steam",
+    "voiceNames": [
+      "steam"
+    ]
+  },
+  {
     "id": "moonlight",
     "name": "Moonlight",
     "colors": [

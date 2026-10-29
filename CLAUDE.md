@@ -105,7 +105,8 @@ homescreen/
                     Moonlight tile does this; without a host it opens Moonlight), `pair <host> <pin>`, `quit` =
                     Ctrl+Alt+Shift+Q via ydotool (red button, global shortcut "Red"; verified to work during a stream).
                     Host: Wolf (games-on-whales) on 192.168.0.100, run by Coolify (service usnnqk2hwn9yjp419cdp8zd0),
-                    paired 2026-10-29, tileApp "Steam": the Steam app was copied from Wolf's `user` profile into
+                    paired 2026-10-29. Steam tile (apps.json, action moonlight_stream:Steam, icons/steam.svg =
+                    Wikimedia Steam_icon_logo.svg) goes straight into Steam; Moonlight tile = tileApp "Wolf UI". The Steam app was copied from Wolf's `user` profile into
                     `moonlight-profile-id` in /etc/wolf/cfg/config.toml (backup .before-steam-shortcut), and
                     /etc/wolf/9078250509390541011/Steam (this laptop's app folder, named after the app title) is a
                     symlink to /etc/wolf/profile-data/user/WolfSteam, so it is the same logged-in Steam with the games.

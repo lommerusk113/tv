@@ -1,7 +1,7 @@
 {
   "comment": "Moonlight (Sunshine/Apollo/Wolf game streaming; Wolf: pair link from `docker logs <wolf> | grep pin`). host: the gaming PC's name or IP (empty until paired). The Moonlight tile streams `tileApp` directly; moonlight.py lists the host's apps for the Games row. options are passed to `moonlight stream` (resolution follows the screen when not set).",
   "host": "192.168.0.100",
-  "tileApp": "Steam",
+  "tileApp": "Wolf UI",
   "options": [
     "--display-mode",
     "fullscreen",
