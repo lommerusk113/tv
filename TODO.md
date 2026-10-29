@@ -35,7 +35,7 @@ Status and conventions: see CLAUDE.md. Do phases in order. Each phase ends with 
   re-activates the window. Enter on a running app's tile brings it back (no second instance). Back stays with the app
   (apps need it for their own navigation). Still to check: Home while Moonlight streams (it may capture the shortcut).
 - [x] (2026-10-28, logging only; rebind to the real remote codes after Phase 1) Remote key mapping driven by a keymap.json in config (button → action, e.g. `launch:jellyfin`, `home`, `volume_up`). Prefer handling keys inside the home screen. A system-level remapper (input-remapper/keyd) is an install, so ask first.
-- Map one remote button to Moonlight's exit-stream shortcut (Ctrl+Alt+Shift+Q). Blocked: needs a Moonlight host to test (remote codes are known now). Moonlight captures the keyboard while streaming (and may inhibit KWin global shortcuts), so this probably needs Moonlight's "capture system shortcuts" setting off plus a global shortcut.
+- [x] (2026-10-29) Red button ends a Moonlight stream (global shortcut, verified during a stream); Home quits the app.
 - [ME] Test RiksTV playback in Chrome (DRM shows black in screenshots). If needed: Chrome policies (URL allowlist) to keep the kiosk on RiksTV domains.
   First start of the Chrome Flatpak shows "Google Chrome and ChromeOS Additional Terms of Service" (Accept/Cancel) over the
   kiosk; accept it once yourself (2026-10-28: the tile launches Chrome fine, the dialog blocks rikstv.no until accepted).
@@ -86,9 +86,7 @@ Status and conventions: see CLAUDE.md. Do phases in order. Each phase ends with 
   The API key in secrets.json is temporary; replace it later (Dashboard -> API Keys).
 
 ## Next (written 2026-10-29, end of day)
-- Trakt: user creates an API app (trakt.tv/oauth/applications/new, redirect urn:ietf:wg:oauth:2.0:oob), puts
-  clientId/clientSecret in secrets.json, runs `python3 homescreen/trakt.py auth`. Then: "Recommended for you" row from
-  Trakt recommendations, limited to titles on the Jellyfin server (playable), maybe also the banner.
+- [x] (2026-10-29) Trakt connected (see "Recommended for you").
 - Voice with an LLM (idea, not started): whisper text -> small model with the available actions as tools (launch,
   jellyfin_play, youtube_search, volume, settings, move_to_tv...) instead of fixed phrases; fall back to voice.py rules
   offline. Needs an API key from the user and a decision on which model/provider.
