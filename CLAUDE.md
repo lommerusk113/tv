@@ -111,6 +111,7 @@ homescreen/
   media.py          pause (MPRIS), leave (pause + Jellyfin GoHome), YouTube deeplinks (search, history, watch, home)
   remote.py         global remote buttons (config/remote.json -> X-KDE-Shortcuts .desktop files) and the FIFO to Home
   jellyfin_back.py  Back on Jellyfin's start page -> home screen (see DevTools ports)
+  jellyfin_curtain.py  black "Starting…" cover over Jellyfin's page while a tile starts a video (`on`/`off`)
   tvpower.py        LG TV on/off: WOL + bscpylgtv (venv ~/.local/share/tv-project/venv, reruns itself there);
                     `on|off|pair|status|watch-sleep`; settings "tv": {ip, mac, input}; test_tvpower.py (no TV needed)
   test_trakt.py     runs trakt.py auth + sync against a local mock Trakt API: python3 homescreen/test_trakt.py
@@ -284,6 +285,8 @@ an unknown key name and an unknown app id.
   commands on `window.api.input.hostInput` ("back", "up"...), not DOM keydown; "back" on `#/home` without a dialog ->
   `remote.py send show_home` -> Shortcuts.toggleHomeScreen(). Runtime.enable replays old console messages: filter by
   timestamp.
-- Jellyfin tiles (`jellyfin_play_id:`): when Jellyfin runs, PlayNow goes out in the background and Jellyfin is raised
-  once the session's PositionTicks moves (jellyfin.py start), so it opens straight into the video; "Starting…" pill
-  meanwhile. media.py leave <app> does not pause the app being opened.
+- Jellyfin tiles (`jellyfin_play_id:`): a MINIMIZED Jellyfin gets no requestAnimationFrame (measured: 0 frames/s), so
+  PlayNow sent while it is hidden leaves its start page on top of the player (sound, but "Because you watched"
+  visible). So Jellyfin is raised first; when it already runs, jellyfin_curtain.py puts a black "Starting…" div over
+  its page (DevTools, removes itself after 20 s), PlayNow goes out, jellyfin.py start returns once PositionTicks moves,
+  then the curtain comes off. media.py leave <app> does not pause the app being opened. Host-verified 2026-10-29.

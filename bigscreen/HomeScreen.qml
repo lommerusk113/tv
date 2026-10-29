@@ -300,26 +300,30 @@ Item {
                     });
                 } else if (action.startsWith("jellyfin_play:") || action.startsWith("jellyfin_play_id:")) {
                     // Voice "play <title> on Jellyfin" / OK on a Jellyfin tile or the banner: the server starts the
-                    // item on Jellyfin Desktop. When it already runs, that happens in the background and Jellyfin
-                    // is raised once the video plays, so it opens straight into the video; otherwise it starts first
-                    // (jellyfin.py waits for it to connect).
+                    // item on Jellyfin Desktop (jellyfin.py waits for it to connect, then for the video to run).
+                    // Jellyfin must be in front first: minimized it gets no animation frames and the start page stays
+                    // on top of the player. When it already runs, a black "Starting…" curtain hides its start page.
                     const jellyfinApp = Config.apps.find(app => app.id === "jellyfin");
                     const running = Plasmoid.applicationListModel.isApplicationRunning(jellyfinApp.desktopId);
-                    root.leaveApps("jellyfin");
-                    if (!running)
-                        Config.launch("jellyfin");
-                    else
-                        tv.showStatus("Starting…");
                     const byId = action.startsWith("jellyfin_play_id:");
                     const arg = action.slice(action.indexOf(":") + 1).replace(/'/g, "'\\''");
-                    exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/jellyfin.py")) + "' " + (byId ? "play-id" : "play")
-                             + " '" + arg + "'", data => {
-                        tv.showStatus("");
+                    const scripts = "python3 '" + root.localPath(Qt.resolvedUrl("tv/"));
+                    const play = () => exec.run(scripts + "jellyfin.py' " + (byId ? "play-id" : "play") + " '" + arg + "'", data => {
                         if (running)
-                            Config.launch("jellyfin");
+                            exec.run(scripts + "jellyfin_curtain.py' off", () => {});
                         if (data["exit code"] !== 0 || data.stdout.indexOf('"ok": true') < 0)
                             console.warn("tv: jellyfin.py play: " + (data.stdout + data.stderr).trim());
                     });
+                    root.leaveApps("jellyfin");
+                    if (!running) {
+                        Config.launch("jellyfin");
+                        play();
+                    } else {
+                        exec.run(scripts + "jellyfin_curtain.py' on", () => {
+                            Config.launch("jellyfin");
+                            play();
+                        });
+                    }
                 } else if (action === "tv_off" || action === "tv_power" || action === "tv_input")
                     root.runScript("tvpower.py " + {"tv_off": "off", "tv_power": "toggle", "tv_input": "on"}[action], () => {});
                 else if (commands[action])
