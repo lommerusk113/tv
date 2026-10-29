@@ -1,0 +1,5 @@
+# Lets the Bluetooth remote wake the laptop from sleep (tv-project, scripts/install-remote-wake.sh).
+# The Intel AX211 Bluetooth adapter (USB 8087:0033) and the USB 2 root hub it hangs off (usb3) have wakeup disabled
+# by default; the remote itself is already WakeAllowed in BlueZ. Undo: delete this file.
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="8087", ATTR{idProduct}=="0033", TEST=="power/wakeup", ATTR{power/wakeup}="enabled"
+ACTION=="add", SUBSYSTEM=="usb", KERNEL=="usb3", TEST=="power/wakeup", ATTR{power/wakeup}="enabled"

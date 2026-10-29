@@ -261,6 +261,8 @@ an unknown key name and an unknown app id.
 | Back | c0224 | BACK (VacuumTube quits on it) | ESC | Escape | back |
 | arrows, home, vol +/-, mute | | as named | unchanged | | keymap.json / Plasma |
 
+- Wake from sleep: scripts/remote/71-bluetooth-wake.rules (scripts/install-remote-wake.sh, user runs it) enables
+  power/wakeup on the AX211 Bluetooth adapter and root hub usb3 (both disabled by default).
 - Remap: scripts/remote/70-strong-remote.hwdb → /etc/udev/hwdb.d (scripts/install-remote-keys.sh, pkexec). Afterwards the
   remote must reconnect (turn off/on, or `bluetoothctl disconnect`, then press a key): libinput drops keys the device did
   not declare when it appeared (PROG1-4).
