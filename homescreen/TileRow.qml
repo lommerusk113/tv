@@ -108,6 +108,10 @@ Item {
             width: tile.width
             height: list.height
             z: tile.focused ? 1 : 0
+            // Tiles scrolled past the left page margin fade out, so every row starts at the same edge (the next tile
+            // still peeks in on the right). Measured against where the scroll ends, so it does not flicker meanwhile.
+            opacity: cell.x < (hScroll.running ? hScroll.to : list.contentX) + list.leftMargin - 1 ? 0 : 1
+            Behavior on opacity { NumberAnimation { duration: row.theme.animationMs * 2 } }
 
             Tile {
                 id: tile
