@@ -106,6 +106,11 @@ FocusScope {
             loader.item.runAction(action);
     }
 
+    function showGetDialog(result) {
+        if (loader.item)
+            loader.item.showGetDialog(result);
+    }
+
     function showChoices(text, options) {
         if (loader.item)
             loader.item.showChoices(text, options);

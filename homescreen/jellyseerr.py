@@ -5,6 +5,9 @@
                                              Trakt picks NOT on the server (recommend.py's trakt-missing.json) with
                                              Jellyseerr's poster, year and status; OK asks "Request X?"
   python3 jellyseerr.py request movie|tv <tmdb id>   requests it (series: all seasons); prints {"ok", "status"}
+  python3 jellyseerr.py search <title>       films/series matching a title (voice: "play X" when X is not on the server,
+                                             "download X"): {"ok", "query", "results": [{kind, tmdb, title, year,
+                                             image, status, label, overview}]}, best first, max SEARCH_ITEMS
 
 Settings in ~/.config/tv-project/secrets.json: "jellyseerr": {"url": "http://...:5055", "apiKey": "..."} (Settings ->
 General -> API Key). Requests are made as the API key's user (admin = approved at once, then Sonarr/Radarr).
@@ -14,6 +17,7 @@ import json
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 from trakt import CACHE, colors, download, secrets, update_content
@@ -22,6 +26,7 @@ MISSING = CACHE / "trakt-missing.json"
 DETAILS = CACHE / "jellyseerr-details.json"
 TMDB_IMAGES = "https://image.tmdb.org/t/p/w342"
 MAX_ITEMS = 20
+SEARCH_ITEMS = 6
 STATUS_AGE = 3600
 DETAILS_AGE = 86400
 # Jellyseerr media status: 1 unknown, 2 pending, 3 processing, 4 partially available, 5 available, 6 blacklisted
@@ -126,6 +131,28 @@ def request(conf, kind, tmdb):
     return {"ok": True, "status": res.get("status")}
 
 
+def search(conf, query):
+    try:
+        # Jellyseerr wants spaces as %20, not "+" (it rejects the query otherwise).
+        res = api(conf, "/search?query=%s&page=1" % urllib.parse.quote(query, safe=""))
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        return {"ok": False, "error": str(e)}
+    out = []
+    for r in res.get("results") or []:
+        if r.get("mediaType") not in ("movie", "tv") or not r.get("posterPath"):
+            continue
+        status = (r.get("mediaInfo") or {}).get("status") or 1
+        date = r.get("releaseDate") or r.get("firstAirDate") or ""
+        out.append({"kind": r["mediaType"], "tmdb": r["id"], "title": r.get("title") or r.get("name") or "",
+                    "year": date[:4], "status": status, "label": LABEL.get(status, ""),
+                    "overview": (r.get("overview") or "")[:300],
+                    "image": download(TMDB_IMAGES + r["posterPath"], "tmdb-%s-%s-w342.jpg" % (r["mediaType"], r["id"])),
+                    "colors": colors("%s-%s" % (r["mediaType"], r["id"]))})
+        if len(out) == SEARCH_ITEMS:
+            break
+    return {"ok": True, "query": query, "results": out}
+
+
 def main():
     conf = settings()
     if not conf:
@@ -133,6 +160,9 @@ def main():
         return
     if len(sys.argv) == 4 and sys.argv[1] == "request" and sys.argv[2] in ("movie", "tv") and sys.argv[3].isdigit():
         print(json.dumps(request(conf, sys.argv[2], sys.argv[3])))
+        return
+    if len(sys.argv) >= 3 and sys.argv[1] == "search":
+        print(json.dumps(search(conf, " ".join(sys.argv[2:])), ensure_ascii=False))
         return
     if len(sys.argv) > 1:
         sys.exit(__doc__)

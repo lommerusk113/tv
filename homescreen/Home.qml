@@ -16,7 +16,7 @@ FocusScope {
     // its overlay).
     readonly property bool atRoot: {
         const loader = sectionRepeater.count > section ? sectionRepeater.itemAt(section) : null;
-        return !settingsPanel.open && !requestDialog.open && !choiceDialog.open && !loadingScreen.open && section === initialSection
+        return !settingsPanel.open && !requestDialog.open && !choiceDialog.open && !getDialog.open && !loadingScreen.open && section === initialSection
                 && (!loader || !loader.item || loader.item.current === 0);
     }
 
@@ -160,6 +160,8 @@ FocusScope {
             return;
         if (choiceDialog.open && choiceDialog.handle(action))
             return;
+        if (getDialog.open && getDialog.handle(action))
+            return;
         if (action.startsWith("request:")) {  // a "Get more" tile: ask first
             requestDialog.ask(action);
             return;
@@ -190,6 +192,12 @@ FocusScope {
     // "Did you mean…?" with the AI step's guesses ([{label, action}]); the chosen one runs.
     function showChoices(text, options) {
         choiceDialog.ask(text, options);
+    }
+
+    // "Not on your server": Jellyseerr's hits for a title ({query, results}, jellyseerr.py search), OK downloads one.
+    function showGetDialog(result) {
+        voiceOverlay.hide();
+        getDialog.ask(result);
     }
 
     // Short message in the pill at the bottom; goes away by itself.
@@ -400,6 +408,11 @@ FocusScope {
 
     SettingsPanel {
         id: settingsPanel
+    }
+
+    GetDialog {
+        id: getDialog
+        onMessage: text => home.showMessage(text)
     }
 
     ChoiceDialog {

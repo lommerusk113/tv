@@ -31,7 +31,7 @@ API = "https://api.openai.com/v1/"
 # Actions the model may return: exact ones, and prefixes with free text after them.
 EXACT = {"home", "volume_up", "volume_down", "volume_mute", "tv_off", "move_to_tv", "youtube_history", "settings",
          "weather_refresh"}
-FREE = ("jellyfin_play:", "jellyfin_search:", "youtube_search:")
+FREE = ("jellyfin_play:", "jellyfin_search:", "youtube_search:", "request_search:")
 # Prefixes whose value must be one of the tiles' actions (ids cannot be guessed).
 FROM_TILES = ("jellyfin_play_id:", "youtube_watch:", "moonlight_stream:", "request:", "launch_desktop:")
 
@@ -51,10 +51,14 @@ action is ONE of these, or null:
 - move_to_tv                       move what plays on the phone/PC to the TV
 - moonlight_stream:<app>           start a game-streaming app from the tiles (e.g. Steam)
 - request:<kind>:<tmdb id>:<title> ask the server to download a "Get more" tile
+- request_search:<title>           a film/series that is NOT in the library (or "download/request/get X"): shows
+                                   what can be downloaded with that title
 - launch_desktop:<desktop id>      open an installed desktop app tile
 
-"library" lists every film and series on the Jellyfin server: when the words SOUND like one of them ("mobile and" ->
-MobLand, "mot i brystet" -> Mot i brøstet), play it (its tile action if it has a tile, else jellyfin_play:<exact name>).
+"library" is the COMPLETE list of films and series on the Jellyfin server (nothing else is there): when the words SOUND like one of them ("mobile and" ->
+MobLand, "mot i brystet" -> Mot i brøstet), play it (its tile action if it has a tile, else jellyfin_play:<exact name>). "Play X"
+where X is a real film/series that is not in the library (and does not sound like one in it) ->
+request_search:<its real, official title>; never jellyfin_play, jellyfin_search or options for it.
 A number after a film series means that film in order ("harry potter seven" -> Harry Potter and the Deathly
 Hallows: Part 1, "the second pirates film" -> Dead Man's Chest). Never write placeholders like <title>; never turn the TV off unless the TV is clearly meant.
 Prefer a tile's exact action when the user means it ("continue Merlin", "the new Lanterns episode"). Fix misheard

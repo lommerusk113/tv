@@ -184,6 +184,14 @@ def record(path, seconds):
     return True
 
 
+def in_library(title):
+    """Whether a film/series on Jellyfin sounds like the title (agent.library(); True when the list is unknown)."""
+    import jellyfin
+    names = [n.removesuffix(" (series)") for n in agent.library()]
+    # Stricter than jellyfin.MIN_MATCH: "the bear" reaches 0.64 against "The Matrix Revolutions".
+    return not names or max(jellyfin.match_score(title, n) for n in names) >= 0.75
+
+
 # Rule results the AI step may improve: titles ("dead mans chest") and searches; everything else is final.
 AGENT_FIXES = ("jellyfin_play:", "jellyfin_search:", "youtube_search:")
 
@@ -198,6 +206,10 @@ def result(text, conf, use_agent=True):
         if answer:
             # Unsure: no action, a few guesses to pick from ("Did you mean…?") instead of the rules' guess.
             unsure = not answer["action"] and answer["options"]
+            # ...unless it was "play X" and nothing on the server sounds like X: offer to download X instead.
+            if unsure and action and action.startswith("jellyfin_play:") and not in_library(action[14:]):
+                answer.update(action="request_search:" + action[14:], options=[])
+                unsure = False
             out.update(action=answer["action"] or (None if unsure else action), say=answer["say"],
                        options=answer["options"], by=answer["model"])
     return out

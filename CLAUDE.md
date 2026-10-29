@@ -166,6 +166,13 @@ homescreen/
                     Test the screens without speaking: write a result JSON to ~/.cache/tv-project/voice-fake.json,
                     the next `voice.py listen` prints it once. remote_mic: no speech -> no transcription (whisper
                     invents "volume down mute…" from silence).
+  GetDialog.qml     "Not on your server" (2026-10-29): action request_search:<title> (HomeScreen.qml; brings the home
+                    screen to the front) -> `jellyseerr.py search <title>` (Jellyseerr /search, query %20-encoded,
+                    films/series with a poster, max 6, TMDb w342 posters cached) -> posters left/right, plot of the
+                    focused one, OK = jellyseerr_request (status < 2), "Already requested" (2-3), or plays it (>= 4,
+                    jellyfin_play). Triggered by: jellyfin_play with no Jellyfin match (instead of "Nothing called X"),
+                    the AI step (titles not in its library list, "download X"), and voice.py when the AI is unsure
+                    about "play X" and no library name scores >= 0.75 (jellyfin.match_score).
   recommend.py rotation: traktRecommended, the banner and trakt-missing (Get more) are a shuffle of the best 60,
                     new every ROTATE_HOURS (3).
   VoiceOverlay.qml  push-to-talk feedback pill (bottom centre) (also "busy" status: showStatus("Starting…"))

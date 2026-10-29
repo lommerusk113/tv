@@ -420,6 +420,30 @@ Item {
                     exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/moonlight.py")) + "' quit", () => {});
                     return true;
                 }
+                if (action.startsWith("request_search:")) {
+                    // A title that is not on Jellyfin (voice): Jellyseerr's hits in GetDialog, OK downloads one.
+                    // The dialog needs the arrows, so the home screen comes to the front first.
+                    const query = action.slice(15);
+                    appVoice.hide();
+                    if (!root.windowActive)
+                        Shortcuts.toggleHomeScreen();
+                    tv.showStatus("Looking for “" + query + "”…");
+                    exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/jellyseerr.py")) + "' search '"
+                             + query.replace(/'/g, "'\\''") + "'", data => {
+                        tv.showStatus("");
+                        let res = null;
+                        try {
+                            res = JSON.parse(data.stdout);
+                        } catch (e) {}
+                        if (res && res.ok && res.results.length)
+                            tv.showGetDialog(res);
+                        else {
+                            tv.showMessage("Couldn't find “" + query + "” anywhere");
+                            console.warn("tv: jellyseerr.py search: " + (data.stdout + data.stderr).trim().slice(-300));
+                        }
+                    });
+                    return true;
+                }
                 if (action.startsWith("jellyseerr_request:")) {
                     // "Get more" tile, confirmed in RequestDialog: Jellyseerr requests it (Sonarr/Radarr download it).
                     const [, kind, tmdb, ...rest] = action.split(":");
@@ -501,8 +525,8 @@ Item {
                         } catch (e) {}
                         if (found && found.ok)
                             tv.runAction("jellyfin_play_id:" + found.id);
-                        else
-                            tv.showMessage("Nothing called “" + title + "” on Jellyfin");
+                        else  // not on the server: offer to download it
+                            Config.system("request_search:" + title);
                     });
                 } else if (action.startsWith("jellyfin_play_id:")) {
                     // OK on a Jellyfin tile or the banner (and voice, after the lookup above): the server starts the
