@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Records from the microphone in the Bluetooth remote (Strong RemoteG20) over Google's "ATV Voice" GATT service.
 
-  python3 remote_mic.py record <out.wav> [max seconds]   16 kHz mono WAV; stops early after speech + a pause
+  python3 remote_mic.py record <out.wav> [max seconds]   16 kHz mono WAV; stops early after speech + a pause; prints
+                                                        {"seconds", "speech"}; speech false = nobody talked (whisper
+                                                        invents words from silence: "volume down mute down…")
   python3 remote_mic.py check                           exit 0 if a connected remote has the voice service
 
 Linux does not turn the remote's mic into an audio device, so voice.py used the laptop's mic across the room.
@@ -13,6 +15,7 @@ IMA/DVI ADPCM (256 samples, high nibble first). Each frame decodes on its own. v
 Needs dbus-python + PyGObject (in Bazzite's base image).
 """
 import array
+import json
 import math
 import sys
 import wave
@@ -79,7 +82,7 @@ def rms(samples):
 
 
 def record(out, max_seconds=8):
-    """Writes a 16 kHz WAV of what was said; returns the seconds recorded (0 = no remote / nothing came)."""
+    """Writes a 16 kHz WAV of what was said; returns (seconds recorded, whether anyone spoke)."""
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
     bus = dbus.SystemBus()
     chars = find_chars(bus)
@@ -98,9 +101,9 @@ def record(out, max_seconds=8):
             del buf[:FRAME]
             samples.extend(frame)
             level = rms(frame)
-            # The first ~0.2 s set the noise floor; speech = clearly above it.
+            # The first ~0.2 s set the noise floor (capped); speech = 3x above it.
             if state["noise"] is None and len(samples) >= RATE // 5:
-                state["noise"] = max(rms(samples), 150)
+                state["noise"] = min(max(rms(samples), 150), 300)  # silence measured ~30; talking from the start must still count
             if state["noise"] is None:
                 continue
             if level > state["noise"] * 3:
@@ -128,7 +131,7 @@ def record(out, max_seconds=8):
     except dbus.DBusException:
         pass
     write_wav(out, samples)
-    return len(samples) / RATE
+    return len(samples) / RATE, state["speech"]
 
 
 def write_wav(out, samples):
@@ -154,8 +157,8 @@ def main():
         sys.exit(0 if find_chars(dbus.SystemBus()) else 1)
     if len(sys.argv) < 3 or sys.argv[1] != "record":
         sys.exit(__doc__)
-    seconds = record(sys.argv[2], float(sys.argv[3]) if len(sys.argv) > 3 else 8)
-    print(f"{seconds:.1f}")
+    seconds, speech = record(sys.argv[2], float(sys.argv[3]) if len(sys.argv) > 3 else 8)
+    print(json.dumps({"seconds": round(seconds, 1), "speech": speech}))
 
 
 if __name__ == "__main__":

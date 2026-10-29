@@ -8,6 +8,7 @@ import org.kde.plasma.plasma5support as P5Support
 import org.kde.bigscreen as Bigscreen
 import org.kde.private.biglauncher
 import org.kde.taskmanager as TaskManager
+import org.kde.layershell as LayerShell
 
 import "tv"
 
@@ -113,30 +114,23 @@ Item {
         }
     }
 
-    // Plasma's on-screen popup (the volume one): shows over fullscreen apps, hides itself after ~2 s.
-    function osd(icon, text) {
-        exec.run("qdbus org.kde.plasmashell /org/kde/osdService org.kde.osdService.showText " + icon + " '"
-                 + text.replace(/'/g, "'\\''") + "'", () => {});
-    }
-
     // Voice while an app is in front: listen and act without going to the home screen (which would pause the app).
-    // Only actions that need the home screen itself (home, settings, request dialog, a spoken answer) show it.
+    // The same voice card as on the home screen, in an overlay-layer window (layer-shell: above fullscreen apps,
+    // never takes the keyboard). Only actions that need the home screen itself (home, settings, request dialog) show it.
     function voiceInApp() {
-        osd("audio-input-microphone", "Listening…");
-        osdRepeat.restart();
+        appVoice.show("listening", "");
         Config.voiceListener(result => {
-            osdRepeat.stop();
             const action = result ? result.action : null;
             if (!result)
-                osd("dialog-error", "Voice control failed");
+                appVoice.show("error", "");
             else if (result.say)
-                osd("audio-input-microphone", result.say);
+                appVoice.show("message", result.say);
             else
-                osd("audio-input-microphone", action ? "“" + result.text + "”"
-                    : result.text ? "Didn't understand “" + result.text + "”" : "Didn't hear anything");
+                appVoice.show(action ? "heard" : "unknown", result.text);
             if (!action)
                 return;
             if (action === "home" || action === "settings" || action.startsWith("request:")) {
+                appVoice.hide();
                 Shortcuts.toggleHomeScreen();
                 if (action === "home")
                     return;
@@ -144,11 +138,26 @@ Item {
             tv.runAction(action);
         });
     }
-    Timer {
-        id: osdRepeat
-        interval: 1800
-        repeat: true
-        onTriggered: root.osd("audio-input-microphone", "Listening…")
+
+    Window {
+        id: appVoiceWindow
+        LayerShell.Window.scope: "tv-voice"
+        LayerShell.Window.layer: LayerShell.Window.LayerOverlay
+        LayerShell.Window.anchors: LayerShell.Window.AnchorBottom
+        LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityNone
+        LayerShell.Window.exclusionZone: -1
+        width: Config.px(1300)
+        height: Config.px(280)
+        color: "transparent"
+        flags: Qt.FramelessWindowHint | Qt.WindowDoesNotAcceptFocus
+        visible: appVoice.visible
+
+        VoiceOverlay {
+            id: appVoice
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: Config.px(72)
+        }
     }
 
     // Global remote buttons (config/remote.json, shortcuts installed by `remote.py install`) work inside apps too:
