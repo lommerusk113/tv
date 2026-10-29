@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Jellyfin for the home screen: its rows and banner, and playing things (tiles, voice). Standard library only.
 
-  python3 jellyfin.py               writes into ~/.cache/tv-project/content.json: jellyfinResume (Continue watching),
-                                    jellyfinNextUp (next episode of each series) and jellyfinFeatured (the banner:
+  python3 jellyfin.py               writes into ~/.cache/tv-project/content.json: jellyfinResume (started videos),
+                                    jellyfinNextUp (next episode of each series), jellyfinContinue (the
+                                    "Continue watching" row: started first, then next episodes, one per series)
+                                    and jellyfinFeatured (the banner:
                                     newest unwatched films and series, with backdrop and logo). Tiles carry
                                     "action": "jellyfin_play_id:<item id>", so OK starts them (resuming)
   python3 jellyfin.py play-id <id>  plays the item (a series: its next-up episode) in Jellyfin Desktop here
@@ -93,6 +95,20 @@ def next_up(conf, uid):
     query = urllib.parse.urlencode({"userId": uid, "limit": MAX_ITEMS, "enableImageTypes": IMAGE_TYPES,
                                     "fields": "UserData", "enableResumable": "false"})
     return (get(conf, "/Shows/NextUp?" + query) or {}).get("Items", [])
+
+
+def continue_watching(resume, upcoming, limit=20):
+    """One row like Google TV: started videos first (most recent first, as the server sorts them), then the next
+    episode of each series being followed; one tile per series (its most recent)."""
+    out, series = [], set()
+    for item in resume + upcoming:
+        sid = item.get("SeriesId")
+        if sid in series:  # also two started episodes of one series: the most recent one only
+            continue
+        if sid:
+            series.add(sid)
+        out.append(item)
+    return out[:limit]
 
 
 def newest(conf, uid):
@@ -435,9 +451,11 @@ def main():
         return
     try:
         uid = user_id(conf)
+        resume, upcoming = resume_items(conf, uid), next_up(conf, uid)
         rows = {
-            "jellyfinResume": [tile(conf, i) for i in resume_items(conf, uid)],
-            "jellyfinNextUp": [tile(conf, i) for i in next_up(conf, uid)],
+            "jellyfinResume": [tile(conf, i) for i in resume],
+            "jellyfinNextUp": [tile(conf, i) for i in upcoming],
+            "jellyfinContinue": [tile(conf, i) for i in continue_watching(resume, upcoming)],
             "jellyfinFeatured": featured(conf, newest(conf, uid)),
         }
     except (urllib.error.URLError, OSError, ValueError) as e:

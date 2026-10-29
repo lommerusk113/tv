@@ -149,6 +149,11 @@ def main():
     assert items[2]["title"] == "No Art" and "image" not in items[2] and "progress" not in items[2]
     # Up next: the next episode of each series; banner: newest with a backdrop, one per franchise, logo when there is one.
     assert [i["action"] for i in content["jellyfinNextUp"]] == ["jellyfin_play_id:bb-s2e3"]
+    # Continue watching = started (ep1, mv1, mv2) then next episodes of other series (bb); one per series.
+    import jellyfin
+    two = [{"Id": "e1", "SeriesId": "S"}, {"Id": "e2", "SeriesId": "S"}, {"Id": "m"}]
+    assert [i["Id"] for i in jellyfin.continue_watching(two, [{"Id": "e3", "SeriesId": "S"}, {"Id": "x", "SeriesId": "T"}])] == ["e1", "m", "x"]
+    assert [i["id"] for i in content["jellyfinContinue"]] == ["jellyfin-ep1", "jellyfin-mv1", "jellyfin-mv2", "jellyfin-bb-s2e3"]
     hero = content["jellyfinFeatured"]
     assert [h["title"] for h in hero] == ["Resident Evil: Retribution", "Nobel"], hero
     assert hero[0]["meta"] == "Film · Action · 2012" and hero[0]["description"] == "Alice again."

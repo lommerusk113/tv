@@ -3,8 +3,7 @@
   "rows": [
     { "id": "hero", "type": "hero", "source": ["jellyfinFeatured", "featured"] },
     { "id": "apps", "title": "Your apps", "source": "apps", "style": "app" },
-    { "id": "upnext", "title": "Up next", "source": ["jellyfinNextUp", "upNext"], "style": "landscape" },
-    { "id": "continue", "title": "Continue watching", "source": "jellyfinResume", "style": "landscape" },
+    { "id": "continue", "title": "Continue watching", "source": ["jellyfinContinue", "upNext"], "style": "landscape" },
     { "id": "youtube", "title": "New from your channels", "source": "youtubeChannels", "style": "landscape" },
     { "id": "youtubeRecommended", "title": "Recommended on YouTube", "source": "youtubeRecommended", "style": "landscape" },
     { "id": "trending", "title": "Trending", "source": "trending", "style": "poster" },

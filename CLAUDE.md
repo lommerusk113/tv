@@ -89,7 +89,9 @@ homescreen/
   trakt.py          Trakt "Up next": `auth` (device code login), `sync` (writes content.json); stdlib only;
                     update_content() = locked, atomic merge into content.json (each script owns its keys)
   tmdb.py           TMDb "trending" key (posters); test_tmdb.py = mock test (`--keep DIR` to view it in the prototype)
-  jellyfin.py       Jellyfin "jellyfinResume" key (Continue watching); test_jellyfin.py = mock test (`--keep DIR`)
+  jellyfin.py       Jellyfin rows: jellyfinContinue ("Continue watching" = started videos, most recent first, then the
+                    next episode of followed series; one tile per series), jellyfinFeatured (banner), also
+                    jellyfinResume / jellyfinNextUp; play/play-id/pull/playing/home; test_jellyfin.py (`--keep DIR`)
   voice.py          `listen` (arecord 4 s -> whisper-cli -> action), `file <wav>`, `parse <text>`; config/voice.json;
                     test_voice.py (`--whisper` also transcribes whisper.cpp's jfk.wav)
   VoiceOverlay.qml  push-to-talk feedback pill (bottom centre) (also "busy" status: showStatus("Starting…"))
