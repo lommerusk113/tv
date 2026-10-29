@@ -105,7 +105,11 @@ homescreen/
                     Moonlight tile does this; without a host it opens Moonlight), `pair <host> <pin>`, `quit` =
                     Ctrl+Alt+Shift+Q via ydotool (red button, global shortcut "Red"; verified to work during a stream).
                     Host: Wolf (games-on-whales) on 192.168.0.100, run by Coolify (service usnnqk2hwn9yjp419cdp8zd0),
-                    paired 2026-10-29, tileApp "Wolf UI". Pairing: Wolf logs "Insert pin at http://..:47989/pin/#.."
+                    paired 2026-10-29, tileApp "Steam": the Steam app was copied from Wolf's `user` profile into
+                    `moonlight-profile-id` in /etc/wolf/cfg/config.toml (backup .before-steam-shortcut), and
+                    /etc/wolf/9078250509390541011/Steam (this laptop's app folder, named after the app title) is a
+                    symlink to /etc/wolf/profile-data/user/WolfSteam, so it is the same logged-in Steam with the games.
+                    Do not run it from Wolf UI and the shortcut at the same time. Pairing: Wolf logs "Insert pin at http://..:47989/pin/#.."
                     (`docker logs <wolf> | grep -i pin`). Wolf ignores Moonlight's "quit app" prompt: a leftover
                     session blocks other apps (`moonlight quit <host>`).
                     Wolf/NVIDIA "no video": driver files live in a Docker volume built for one host driver version;
