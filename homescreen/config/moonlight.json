@@ -1,5 +1,5 @@
 {
-  "comment": "Moonlight (Sunshine/Apollo/Wolf game streaming; Wolf: pair link from `docker logs <wolf> | grep pin`). host: the gaming PC's name or IP (empty until paired). The Moonlight tile streams `tileApp` directly; moonlight.py lists the host's apps for the Games row. options are passed to `moonlight stream` (resolution follows the screen when not set). bootSeconds: per app, how long the loading screen stays after a fresh start (the app boots inside the stream).",
+  "comment": "Moonlight (Sunshine/Apollo/Wolf game streaming; Wolf: pair link from `docker logs <wolf> | grep pin`). host: the gaming PC's name or IP (empty until paired). The Moonlight tile streams `tileApp` directly; moonlight.py lists the host's apps for the Games row. options are passed to `moonlight stream` (resolution follows the screen when not set). bootSeconds: per app, how long the loading screen stays after a fresh start (the app boots inside the stream). keepRunningMinutes: after Home the app keeps running on the host this long (a return is a fast resume), then it is quit.",
   "host": "192.168.0.100",
   "tileApp": "Wolf UI",
   "options": [
@@ -13,5 +13,6 @@
   ],
   "bootSeconds": {
     "Steam": 24
-  }
+  },
+  "keepRunningMinutes": 30
 }

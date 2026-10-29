@@ -119,7 +119,8 @@ homescreen/
                     auto-fullscreen watcher (it does fullscreen itself).
                     Fresh start (log has /launch?, not /resume?): the loading screen stays bootSeconds longer
                     (moonlight.json, Steam 24: measured ~25 s of Steam booting/updating inside the stream).
-                    Home = moonlight.py stop: kill Moonlight now, `moonlight quit <host>` 10 s later from a detached
+                    Home = moonlight.py stop: kill Moonlight now, `moonlight quit <host>` keepRunningMinutes (30) later
+                    (a return within that is a ~2 s resume instead of ~45 s), at least 10 s, from a detached
                     stop-later (Wolf stops the Steam container; quitting in the same instant as the stream drops hung
                     Wolf's HTTPS API until a restart, 2026-10-29); a new start cancels a pending quit. Red button only
                     ends the stream. Steam's idle screensaver ignores keys: `moonlight.py wake` (mouse wiggle) after a start. Pairing: Wolf logs "Insert pin at http://..:47989/pin/#.."

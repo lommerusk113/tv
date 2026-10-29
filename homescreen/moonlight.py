@@ -7,8 +7,8 @@
                                        once the picture arrives (Moonlight's output goes to ~/.cache/tv-project/moonlight.log)
   python3 moonlight.py pair <host> <pin>   pairs once: type the PIN on Sunshine's web page (https://<host>:47990, PIN);
                                        on success the host is saved in config/moonlight.json
-  python3 moonlight.py stop            Home: closes Moonlight now and quits the app on the host 10 s later (Wolf
-                                       stops its container); a new start in between cancels that
+  python3 moonlight.py stop            Home: closes Moonlight now and quits the app on the host after
+                                       keepRunningMinutes (config; at least 10 s); a new start in between cancels that
   python3 moonlight.py wake            mouse wiggle into the stream (wakes Steam's screensaver; done after a start)
   python3 moonlight.py quit            ends the stream on this computer (Ctrl+Alt+Shift+Q via ydotool, the remote's
                                        exit button); the game keeps running on the PC
@@ -28,7 +28,7 @@ HERE = Path(__file__).resolve().parent
 CONFIG = HERE / "config/moonlight.json"
 MOONLIGHT = ["flatpak", "run", "com.moonlight_stream.Moonlight"]
 PENDING_STOP = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "tv-project/moonlight-stop.pid"
-STOP_DELAY = 10  # seconds between ending the stream and quitting the app on the host
+STOP_DELAY = 10  # minimum seconds between ending the stream and quitting the app (sooner hung Wolf)
 WAITER = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "tv-project/moonlight-wait.pid"
 LOG = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "tv-project/moonlight.log"
 WAIT_SECONDS = 120  # Wolf starts the app's container first: Steam takes 15-40 s
@@ -153,7 +153,8 @@ def stop():
 
 def stop_later():
     PENDING_STOP.write_text(str(os.getpid()))
-    time.sleep(STOP_DELAY)
+    # Keep the app warm for a while: coming back within keepRunningMinutes is a resume (~2 s instead of ~45 s).
+    time.sleep(max(STOP_DELAY, 60 * config().get("keepRunningMinutes", 0)))
     if PENDING_STOP.exists() and PENDING_STOP.read_text() == str(os.getpid()):
         PENDING_STOP.unlink(missing_ok=True)
         subprocess.run(MOONLIGHT + ["quit", config()["host"]], capture_output=True, timeout=90)
