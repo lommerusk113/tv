@@ -7,7 +7,8 @@
                                        once the picture arrives (Moonlight's output goes to ~/.cache/tv-project/moonlight.log)
   python3 moonlight.py pair <host> <pin>   pairs once: type the PIN on Sunshine's web page (https://<host>:47990, PIN);
                                        on success the host is saved in config/moonlight.json
-  python3 moonlight.py stop            Home: quits the app on the host (Wolf stops its container) and closes Moonlight
+  python3 moonlight.py stop            Home: closes Moonlight now and quits the app on the host 10 s later (Wolf
+                                       stops its container); a new start in between cancels that
   python3 moonlight.py wake            mouse wiggle into the stream (wakes Steam's screensaver; done after a start)
   python3 moonlight.py quit            ends the stream on this computer (Ctrl+Alt+Shift+Q via ydotool, the remote's
                                        exit button); the game keeps running on the PC
@@ -26,6 +27,8 @@ from trakt import colors, update_content
 HERE = Path(__file__).resolve().parent
 CONFIG = HERE / "config/moonlight.json"
 MOONLIGHT = ["flatpak", "run", "com.moonlight_stream.Moonlight"]
+PENDING_STOP = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "tv-project/moonlight-stop.pid"
+STOP_DELAY = 10  # seconds between ending the stream and quitting the app on the host
 WAITER = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "tv-project/moonlight-wait.pid"
 LOG = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "tv-project/moonlight.log"
 WAIT_SECONDS = 120  # Wolf starts the app's container first: Steam takes 15-40 s
@@ -58,6 +61,7 @@ def stream(app=None, wait=False):
     if not conf.get("host"):
         sys.exit("moonlight: no host paired yet (moonlight.py pair <host> <pin>)")
     LOG.parent.mkdir(parents=True, exist_ok=True)
+    cancel_pending_stop()
     command = MOONLIGHT + ["stream", conf["host"], app or conf.get("tileApp", "Desktop")] + conf.get("options", [])
 
     def launch():
@@ -72,6 +76,11 @@ def stream(app=None, wait=False):
     while time.monotonic() < deadline:
         text = LOG.read_text(errors="replace")
         if "Received first video packet" in text:
+            # A fresh start (Wolf: /launch, not /resume) still shows the app booting/updating inside the stream (Steam's
+            # update window): keep the loading screen up a little longer (config bootSeconds per app).
+            boot = conf.get("bootSeconds", {}).get(app or conf.get("tileApp", ""), 0)
+            if boot and "/launch?" in text:
+                time.sleep(boot)
             print("ready")
             return
         failed = next((l for l in text.splitlines() if "Connection terminated" in l or "Starting RTSP handshake failed" in l), None)
@@ -131,13 +140,33 @@ def wake():
 
 
 def stop():
-    """Home: end the app on the host (Wolf stops its container, e.g. Steam; unsaved game progress is lost) and close
-    Moonlight here. The red button (quit) only ends the stream and leaves the app running."""
-    host = config().get("host")
+    """Home: end the stream now, and quit the app on the host (Wolf stops its container, e.g. Steam; unsaved game
+    progress is lost) STOP_DELAY seconds later, in a detached `stop-later` process. Quitting in the same instant as
+    the stream drops hung Wolf (2026-10-29: HTTPS API dead until restart); with the stream already gone it works.
+    A new start within the delay cancels the pending quit (stream() -> cancel_pending_stop)."""
     cancel_waiter()  # a start still waiting for its picture must not retry once Moonlight is gone
     subprocess.run(["flatpak", "kill", "com.moonlight_stream.Moonlight"], capture_output=True, timeout=15)
-    if host:
-        subprocess.run(MOONLIGHT + ["quit", host], capture_output=True, timeout=60)
+    if config().get("host"):
+        subprocess.Popen([sys.executable, str(Path(__file__).resolve()), "stop-later"], stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL, start_new_session=True)
+
+
+def stop_later():
+    PENDING_STOP.write_text(str(os.getpid()))
+    time.sleep(STOP_DELAY)
+    if PENDING_STOP.exists() and PENDING_STOP.read_text() == str(os.getpid()):
+        PENDING_STOP.unlink(missing_ok=True)
+        subprocess.run(MOONLIGHT + ["quit", config()["host"]], capture_output=True, timeout=90)
+
+
+def cancel_pending_stop():
+    """A new stream start: the app must keep running, so drop a quit that is still waiting."""
+    try:
+        pid = int(PENDING_STOP.read_text())
+        os.kill(pid, 15)
+    except (OSError, ValueError):
+        pass
+    PENDING_STOP.unlink(missing_ok=True)
 
 
 def main():
@@ -152,6 +181,8 @@ def main():
         return quit_stream()
     if args == ["stop"]:
         return stop()
+    if args == ["stop-later"]:
+        return stop_later()
     if args == ["cancel"]:
         cancel_waiter()
         return subprocess.run(["flatpak", "kill", "com.moonlight_stream.Moonlight"], capture_output=True, timeout=15)

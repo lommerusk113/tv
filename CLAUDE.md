@@ -116,7 +116,13 @@ homescreen/
                     load/unload/once); `moonlight.py stream [app] --wait` watches ~/.cache/tv-project/moonlight.log for
                     "Received first video packet" (one automatic retry: a resume right after a stream ended can get no
                     video, -100), then show-moonlight.js. Back/Home cancel. Moonlight is excluded from the
-                    auto-fullscreen watcher (it does fullscreen itself). Pairing: Wolf logs "Insert pin at http://..:47989/pin/#.."
+                    auto-fullscreen watcher (it does fullscreen itself).
+                    Fresh start (log has /launch?, not /resume?): the loading screen stays bootSeconds longer
+                    (moonlight.json, Steam 24: measured ~25 s of Steam booting/updating inside the stream).
+                    Home = moonlight.py stop: kill Moonlight now, `moonlight quit <host>` 10 s later from a detached
+                    stop-later (Wolf stops the Steam container; quitting in the same instant as the stream drops hung
+                    Wolf's HTTPS API until a restart, 2026-10-29); a new start cancels a pending quit. Red button only
+                    ends the stream. Steam's idle screensaver ignores keys: `moonlight.py wake` (mouse wiggle) after a start. Pairing: Wolf logs "Insert pin at http://..:47989/pin/#.."
                     (`docker logs <wolf> | grep -i pin`). Wolf ignores Moonlight's "quit app" prompt: a leftover
                     session blocks other apps (`moonlight quit <host>`).
                     Wolf/NVIDIA "no video": driver files live in a Docker volume built for one host driver version;

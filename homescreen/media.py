@@ -62,11 +62,10 @@ MOONLIGHT_FLATPAK = "com.moonlight_stream.Moonlight"
 
 def leave(keep=None):
     pause(keep)
-    # Moonlight: leaving it ends the stream (the app keeps running on the host).
+    # Moonlight: leaving it is done playing: the app on the host is quit too (moonlight.py stop).
     if keep != "moonlight" and running(MOONLIGHT_FLATPAK):
-        # Only end the stream. `moonlight.py stop` (quit the app on the host, so Wolf stops e.g. the Steam container)
-        # made Wolf 2026-10 hang: its HTTPS API stopped answering until a restart. Exit Steam from Steam's own menu.
-        subprocess.run([sys.executable, str(HERE / "moonlight.py"), "cancel"], capture_output=True, timeout=30)
+        # End the stream now, quit the app on the host (Wolf stops e.g. the Steam container) a little later.
+        subprocess.run([sys.executable, str(HERE / "moonlight.py"), "stop"], capture_output=True, timeout=30)
     if keep != "jellyfin":
         subprocess.run([sys.executable, str(HERE / "jellyfin.py"), "home"], timeout=60)
 
