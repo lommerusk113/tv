@@ -19,10 +19,10 @@ Status and conventions: see CLAUDE.md. Do phases in order. Each phase ends with 
 ## Phase 2: Move the prototype into Plasma Bigscreen
 - [x] (2026-10-28, see CLAUDE.md "Bigscreen packaging") Find how Bigscreen's home screen is packaged (shell/containment QML package) and whether a modified copy can live in ~/.local/share/plasma/ without touching the read-only system.
 - [x] (2026-10-28, container-tested) Port the prototype's QML into that package; keep the config files (theme.json, apps.json, layout.json) working. Keep changes modular to make upstream KDE updates easy to merge.
-- [ME] Run `scripts/install-bigscreen.sh`, then either `plasma-bigscreen-swap-session` (no logout, Claude Code keeps running) or log out, choose "Plasma Bigscreen", open Konsole, and restart Claude Code.
+- [x] (2026-10-28) [ME] Run `scripts/install-bigscreen.sh`, then either `plasma-bigscreen-swap-session` (no logout, Claude Code keeps running) or log out, choose "Plasma Bigscreen", open Konsole, and restart Claude Code.
 - [x] (2026-10-28, host, via plasma-bigscreen-swap-session) Verify navigation in the real session with ydotool + screenshots.
 - [x] (2026-10-28, host) Launched apps open fullscreen: HomeScreen.qml watches TaskManager windows and requests fullscreen once for any window whose AppId matches an apps.json desktopId. Verified with VacuumTube and Jellyfin (incl. re-raise after Home).
-- [ME] Decide on auto-login to the Bigscreen session (System Settings → Login Screen). Recommended once Phase 3 works.
+- [x] (2026-10-29) [ME] Auto-login into Bigscreen installed (scripts/install-autologin.sh); still to see after a reboot. Decide on auto-login to the Bigscreen session (System Settings → Login Screen). Recommended once Phase 3 works.
 
 ## Phase 3: Launching apps and the remote
 - [x] (2026-10-28, container-tested with a fake .desktop; host: YouTube/VacuumTube launched from Bigscreen, others untested) Make Enter run the launch command from apps.json:
@@ -35,11 +35,11 @@ Status and conventions: see CLAUDE.md. Do phases in order. Each phase ends with 
   re-activates the window. Enter on a running app's tile brings it back (no second instance). Back stays with the app
   (apps need it for their own navigation). Still to check: Home while Moonlight streams (it may capture the shortcut).
 - [x] (2026-10-28, logging only; rebind to the real remote codes after Phase 1) Remote key mapping driven by a keymap.json in config (button → action, e.g. `launch:jellyfin`, `home`, `volume_up`). Prefer handling keys inside the home screen. A system-level remapper (input-remapper/keyd) is an install, so ask first.
-- Map one remote button to Moonlight's exit-stream shortcut (Ctrl+Alt+Shift+Q). Blocked: needs the remote's key codes (Phase 1) and a Moonlight host to test. Moonlight captures the keyboard while streaming (and may inhibit KWin global shortcuts), so this probably needs Moonlight's "capture system shortcuts" setting off plus a global shortcut.
+- Map one remote button to Moonlight's exit-stream shortcut (Ctrl+Alt+Shift+Q). Blocked: needs a Moonlight host to test (remote codes are known now). Moonlight captures the keyboard while streaming (and may inhibit KWin global shortcuts), so this probably needs Moonlight's "capture system shortcuts" setting off plus a global shortcut.
 - [ME] Test RiksTV playback in Chrome (DRM shows black in screenshots). If needed: Chrome policies (URL allowlist) to keep the kiosk on RiksTV domains.
   First start of the Chrome Flatpak shows "Google Chrome and ChromeOS Additional Terms of Service" (Accept/Cancel) over the
   kiosk; accept it once yourself (2026-10-28: the tile launches Chrome fine, the dialog blocks rikstv.no until accepted).
-- [ME] Jellyfin Desktop asks for the server address on first start (launch from the tile works, 2026-10-28).
+- [x] (2026-10-28) [ME] Jellyfin Desktop asks for the server address on first start (launch from the tile works, 2026-10-28).
 
 ## Phase 4: Real data in the rows
 - [x] (2026-10-28, mock-tested; needs a Trakt API app + `python3 homescreen/trakt.py auth` on the host) Trakt "Up next" row (replaces the placeholder Continue watching row).
