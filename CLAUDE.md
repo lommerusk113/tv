@@ -96,9 +96,12 @@ homescreen/
   SettingsPanel.qml slide-in from the right (Settings tile, gear button, "open settings"), pages: main (volume
                     left/right; links), Wi-Fi (on/off, rescan, networks: OK connects/disconnects, unknown secured ->
                     password page), Bluetooth (on/off, search 8 s, OK connects/disconnects/pairs), Display (per screen:
-                    use it (2+ screens), resolution left/right then OK -> "Keep?" 15 s auto-revert, size 100-200 %),
+                    use it (2+ screens), sliders for resolution and size 100-200 % only choose; Apply sets both ->
+                    "Keep these settings" 15 s auto-revert / Go back),
                     Power (TV off, sleep, restart/shut down need a second OK). Back = up a page / close. While open,
-                    Home routes keys to it and atRoot is false (Back does not open Bigscreen's overlay)
+                    Home routes keys to it and atRoot is false (Back does not open Bigscreen's overlay). Look: cards
+                    with Breeze icons (icons/settings/, copied from breeze-dark, tinted with MultiEffect), toggles,
+                    sliders, section headers. Avoid property names Item already has (`top` is FINAL: page fails to load)
   system.py         backend for those pages: nmcli, bluetoothctl, kscreen-doctor; JSON out ({"error"} + exit 1);
                     refuses to disable the last screen
   apps.py           "More apps" row (installedApps): every exported Flatpak .desktop not pinned in apps.json, with its
