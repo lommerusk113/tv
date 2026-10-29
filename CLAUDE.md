@@ -100,6 +100,11 @@ homescreen/
                     /api/v1/request (tv: seasons "all"). secrets "jellyseerr": {url, apiKey}; the key's user is
                     admin, so requests are auto-approved. Tile action request:<kind>:<tmdb>:<title> -> RequestDialog.qml
                     (Request/Cancel) -> Config.system("jellyseerr_request:...") -> message on the home screen.
+                    Since 2026-10-29 tiles carry "overview" and "trailer" (YouTube id from TMDb relatedVideos: Trailer,
+                    else Teaser, else any clip); RequestDialog shows poster + plot + Request / ▶ Trailer / Cancel;
+                    Trailer = youtube_watch, the dialog stays open for coming back. media.py pause(keep) matches players
+                    by MPRIS Identity (VacuumTube's bus name is chromium.instanceN): before, raising YouTube after a
+                    youtube_watch deeplink paused the video it had just started.
   moonlight.py      Moonlight (Flatpak CLI list/stream/pair/quit), config/moonlight.json {host, tileApp, options}:
                     (not in the layout since 2026-10-29) "Games" row (moonlightApps, plain `list` output: `--csv` hangs against Wolf), `stream [app]` (the
                     Moonlight tile does this; without a host it opens Moonlight), `pair <host> <pin>`, `quit` =

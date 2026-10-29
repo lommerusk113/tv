@@ -56,13 +56,24 @@ def details(conf, kind, tmdb, cache):
     key = "%s:%s" % (kind, tmdb)
     old = cache.get(key)
     now = time.time()
-    if old and now - old["fetched"] < DETAILS_AGE and now - old.get("checked", 0) < STATUS_AGE:
+    if old and "trailer" in old and now - old["fetched"] < DETAILS_AGE and now - old.get("checked", 0) < STATUS_AGE:
         return old
     d = api(conf, "/%s/%s" % (kind, tmdb))
     date = d.get("releaseDate") or d.get("firstAirDate") or ""
     cache[key] = {"title": d.get("title") or d.get("name") or "", "year": date[:4], "poster": d.get("posterPath"),
-                  "status": (d.get("mediaInfo") or {}).get("status") or 1, "fetched": now, "checked": now}
+                  "status": (d.get("mediaInfo") or {}).get("status") or 1, "fetched": now, "checked": now,
+                  "trailer": trailer(d), "overview": (d.get("overview") or "")[:400]}
     return cache[key]
+
+
+def trailer(d):
+    """YouTube id of the title's trailer (TMDb related videos): a Trailer, else a Teaser, else any clip; or None."""
+    videos = [v for v in d.get("relatedVideos") or [] if v.get("site") == "YouTube" and v.get("key")]
+    for kind in ("Trailer", "Teaser", None):
+        hit = next((v["key"] for v in videos if kind is None or v.get("type") == kind), None)
+        if hit:
+            return hit
+    return None
 
 
 def tile(kind, tmdb, info):
@@ -73,7 +84,10 @@ def tile(kind, tmdb, info):
         "meta": " · ".join(p for p in ("Series" if kind == "tv" else "Film", info["year"], status) if p),
         "colors": colors("%s%s" % (kind, tmdb)),
         "action": "request:%s:%s:%s" % (kind, tmdb, info["title"]),
+        "overview": info.get("overview") or "",
     }
+    if info.get("trailer"):
+        out["trailer"] = info["trailer"]  # RequestDialog's "Trailer" button (youtube_watch)
     if info.get("poster"):
         image = download(TMDB_IMAGES + info["poster"], "tmdb-%s-%s-w342.jpg" % (kind, tmdb))
         if image:

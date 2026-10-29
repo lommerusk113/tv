@@ -38,13 +38,20 @@ def players():
     return re.findall(r"'(" + re.escape(MPRIS) + r"[^']+)'", names)
 
 
-# The app being opened keeps playing (it may just have been started on purpose, e.g. a Jellyfin tile).
-PLAYER_OF_APP = {"jellyfin": "JellyfinDesktop"}
+# The app being opened keeps playing (it may just have been started on purpose, e.g. a Jellyfin tile or a trailer).
+# Matched by the player's MPRIS Identity: VacuumTube's bus name is a generic "chromium.instanceN" (so is Chrome's).
+IDENTITY_OF_APP = {"jellyfin": "Jellyfin", "youtube": "VacuumTube"}
+
+
+def identity(player):
+    out = gdbus(player, "org.freedesktop.DBus.Properties.Get", "org.mpris.MediaPlayer2", "Identity").stdout
+    m = re.search(r"'([^']*)'", out)
+    return m.group(1) if m else ""
 
 
 def pause(keep=None):
     for player in players():
-        if keep in PLAYER_OF_APP and player[len(MPRIS):].startswith(PLAYER_OF_APP[keep]):
+        if keep in IDENTITY_OF_APP and identity(player) == IDENTITY_OF_APP[keep]:
             continue
         status = gdbus(player, "org.freedesktop.DBus.Properties.Get", "org.mpris.MediaPlayer2.Player", "PlaybackStatus")
         if "Playing" in status.stdout:
