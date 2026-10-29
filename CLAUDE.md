@@ -156,6 +156,10 @@ homescreen/
                     title/search, chat/completions with JSON schema, models tried in order (voice.json "agent": nano,
                     then mini). Context = apps, home-screen tiles (content.json), weather, time. Returns
                     {action, say}; actions checked against an allow-list (ids only from tiles; no restart/shutdown).
+                    Key added 2026-10-29. Tested: gpt-5-nano made bad calls (literal "<title>", wrong show, "turn off the
+                    light" -> tv_off), so voice.json models = ["gpt-5-mini"] only (~1.3-2 s, ~10k tokens with the
+                    library list). Context also has every Jellyfin film/series name (library-titles.json, cached a day)
+                    for sound-alike titles ("mobile and" -> MobLand). Speech-to-text gpt-4o-mini-transcribe ~1.7 s.
                     `say` is shown in the voice pill. Could later be exposed as an MCP server (user idea).
                     Unsure -> "options" (2-3 {label, action}, allow-listed) -> ChoiceDialog.qml "Did you mean…?"
                     (up/down, OK runs, "None of these", Back); from inside an app it opens on the home screen.

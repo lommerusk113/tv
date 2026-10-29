@@ -53,14 +53,20 @@ action is ONE of these, or null:
 - request:<kind>:<tmdb id>:<title> ask the server to download a "Get more" tile
 - launch_desktop:<desktop id>      open an installed desktop app tile
 
+"library" lists every film and series on the Jellyfin server: when the words SOUND like one of them ("mobile and" ->
+MobLand, "mot i brystet" -> Mot i brøstet), play it (its tile action if it has a tile, else jellyfin_play:<exact name>).
+A number after a film series means that film in order ("harry potter seven" -> Harry Potter and the Deathly
+Hallows: Part 1, "the second pirates film" -> Dead Man's Chest). Never write placeholders like <title>; never turn the TV off unless the TV is clearly meant.
 Prefer a tile's exact action when the user means it ("continue Merlin", "the new Lanterns episode"). Fix misheard
 titles to their real names ("dead mans chest" -> "Pirates of the Caribbean: Dead Man's Chest"). Use null when it is
 not a command for the TV.
 options: when you are NOT sure (misheard words, several titles fit), set action to null and give 2-3 guesses, best
 first, each {"label": what it does in a few words, e.g. "Play Merlin", "Search YouTube for Asmongold", "action": ...};
-otherwise options is []. Think about what the words could sound like: "mot i brystet" -> "Mot i brøstet",
+otherwise options is [] (also for questions: answer them in say). Think about what the words could sound like: "mot i brystet" -> "Mot i brøstet",
 "the lord of the ring two" -> The Two Towers.
-say is a short reply (max 15 words, the user's language) shown on screen: an answer to a question (weather, time,
+LANGUAGE: say and option labels use the language of "said" ONLY (the context is often Norwegian; ignore that).
+"said" in English -> answer in English.
+say is a short reply (max 15 words) shown on screen: an answer to a question (weather, time,
 "what should I watch?" -> suggest one tile and also play nothing), or null when the action speaks for itself.
 """
 
@@ -115,11 +121,35 @@ def weather():
     return {"now": {"temp": w.get("temperature"), "symbol": w.get("symbol")}, "next hours (UTC)": hours}
 
 
+def library():
+    """Names of every film and series on Jellyfin (cached a day in library-titles.json), so misheard titles can be
+    matched by sound; [] without Jellyfin."""
+    cache = CACHE / "library-titles.json"
+    try:
+        if time.time() - cache.stat().st_mtime < 24 * 3600:
+            return json.loads(cache.read_text())
+    except (OSError, ValueError):
+        pass
+    try:
+        import urllib.parse
+        import jellyfin
+        conf = jellyfin.settings()
+        query = urllib.parse.urlencode({"userId": jellyfin.user_id(conf), "includeItemTypes": "Movie,Series",
+                                        "recursive": "true", "fields": "ProductionYear"})
+        items = (jellyfin.get(conf, "/Items?" + query) or {}).get("Items", [])
+        names = sorted({i["Name"] + (" (series)" if i.get("Type") == "Series" else "") for i in items})
+        cache.write_text(json.dumps(names, ensure_ascii=False))
+        return names
+    except Exception as e:  # Jellyfin down / not configured: work without the list
+        print(f"agent: library: {e}", file=sys.stderr)
+        return []
+
+
 def context():
     apps = json.loads((HERE / "config/apps.json").read_text())
     return {"time": datetime.now().strftime("%A %Y-%m-%d %H:%M"),
             "apps": [{"id": a["id"], "name": a["name"]} for a in apps],
-            "tiles": tiles(), "weather": weather()}
+            "tiles": tiles(), "weather": weather(), "library": library()}
 
 
 def allowed(action, ctx):
