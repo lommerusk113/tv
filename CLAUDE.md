@@ -123,7 +123,11 @@ homescreen/
                     (a return within that is a ~2 s resume instead of ~45 s), at least 10 s, from a detached
                     stop-later (Wolf stops the Steam container; quitting in the same instant as the stream drops hung
                     Wolf's HTTPS API until a restart, 2026-10-29); a new start cancels a pending quit. Red button only
-                    ends the stream. Steam's idle screensaver ignores keys: `moonlight.py wake` (mouse wiggle) after a start. Pairing: Wolf logs "Insert pin at http://..:47989/pin/#.."
+                    ends the stream. Since 2026-10-29 keepRunningMinutes = -1: the laptop never quits the app;
+                    scripts/server/wolf-idle-watchdog.sh (+ .service/.timer, runs on the game server every minute;
+                    "streaming" = nvidia-smi encoder.stats.sessionCount > 0) closes games ('SteamLaunch AppId=' under
+                    Steam's reaper) after 10 min without a stream and stops WolfSteam_* after 48 h. Idle Big Picture
+                    measured: ~860 MB RAM, ~0.5 core, GPU 15 %, ~23 W over idle. Steam's idle screensaver ignores keys: `moonlight.py wake` (mouse wiggle) after a start. Pairing: Wolf logs "Insert pin at http://..:47989/pin/#.."
                     (`docker logs <wolf> | grep -i pin`). Wolf ignores Moonlight's "quit app" prompt: a leftover
                     session blocks other apps (`moonlight quit <host>`).
                     Wolf/NVIDIA "no video": driver files live in a Docker volume built for one host driver version;

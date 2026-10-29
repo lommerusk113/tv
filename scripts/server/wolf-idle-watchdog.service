@@ -1,0 +1,6 @@
+[Unit]
+Description=Close idle Wolf games (10 min) and Steam (48 h) when nothing streams
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/wolf-idle-watchdog.sh

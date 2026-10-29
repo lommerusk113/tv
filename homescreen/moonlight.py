@@ -146,7 +146,7 @@ def stop():
     A new start within the delay cancels the pending quit (stream() -> cancel_pending_stop)."""
     cancel_waiter()  # a start still waiting for its picture must not retry once Moonlight is gone
     subprocess.run(["flatpak", "kill", "com.moonlight_stream.Moonlight"], capture_output=True, timeout=15)
-    if config().get("host"):
+    if config().get("host") and config().get("keepRunningMinutes", 0) >= 0:  # < 0: the server's watchdog decides
         subprocess.Popen([sys.executable, str(Path(__file__).resolve()), "stop-later"], stdout=subprocess.DEVNULL,
                          stderr=subprocess.DEVNULL, start_new_session=True)
 
