@@ -5,7 +5,6 @@
     { "id": "apps", "title": "Your apps", "source": "apps", "style": "app" },
     { "id": "continue", "title": "Continue watching", "source": ["jellyfinContinue", "upNext"], "style": "landscape" },
     { "id": "recommended", "title": "Recommended for you", "source": "traktRecommended", "style": "landscape" },
-    { "id": "games", "title": "Games", "source": "moonlightApps", "style": "landscape" },
     { "id": "getMore", "title": "Get more", "source": "traktMissing", "style": "poster" },
     { "id": "latest", "title": "Recently added", "source": ["jellyfinLatest", "trending"], "style": "poster" },
     { "id": "youtube", "title": "New from your channels", "source": "youtubeChannels", "style": "landscape" },

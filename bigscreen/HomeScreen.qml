@@ -32,7 +32,6 @@ Item {
         });
         runScript("tmdb.py", tv.reloadLive);
         runScript("jellyfin.py", tv.reloadLive);
-        runScript("moonlight.py", tv.reloadLive);  // Games row (nothing until a PC is paired)
         runScript("youtube.py", tv.reloadLive);
         runScript("location.py", () => runScript("weather.py", tv.reloadWeather));  // location: daily, if switched on
     }

@@ -101,7 +101,7 @@ homescreen/
                     admin, so requests are auto-approved. Tile action request:<kind>:<tmdb>:<title> -> RequestDialog.qml
                     (Request/Cancel) -> Config.system("jellyseerr_request:...") -> message on the home screen.
   moonlight.py      Moonlight (Flatpak CLI list/stream/pair/quit), config/moonlight.json {host, tileApp, options}:
-                    "Games" row (moonlightApps, plain `list` output: `--csv` hangs against Wolf), `stream [app]` (the
+                    (not in the layout since 2026-10-29) "Games" row (moonlightApps, plain `list` output: `--csv` hangs against Wolf), `stream [app]` (the
                     Moonlight tile does this; without a host it opens Moonlight), `pair <host> <pin>`, `quit` =
                     Ctrl+Alt+Shift+Q via ydotool (red button, global shortcut "Red"; verified to work during a stream).
                     Host: Wolf (games-on-whales) on 192.168.0.100, run by Coolify (service usnnqk2hwn9yjp419cdp8zd0),
