@@ -32,6 +32,7 @@ Rectangle {
         case "unavailable": return "Voice control works in Bigscreen";
         case "error": return "Voice control failed";
         case "busy": return heard;      // e.g. "Starting…" while a Jellyfin video loads (stays until hidden)
+        case "message": return heard;   // e.g. "Nothing called X on Jellyfin" (hides by itself)
         }
         return "";
     }

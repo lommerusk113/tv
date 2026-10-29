@@ -174,6 +174,11 @@ FocusScope {
             console.log("action:" + action); // the prototype has no system hook: volume etc. are only logged
     }
 
+    // Short message in the pill at the bottom; goes away by itself.
+    function showMessage(text) {
+        voiceOverlay.show("message", text);
+    }
+
     // Status pill at the bottom ("Starting…"); an empty text hides it.
     function showStatus(text) {
         if (text)

@@ -4,9 +4,10 @@
   python3 jellyfin.py               writes into ~/.cache/tv-project/content.json: jellyfinResume (started videos),
                                     jellyfinNextUp (next episode of each series), jellyfinContinue (the
                                     "Continue watching" row: started first, then next episodes, one per series)
-                                    and jellyfinFeatured (the banner:
+                                    jellyfinLatest (Recently added, posters) and jellyfinFeatured (the banner:
                                     newest unwatched films and series, with backdrop and logo). Tiles carry
                                     "action": "jellyfin_play_id:<item id>", so OK starts them (resuming)
+  python3 jellyfin.py find <title>  what "play <title>" would start, without starting it ({"ok", "id", "title"})
   python3 jellyfin.py play-id <id>  plays the item (a series: its next-up episode) in Jellyfin Desktop here
   python3 jellyfin.py playing       what plays on another device of this user ({"ok", "title"}), without touching it
   python3 jellyfin.py pull          "move to TV": stops what this user is watching on another device (phone, browser)
@@ -120,6 +121,33 @@ def newest(conf, uid):
     return (get(conf, "/Items?" + query) or {}).get("Items", [])
 
 
+def latest(conf, uid):
+    """Recently added films and series (new episodes count for their series), newest first."""
+    query = urllib.parse.urlencode({"userId": uid, "limit": MAX_ITEMS + 5, "includeItemTypes": "Movie,Episode",
+                                    "groupItems": "true", "enableImageTypes": "Primary", "fields": "ProductionYear"})
+    items = get(conf, "/Items/Latest?" + query) or []
+    return [i for i in items if i.get("Type") in ("Movie", "Series")][:MAX_ITEMS + 5]
+
+
+def poster(conf, item):
+    """Poster tile (2:3) for the Recently added row: "Film · 2016" / "Series · 2025", OK plays it."""
+    out = {
+        "id": "jellyfin-" + item["Id"],
+        "title": item.get("Name", ""),
+        "meta": " · ".join(p for p in ("Series" if item.get("Type") == "Series" else "Film",
+                                       str(item["ProductionYear"]) if item.get("ProductionYear") else "") if p),
+        "colors": colors(item["Id"]),
+        "app": "jellyfin",
+        "action": "jellyfin_play_id:" + item["Id"],
+    }
+    tag = (item.get("ImageTags") or {}).get("Primary")
+    image = tag and download(image_url(conf, item["Id"], "Primary", tag, 500),
+                             "jellyfin-%s-poster-%s.jpg" % (item["Id"], tag))
+    if image:
+        out["image"] = image
+    return out
+
+
 def image_url(conf, item_id, kind, tag, width):
     return "%s/Items/%s/Images/%s?tag=%s&maxWidth=%d&quality=90" % (conf["url"].rstrip("/"), item_id, kind, tag, width)
 
@@ -177,12 +205,19 @@ def artwork(item):
     return next(((i, kind, tag) for i, kind, tag in candidates if i and tag), None)
 
 
+def episode_label(item):
+    """ "S2 E5", or as much of it as the episode has ("E5", "S2"); "" without numbers (no "S? E?")."""
+    season, number = item.get("ParentIndexNumber"), item.get("IndexNumber")
+    return " ".join(p for p in ("S%s" % season if season is not None else "",
+                                "E%s" % number if number is not None else "") if p)
+
+
 def tile(conf, item):
     user = item.get("UserData") or {}
     left = max(0, (item.get("RunTimeTicks") or 0) - (user.get("PlaybackPositionTicks") or 0)) // TICKS_PER_MINUTE
     if item.get("Type") == "Episode":
         title = item.get("SeriesName") or item.get("Name", "")
-        parts = ["S%s E%s" % (item.get("ParentIndexNumber", "?"), item.get("IndexNumber", "?")), item.get("Name")]
+        parts = [episode_label(item), item.get("Name")]
     else:
         title = item.get("Name", "")
         parts = [str(item["ProductionYear"]) if item.get("ProductionYear") else None]
@@ -299,6 +334,21 @@ def desktop_session(conf, uid):
     return ours[0] if ours else None
 
 
+def lookup(query):
+    """The item "play <query>" would start, without starting it: {"ok", "id", "title"} (voice: the home screen shows
+    the loading screen for it first, then plays it by id)."""
+    conf = settings()
+    if not conf:
+        return {"ok": False, "error": "no \"jellyfin\" url/apiKey in secrets.json"}
+    try:
+        item = find(conf, user_id(conf), query)
+    except (urllib.error.URLError, OSError, ValueError, SystemExit) as e:
+        return {"ok": False, "error": str(e)}
+    if not item:
+        return {"ok": False, "error": "nothing called \"%s\"" % query}
+    return {"ok": True, "id": item["Id"], "title": item.get("Name", "")}
+
+
 def play(query):
     conf = settings()
     if not conf:
@@ -355,7 +405,7 @@ def start(conf, uid, item):
         time.sleep(0.4)
     title = item.get("Name", "")
     if target is not item:
-        title += " S%s E%s" % (target.get("ParentIndexNumber", "?"), target.get("IndexNumber", "?"))
+        title = " ".join(p for p in (title, episode_label(target)) if p)
     return {"ok": True, "title": title}
 
 
@@ -377,7 +427,7 @@ def elsewhere(conf, uid, here):
 
 def item_title(item):
     if item.get("Type") == "Episode":
-        return "%s S%s E%s" % (item.get("SeriesName", ""), item.get("ParentIndexNumber", "?"), item.get("IndexNumber", "?"))
+        return " ".join(p for p in (item.get("SeriesName", ""), episode_label(item)) if p)
     return item.get("Name", "")
 
 
@@ -439,6 +489,9 @@ def main():
     if sys.argv[1:] in (["pull"], ["playing"]):
         print(json.dumps((pull if sys.argv[1] == "pull" else playing)(), ensure_ascii=False))
         return
+    if len(sys.argv) > 2 and sys.argv[1] == "find":
+        print(json.dumps(lookup(" ".join(sys.argv[2:])), ensure_ascii=False))
+        return
     if len(sys.argv) == 3 and sys.argv[1] == "play-id":
         print(json.dumps(play_id(sys.argv[2]), ensure_ascii=False))
         return
@@ -457,6 +510,7 @@ def main():
             "jellyfinNextUp": [tile(conf, i) for i in upcoming],
             "jellyfinContinue": [tile(conf, i) for i in continue_watching(resume, upcoming)],
             "jellyfinFeatured": featured(conf, newest(conf, uid)),
+            "jellyfinLatest": [poster(conf, i) for i in latest(conf, uid)][:20],
         }
     except (urllib.error.URLError, OSError, ValueError) as e:
         print(f"jellyfin: {conf['url']}: {e}; keeping content.json", file=sys.stderr)

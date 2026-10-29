@@ -94,11 +94,13 @@ Status and conventions: see CLAUDE.md. Do phases in order. Each phase ends with 
   offline. Needs an API key from the user and a decision on which model/provider.
 - Untested on the host: Wi-Fi connect/disconnect, Bluetooth pairing, sleep/restart/shut down, the TV itself (Phase 1),
   "move to TV" from a real other Jellyfin device, weather (needs location), install-tv-power.sh (user runs it).
-- Small: "S? E?" on episodes without numbers; Trending row is still placeholder (TMDb key or replace it).
-- [x] (2026-10-29, host) Loading screen while a Jellyfin tile starts (jellyfin_curtain.py): blurred backdrop, logo or
-  title, "Season 1 · Episode 2 · <name>", "Starting"/"Continuing", sliding bar, fades out when the video runs.
-  Still plain: voice "play X" (no item id before the search, so no picture) and a cold start (Jellyfin not running:
-  its own start page shows while it loads). Idea: resolve the title first, then show the loading screen.
+- [x] (2026-10-29, host) Loading screen while a Jellyfin video starts (jellyfin_curtain.py): blurred backdrop, logo or
+  title, episode line, "Starting"/"Continuing", sliding bar, gone when the player emits `playing`. Voice "play X" now
+  looks the title up first (jellyfin.py find) and gets the same screen; nothing found = "Nothing called X on
+  Jellyfin" on the home screen. Cold start (Jellyfin closed): its start page still shows ~1 s (the page does not
+  exist earlier), then the video (~2.5 s in total).
+- [x] (2026-10-29) "S? E?" gone (episode_label); Trending (placeholder) replaced by "Recently added" from Jellyfin
+  (posters, /Items/Latest, OK plays). Trending with a TMDb key is still possible as the row's fallback source.
 - Settings panel ideas: audio output (TV/HDMI vs laptop speakers), subtitles/language defaults, "switch to desktop".
 - Voice feedback: say/show what was understood more clearly (e.g. "Playing Breaking Bad S2 E3"), errors visible on
   the TV ("Nothing called X on Jellyfin") instead of only in the log.

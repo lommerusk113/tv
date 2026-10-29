@@ -298,28 +298,44 @@ Item {
                                 console.warn("tv: jellyfin.py pull: " + (result.stdout + result.stderr).trim());
                         });
                     });
-                } else if (action.startsWith("jellyfin_play:") || action.startsWith("jellyfin_play_id:")) {
-                    // Voice "play <title> on Jellyfin" / OK on a Jellyfin tile or the banner: the server starts the
+                } else if (action.startsWith("jellyfin_play:")) {
+                    // Voice "play <title> on Jellyfin": look the title up first, so it gets the same loading screen
+                    // (with its picture) as a tile; nothing found = a message instead of silence.
+                    const title = action.slice(14);
+                    exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/jellyfin.py")) + "' find '"
+                             + title.replace(/'/g, "'\\''") + "'", data => {
+                        let found = null;
+                        try {
+                            found = JSON.parse(data.stdout);
+                        } catch (e) {}
+                        if (found && found.ok)
+                            tv.runAction("jellyfin_play_id:" + found.id);
+                        else
+                            tv.showMessage("Nothing called “" + title + "” on Jellyfin");
+                    });
+                } else if (action.startsWith("jellyfin_play_id:")) {
+                    // OK on a Jellyfin tile or the banner (and voice, after the lookup above): the server starts the
                     // item on Jellyfin Desktop (jellyfin.py waits for it to connect, then for the video to run).
                     // Jellyfin must be in front first: minimized it gets no animation frames and the start page stays
-                    // on top of the player. When it already runs, a loading screen (jellyfin_curtain.py) hides its start page.
+                    // on top of the player. A loading screen (jellyfin_curtain.py) covers its page meanwhile; on a
+                    // cold start it waits for the page to come up.
                     const jellyfinApp = Config.apps.find(app => app.id === "jellyfin");
                     const running = Plasmoid.applicationListModel.isApplicationRunning(jellyfinApp.desktopId);
-                    const byId = action.startsWith("jellyfin_play_id:");
-                    const arg = action.slice(action.indexOf(":") + 1).replace(/'/g, "'\\''");
+                    const id = action.slice(17).replace(/[^A-Za-z0-9]/g, "");
                     const scripts = "python3 '" + root.localPath(Qt.resolvedUrl("tv/"));
-                    const play = () => exec.run(scripts + "jellyfin.py' " + (byId ? "play-id" : "play") + " '" + arg + "'", data => {
-                        if (running)
-                            exec.run(scripts + "jellyfin_curtain.py' off", () => {});
-                        if (data["exit code"] !== 0 || data.stdout.indexOf('"ok": true') < 0)
+                    const play = () => exec.run(scripts + "jellyfin.py' play-id " + id, data => {
+                        exec.run(scripts + "jellyfin_curtain.py' off", () => {});
+                        if (data["exit code"] !== 0 || data.stdout.indexOf('"ok": true') < 0) {
                             console.warn("tv: jellyfin.py play: " + (data.stdout + data.stderr).trim());
+                            tv.showMessage("Could not start it on Jellyfin");
+                        }
                     });
                     root.leaveApps("jellyfin");
                     if (!running) {
                         Config.launch("jellyfin");
-                        play();
+                        exec.run(scripts + "jellyfin_curtain.py' on " + id + " --wait", play);
                     } else {
-                        exec.run(scripts + "jellyfin_curtain.py' on" + (byId ? " '" + arg + "'" : ""), () => {
+                        exec.run(scripts + "jellyfin_curtain.py' on " + id, () => {
                             Config.launch("jellyfin");
                             play();
                         });

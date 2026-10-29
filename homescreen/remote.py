@@ -67,7 +67,7 @@ def wait():
                 continue
             data = os.read(fd, 4096).decode()
             if data.strip():
-                print(data.split()[0])
+                print(data.strip().splitlines()[0])  # whole line: actions can contain spaces ("jellyfin_play:dead mans chest")
                 return
     finally:
         os.close(fd)

@@ -41,6 +41,7 @@ FILES = {
     "/Items/re1/Images/Backdrop/0?tag=rb1&maxWidth=1280&quality=90": png(160, 90, (90, 20, 20), (10, 0, 0)),
     "/Items/re1/Images/Logo?tag=rl1&maxWidth=800&quality=90": png(80, 30, (255, 255, 255), (200, 200, 200)),
     "/Items/nb/Images/Backdrop/0?tag=nb1&maxWidth=1280&quality=90": png(160, 90, (20, 60, 90), (0, 10, 20)),
+    "/Items/nb/Images/Primary?tag=np1&maxWidth=500&quality=90": png(60, 90, (20, 60, 90), (0, 10, 20)),
 }
 SEARCH = [
     {"Id": "lotr2", "Type": "Movie", "Name": "The Lord of the Rings: The Two Towers", "ProductionYear": 2002, "UserData": {}},
@@ -80,6 +81,11 @@ class Mock(BaseHTTPRequestHandler):
             body = json.dumps({"Items": NEXT_UP.get(series, []) if series else NEXT_UP["bb"]}).encode()
         elif self.path.startswith("/Items?userId=u1&includeItemTypes=Movie%2CSeries&"):
             body = json.dumps({"Items": NEWEST}).encode()
+        elif self.path.startswith("/Items/Latest?userId=u1&"):
+            body = json.dumps([{"Id": "nb", "Type": "Series", "Name": "Nobel", "ProductionYear": 2016,
+                                "ImageTags": {"Primary": "np1"}},
+                               {"Id": "re1", "Type": "Movie", "Name": "Resident Evil: Retribution"},
+                               {"Id": "x1", "Type": "Season", "Name": "Season 1"}]).encode()
         elif self.path.startswith("/Items/lotr1?userId=u1"):
             body = json.dumps(SEARCH[1]).encode()
         elif self.path.startswith("/Sessions?controllableByUserId=u1"):
@@ -151,6 +157,7 @@ def main():
     assert [i["action"] for i in content["jellyfinNextUp"]] == ["jellyfin_play_id:bb-s2e3"]
     # Continue watching = started (ep1, mv1, mv2) then next episodes of other series (bb); one per series.
     import jellyfin
+    assert [jellyfin.episode_label(i) for i in ({"ParentIndexNumber": 2, "IndexNumber": 5}, {"IndexNumber": 19}, {})] == ["S2 E5", "E19", ""]
     two = [{"Id": "e1", "SeriesId": "S"}, {"Id": "e2", "SeriesId": "S"}, {"Id": "m"}]
     assert [i["Id"] for i in jellyfin.continue_watching(two, [{"Id": "e3", "SeriesId": "S"}, {"Id": "x", "SeriesId": "T"}])] == ["e1", "m", "x"]
     assert [i["id"] for i in content["jellyfinContinue"]] == ["jellyfin-ep1", "jellyfin-mv1", "jellyfin-mv2", "jellyfin-bb-s2e3"]
@@ -160,6 +167,11 @@ def main():
     assert hero[0]["image"] == (images / "jellyfin-re1-backdrop1280-rb1.jpg").as_uri() and "logo" in hero[0]
     assert hero[1]["meta"] == "Series · Drama · 1 season" and "logo" not in hero[1]
     assert hero[1]["action"] == "jellyfin_play_id:nb"
+    # Recently added: posters for films and series only.
+    latest = content["jellyfinLatest"]
+    assert [(i["title"], i["meta"]) for i in latest] == [("Nobel", "Series · 2016"), ("Resident Evil: Retribution", "Film")]
+    assert latest[0]["image"].endswith("jellyfin-nb-poster-np1.jpg") and "image" not in latest[1]
+    assert latest[0]["action"] == "jellyfin_play_id:nb"
 
     # Older server (no /UserItems/Resume): falls back to /Users/{id}/Items/Resume.
     state["new_api"] = False
@@ -203,6 +215,11 @@ def main():
     res = run("play-id", "lotr1")
     assert json.loads(res.stdout) == {"ok": True, "title": "The Lord of the Rings: The Fellowship of the Ring"}, res.stdout
     assert state["posts"][-1] == "/Sessions/here/Playing?playCommand=PlayNow&itemIds=lotr1&startPositionTicks=%d" % (30 * TICKS)
+    # find: what play would start, without starting it.
+    posts = len(state["posts"])
+    res = run("find", "lord", "of", "the", "rings")
+    assert json.loads(res.stdout) == {"ok": True, "id": "lotr1", "title": "The Lord of the Rings: The Fellowship of the Ring"}
+    assert json.loads(run("find", "zzz").stdout)["ok"] is False and len(state["posts"]) == posts
     out = play("zzz qqq")
     assert out["ok"] is False and "nothing called" in out["error"], out
     assert len(state["posts"]) == 7

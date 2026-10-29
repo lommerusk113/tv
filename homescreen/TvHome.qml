@@ -80,6 +80,11 @@ FocusScope {
             loader.item.goHome();
     }
 
+    function showMessage(text) {
+        if (loader.item)
+            loader.item.showMessage(text);
+    }
+
     function showStatus(text) {
         if (loader.item)
             loader.item.showStatus(text);

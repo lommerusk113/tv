@@ -4,6 +4,7 @@
   python3 jellyfin_curtain.py on [item id]   loading screen over the page: the item's picture, logo/title and episode
                                              (without an id just "Starting" and the bar); gone after 20 s at most
   python3 jellyfin_curtain.py off   remove it
+  --wait (after on/off): Jellyfin is still starting, wait up to 30 s for its page
 
 Why: a minimized Jellyfin gets no animation frames, so a video started while it is hidden leaves its start page on top
 of the player. The home screen therefore raises Jellyfin first and starts the video then; the curtain hides Jellyfin's
@@ -13,6 +14,7 @@ import asyncio
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 from jellyfin_back import VENV_PYTHON, page_socket
@@ -66,8 +68,9 @@ ON = r"""
             logo.className = "logo";
             logo.onload = () => { name.innerHTML = ""; name.appendChild(logo); };
             logo.src = ApiClient.getScaledImageUrl(show, { type: "Logo", maxWidth: 1120 });
-            if (it.Type === "Episode")
-                sub.textContent = `Season ${it.ParentIndexNumber ?? "?"} · Episode ${it.IndexNumber ?? "?"} · ${it.Name}`;
+            if (it.Type === "Episode")  // only the numbers the episode has
+                sub.textContent = [it.ParentIndexNumber != null ? `Season ${it.ParentIndexNumber}` : "",
+                                   it.IndexNumber != null ? `Episode ${it.IndexNumber}` : "", it.Name].filter(x => x).join(" · ");
             else if (it.ProductionYear)
                 sub.textContent = String(it.ProductionYear);
             if (it.UserData && it.UserData.PlaybackPositionTicks)
@@ -102,15 +105,35 @@ OFF = r"""
 """
 
 
-async def evaluate(url, expression):
+async def evaluate(url, expression, wait_ready=0):
+    """Run the expression in the page; with wait_ready, first wait (up to that many seconds) until the web client has
+    loaded (ApiClient exists): added earlier, the loading screen is wiped when the page builds itself."""
     import websockets
     async with websockets.connect(url, max_size=None, open_timeout=5) as ws:
-        await ws.send(json.dumps({"id": 1, "method": "Runtime.evaluate", "params": {"expression": expression}}))
-        while json.loads(await asyncio.wait_for(ws.recv(), 10)).get("id") != 1:
-            pass
+        n = 0
+
+        async def call(expr):
+            nonlocal n
+            n += 1
+            await ws.send(json.dumps({"id": n, "method": "Runtime.evaluate",
+                                      "params": {"expression": expr, "returnByValue": True}}))
+            while True:
+                reply = json.loads(await asyncio.wait_for(ws.recv(), 10))
+                if reply.get("id") == n:
+                    return reply.get("result", {}).get("result", {}).get("value")
+
+        deadline = time.monotonic() + wait_ready
+        while wait_ready and time.monotonic() < deadline:
+            if await call("!!(window.ApiClient && document.body && document.readyState === 'complete')"):
+                break
+            await asyncio.sleep(0.25)
+        await call(expression)
 
 
 def main():
+    wait = "--wait" in sys.argv
+    if wait:
+        sys.argv.remove("--wait")
     if not (sys.argv[1:2] == ["on"] and len(sys.argv) <= 3 or sys.argv[1:] == ["off"]):
         sys.exit(__doc__)
     try:
@@ -121,9 +144,13 @@ def main():
             os.execv(str(VENV_PYTHON), [str(VENV_PYTHON), str(Path(__file__).resolve()), *sys.argv[1:]])
         sys.exit("jellyfin_curtain: needs the websockets module")
     url = page_socket()
+    deadline = time.monotonic() + (30 if wait else 0)
+    while not url and time.monotonic() < deadline:  # Jellyfin just launched: its page comes up in a few seconds
+        time.sleep(0.5)
+        url = page_socket()
     if url:
         item = json.dumps(sys.argv[2]) if len(sys.argv) == 3 else "null"
-        asyncio.run(evaluate(url, ON.replace("ITEM", item) if sys.argv[1] == "on" else OFF))
+        asyncio.run(evaluate(url, ON.replace("ITEM", item) if sys.argv[1] == "on" else OFF, 20 if wait else 0))
 
 
 if __name__ == "__main__":
