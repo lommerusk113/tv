@@ -16,7 +16,7 @@ FocusScope {
     // its overlay).
     readonly property bool atRoot: {
         const loader = sectionRepeater.count > section ? sectionRepeater.itemAt(section) : null;
-        return !settingsPanel.open && !requestDialog.open && section === initialSection
+        return !settingsPanel.open && !requestDialog.open && !loadingScreen.open && section === initialSection
                 && (!loader || !loader.item || loader.item.current === 0);
     }
 
@@ -151,6 +151,11 @@ FocusScope {
     }
 
     function runAction(action) {
+        if (loadingScreen.open) {  // a Moonlight stream is starting: only Back cancels it
+            if (action === "back" && !(Config.system && Config.system("moonlight_cancel")))
+                loadingScreen.hide();
+            return;
+        }
         if (requestDialog.open && requestDialog.handle(action))
             return;
         if (action.startsWith("request:")) {  // a "Get more" tile: ask first
@@ -383,6 +388,18 @@ FocusScope {
 
     RequestDialog {
         id: requestDialog
+    }
+
+    LoadingScreen {
+        id: loadingScreen
+    }
+
+    function showLoading(name) {
+        loadingScreen.show(name);
+    }
+
+    function hideLoading() {
+        loadingScreen.hide();
     }
 
     VoiceOverlay {

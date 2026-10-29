@@ -42,6 +42,7 @@ Item {
     Connections {
         target: Shortcuts
         function onToggleHomeScreen() {
+            root.cancelStream();  // Home while a stream starts: give up on it (media.py leave closes Moonlight)
             root.leaveApps(""); // like a TV box: going home pauses, and apps start from their start page next time
             tv.goHome();
             tv.forceActiveFocus();
@@ -69,7 +70,9 @@ Item {
             required property var model
 
             // AppId is the desktop file name, e.g. "rocks.shy.VacuumTube.desktop" (".desktop" stripped on both sides to be safe).
-            readonly property bool ours: Config.apps.some(app => app.desktopId
+            // Moonlight is left out: it goes fullscreen itself, and toggling would bring its hidden windows forward
+            // while a stream starts (startStream).
+            readonly property bool ours: String(model.AppId).indexOf("moonlight_stream") < 0 && Config.apps.some(app => app.desktopId
                 && app.desktopId.replace(/\.desktop$/, "") === String(model.AppId).replace(/\.desktop$/, ""))
 
             // Short delay: some apps (Electron, Qt) set up their window right after it appears.
@@ -110,6 +113,55 @@ Item {
         id: remoteRestart
         interval: 200
         onTriggered: root.waitForRemote()
+    }
+
+    // Moonlight stream start: our loading screen stays up and Moonlight's own windows are kept minimized
+    // (kwin/hide-moonlight.js) until moonlight.py --wait sees the first picture; then Moonlight comes forward.
+    property bool streamStarting: false
+
+    function startStream(app) {
+        const tvdir = "python3 '" + localPath(Qt.resolvedUrl("tv/"));
+        const moonlightApp = Config.apps.find(a => a.id === "moonlight");
+        leaveApps("moonlight");
+        streamStarting = true;
+        tv.showLoading(app || "Moonlight");
+        exec.run(tvdir + "kwin_script.py' load hide-moonlight", () => {
+            exec.run(tvdir + "moonlight.py' stream" + (app ? " '" + app.replace(/'/g, "'\\''") + "'" : "") + " --wait", data => {
+                if (!streamStarting)
+                    return;  // cancelled meanwhile
+                streamStarting = false;
+                exec.run(tvdir + "kwin_script.py' unload hide-moonlight", () => {
+                    if (data["exit code"] === 0) {
+                        exec.run(tvdir + "kwin_script.py' once show-moonlight", () => streamShown.restart());
+                        return;
+                    }
+                    tv.hideLoading();
+                    const reason = data.stderr.trim().split("\n").pop().replace(/^moonlight: /, "");
+                    if (reason.indexOf("no host paired") >= 0) {
+                        Plasmoid.applicationListModel.runApplication(moonlightApp.desktopId);  // plain Moonlight
+                        return;
+                    }
+                    exec.run("flatpak kill com.moonlight_stream.Moonlight", () => {});
+                    tv.showMessage(reason || "The game stream did not start");
+                });
+            });
+        });
+    }
+
+    function cancelStream() {
+        if (!streamStarting)
+            return tv.hideLoading();
+        streamStarting = false;
+        tv.hideLoading();
+        exec.run("python3 '" + localPath(Qt.resolvedUrl("tv/kwin_script.py")) + "' unload hide-moonlight", () => {});
+        exec.run("flatpak kill com.moonlight_stream.Moonlight", () => {});
+    }
+
+    // Lets Moonlight's stream window cover the screen before the loading screen fades out.
+    Timer {
+        id: streamShown
+        interval: 600
+        onTriggered: tv.hideLoading()
     }
 
     property bool youtubeSearch: false // set while a voice search opens YouTube, so it is not reset to its front page
@@ -210,11 +262,7 @@ Item {
                 // Moonlight with a paired PC: straight into the configured app (moonlight.py stream) instead of
                 // Moonlight's PC-style host list; without a host (exit code 1) it opens normally.
                 if (app.id === "moonlight" && !model.isApplicationRunning(app.desktopId)) {
-                    root.leaveApps("moonlight");
-                    exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/moonlight.py")) + "' stream", data => {
-                        if (data["exit code"] !== 0)
-                            model.runApplication(app.desktopId);
-                    });
+                    root.startStream("");  // falls back to opening Moonlight when no host is paired
                     return;
                 }
                 // Switching to another app pauses whatever plays (Jellyfin keeps playing in the background otherwise)
@@ -276,16 +324,16 @@ Item {
                     "restart": "systemctl reboot",
                     "shutdown": "systemctl poweroff"
                 };
-                if (action.startsWith("moonlight_stream:") || action === "moonlight_quit") {
-                    // Games row / red button: straight into a game on the PC, or end the stream (back here).
-                    const arg = action === "moonlight_quit" ? "quit"
-                              : "stream '" + action.slice(17).replace(/'/g, "'\\''") + "'";
-                    if (action !== "moonlight_quit")
-                        root.leaveApps("moonlight");
-                    exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/moonlight.py")) + "' " + arg, data => {
-                        if (data["exit code"] !== 0)
-                            tv.showMessage(data.stderr.trim().split("\n").pop().replace(/^moonlight: /, ""));
-                    });
+                if (action.startsWith("moonlight_stream:")) {
+                    root.startStream(action.slice(17));
+                    return true;
+                }
+                if (action === "moonlight_cancel") {
+                    root.cancelStream();
+                    return true;
+                }
+                if (action === "moonlight_quit") {  // red button: end the stream, back here
+                    exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/moonlight.py")) + "' quit", () => {});
                     return true;
                 }
                 if (action.startsWith("jellyseerr_request:")) {

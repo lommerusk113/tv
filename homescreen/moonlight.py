@@ -3,7 +3,8 @@
 
   python3 moonlight.py                 writes the moonlightApps key ("Games" row: the host's apps) into
                                        ~/.cache/tv-project/content.json; nothing without a paired host
-  python3 moonlight.py stream [app]    streams the app (default: config tileApp) straight away, fullscreen
+  python3 moonlight.py stream [app] [--wait]   streams the app (default: config tileApp), fullscreen; --wait returns
+                                       once the picture arrives (Moonlight's output goes to ~/.cache/tv-project/moonlight.log)
   python3 moonlight.py pair <host> <pin>   pairs once: type the PIN on Sunshine's web page (https://<host>:47990, PIN);
                                        on success the host is saved in config/moonlight.json
   python3 moonlight.py quit            ends the stream on this computer (Ctrl+Alt+Shift+Q via ydotool, the remote's
@@ -15,6 +16,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 from trakt import colors, update_content
@@ -22,6 +24,8 @@ from trakt import colors, update_content
 HERE = Path(__file__).resolve().parent
 CONFIG = HERE / "config/moonlight.json"
 MOONLIGHT = ["flatpak", "run", "com.moonlight_stream.Moonlight"]
+LOG = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "tv-project/moonlight.log"
+WAIT_SECONDS = 120  # Wolf starts the app's container first: Steam takes 15-40 s
 YDOTOOL_SOCKET = "/run/user/%d/.ydotool_socket" % os.getuid()
 KEYS = {"ctrl": 29, "alt": 56, "shift": 42, "q": 16}
 
@@ -43,12 +47,42 @@ def tile(name):
             "action": "moonlight_stream:" + name}
 
 
-def stream(app=None):
+def stream(app=None, wait=False):
+    """Starts the stream. With wait: returns once the first video arrives (exit 0, prints "ready"), or exits 1 with
+    the reason (no picture within WAIT_SECONDS, Moonlight quit, connection error); the home screen keeps its loading
+    screen up meanwhile (Moonlight's own windows are hidden by kwin/hide-moonlight.js)."""
     conf = config()
     if not conf.get("host"):
         sys.exit("moonlight: no host paired yet (moonlight.py pair <host> <pin>)")
-    subprocess.Popen(MOONLIGHT + ["stream", conf["host"], app or conf.get("tileApp", "Desktop")] + conf.get("options", []),
-                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    LOG.parent.mkdir(parents=True, exist_ok=True)
+    command = MOONLIGHT + ["stream", conf["host"], app or conf.get("tileApp", "Desktop")] + conf.get("options", [])
+
+    def launch():
+        with open(LOG, "w") as log:
+            return subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+
+    proc = launch()
+    if not wait:
+        return
+    deadline, retried = time.monotonic() + WAIT_SECONDS, False
+    while time.monotonic() < deadline:
+        text = LOG.read_text(errors="replace")
+        if "Received first video packet" in text:
+            print("ready")
+            return
+        failed = next((l for l in text.splitlines() if "Connection terminated" in l or "Starting RTSP handshake failed" in l), None)
+        if failed or proc.poll() is not None:
+            # Right after a stream ended, Wolf may still be tearing the old session down: the resume gets no picture
+            # (-100). One more try a few seconds later usually works.
+            if not retried:
+                retried = True
+                subprocess.run(["flatpak", "kill", "com.moonlight_stream.Moonlight"], capture_output=True, timeout=15)
+                time.sleep(5)
+                proc = launch()
+                continue
+            sys.exit("moonlight: could not start the stream" + (" (%s)" % failed.split(" - ")[-1] if failed else ""))
+        time.sleep(0.3)
+    sys.exit("moonlight: no picture from %s after %d s" % (conf["host"], WAIT_SECONDS))
 
 
 def pair(host, pin):
@@ -75,8 +109,10 @@ def quit_stream():
 
 def main():
     args = sys.argv[1:]
+    wait = "--wait" in args
+    args = [a for a in args if a != "--wait"]
     if args[:1] == ["stream"] and len(args) <= 2:
-        return stream(args[1] if len(args) == 2 else None)
+        return stream(args[1] if len(args) == 2 else None, wait)
     if args[:1] == ["pair"] and len(args) == 3 and args[2].isdigit() and len(args[2]) == 4:
         return pair(args[1], args[2])
     if args == ["quit"]:
