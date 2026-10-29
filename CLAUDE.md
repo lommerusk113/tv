@@ -105,6 +105,9 @@ homescreen/
                     with Breeze icons (icons/settings/, copied from breeze-dark, tinted with MultiEffect), toggles,
                     sliders, section headers. Avoid property names Item already has (`top` is FINAL: page fails to load)
   OnScreenKeyboard.qml  remote-driven keyboard (arrows + OK; æøå, ⇧, #+=, space, ⌫, OK) on the Wi-Fi password page.
+                    The password is a plain string (SettingsPanel.password); a real keyboard types via
+                    SettingsPanel.typeKey() from Home's key handler. Never give a hidden TextInput focus: it kept the
+                    focus after leaving the page and swallowed the arrows (2026-10-29 bug).
                     Plasma Keyboard (plasma-keyboard, KWin /VirtualKeyboard mode 2 = any input) does pop up for text
                     fields, but arrow keys go to the app, so it cannot be used with the remote; left at mode 1.
                     Jellyfin (TV layout) and YouTube TV have their own remote keyboards in search.

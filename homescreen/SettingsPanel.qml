@@ -22,6 +22,7 @@ Item {
     property var pending: ({})       // display: "<output id>:mode" / ":scale" -> chosen slider index, not applied yet
     property var revert: null        // display: {undo: [[args, busy text]], seconds} while "Keep?" counts down
     property string passwordFor: ""  // Wi-Fi network the password page is for
+    property string password: ""     // typed so far (on-screen keyboard, or a real keyboard through typeKey())
     readonly property var theme: Config.theme
     readonly property var scales: [1, 1.25, 1.5, 1.75, 2]
     readonly property var titles: ({ main: "Settings", wifi: "Wi-Fi", bluetooth: "Bluetooth", display: "Display",
@@ -167,9 +168,7 @@ Item {
         open = false;
         busy = "";
         pending = {};
-        passwordInput.text = "";
-        if (passwordInput.activeFocus)
-            panel.parent.forceActiveFocus();
+        password = "";
     }
 
     function go(newPage, index) {
@@ -183,10 +182,7 @@ Item {
             keyboard.row = 1;
             keyboard.col = 0;
             keyboard.shift = keyboard.symbols = false;
-            passwordInput.forceActiveFocus();
         }
-        else if (passwordInput.activeFocus)
-            panel.parent.forceActiveFocus();  // keys back to Home
     }
 
     function readVolume() {
@@ -290,7 +286,7 @@ Item {
                 query(["wifi-connect", n.ssid], r => wifi = r, "Connecting to " + n.ssid + "…");
             else {
                 passwordFor = n.ssid;
-                passwordInput.text = "";
+                password = "";
                 go("password", 0);
             }
         } else if (e.dev) {
@@ -335,10 +331,26 @@ Item {
     }
 
     function joinWifi() {
-        const ssid = passwordFor, password = passwordInput.text;
-        passwordInput.text = "";
+        const ssid = passwordFor, typed = password;
+        password = "";
         go("wifi", 0);
-        query(["wifi-connect", ssid, password], r => wifi = r, "Connecting to " + ssid + "…");
+        query(["wifi-connect", ssid, typed], r => wifi = r, "Connecting to " + ssid + "…");
+    }
+
+    // A key from a real keyboard, before Home maps it (Home keeps the focus; no hidden text field, which once kept the
+    // focus after leaving the page and swallowed the arrow keys). True when it was typed into the password.
+    function typeKey(event) {
+        if (!open || page !== "password")
+            return false;
+        if (event.key === Qt.Key_Backspace) {
+            password = password.slice(0, -1);
+            return true;
+        }
+        if (event.text.length === 1 && event.text.charCodeAt(0) >= 32) {
+            password += event.text;
+            return true;
+        }
+        return false;
     }
 
     // Returns true when the action was used (Home then does nothing else with it).
@@ -769,9 +781,9 @@ Item {
                             anchors.left: parent.left
                             anchors.leftMargin: Config.px(16)
                             anchors.verticalCenter: parent.verticalCenter
-                            text: passwordInput.text.length ? "•".repeat(passwordInput.text.length) : "Type the password"
+                            text: panel.password.length ? "•".repeat(panel.password.length) : "Type the password"
                             color: row.ink
-                            opacity: passwordInput.text.length ? 1 : 0.55
+                            opacity: panel.password.length ? 1 : 0.55
                             font.family: panel.theme.font.family
                             font.pixelSize: Config.px(21)
                         }
@@ -790,28 +802,8 @@ Item {
         width: sheet.width - sheet.pad * 2
         anchors.bottom: parent.bottom
         anchors.bottomMargin: Config.px(48)
-        onTyped: text => passwordInput.insert(passwordInput.cursorPosition, text)
-        onBackspace: passwordInput.remove(Math.max(0, passwordInput.cursorPosition - 1), passwordInput.cursorPosition)
+        onTyped: text => panel.password += text
+        onBackspace: panel.password = panel.password.slice(0, -1)
         onDone: panel.joinWifi()
-    }
-
-    // Receives the typing on the password page (drawn as dots in the row above).
-    TextInput {
-        id: passwordInput
-        width: 1
-        height: 1
-        opacity: 0  // not visible: false, which could not take keyboard focus
-        echoMode: TextInput.Password
-        inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText
-        // Arrows and OK (the remote's OK sends Enter) drive the on-screen keyboard; letters from a real keyboard type.
-        Keys.onPressed: event => {
-            const action = { [Qt.Key_Left]: "left", [Qt.Key_Right]: "right", [Qt.Key_Up]: "up", [Qt.Key_Down]: "down",
-                             [Qt.Key_Return]: "select", [Qt.Key_Enter]: "select", [Qt.Key_Select]: "select",
-                             [Qt.Key_Escape]: "back", [Qt.Key_Back]: "back" }[event.key];
-            if (action) {
-                panel.handle(action);
-                event.accepted = true;
-            }
-        }
     }
 }

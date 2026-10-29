@@ -210,6 +210,10 @@ FocusScope {
     }
 
     Keys.onPressed: event => {
+        if (settingsPanel.typeKey(event)) {
+            event.accepted = true;
+            return;
+        }
         let action = event.key ? keyActions[event.key] : undefined;
         // On Linux the native scan code is the evdev code + 8.
         if (action === undefined && event.nativeScanCode > 8)
