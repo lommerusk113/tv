@@ -103,4 +103,8 @@ Status and conventions: see CLAUDE.md. Do phases in order. Each phase ends with 
 - Voice feedback: say/show what was understood more clearly (e.g. "Playing Breaking Bad S2 E3"), errors visible on
   the TV ("Nothing called X on Jellyfin") instead of only in the log.
 - Remote: red/green/yellow/blue and number keys are still unused (shortcuts? jump to rows?).
+- Moonlight opens in its desktop (PC) UI. Make it TV-like: check its fullscreen/"gamepad" settings and the remote's
+  arrows/OK in its host list; better still, skip the UI: the tile runs `moonlight stream <host> "<app>"` (e.g.
+  "Steam Big Picture" on the gaming PC) so it goes straight into the stream, with one tile per host/app if needed.
+  Needs the host paired first (user) and a way out (exit-stream shortcut on a remote button, see Phase 3).
 
