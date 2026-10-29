@@ -1,7 +1,24 @@
 # TV home screen
 
-Google TV-style home screen for a Bazzite living-room PC, prototyped in plain Qt Quick (Qt 6)
-and later ported into Plasma Bigscreen. See `CLAUDE.md` for decisions, config format and rules.
+Google TV-style home screen for a Bazzite living-room PC (Plasma Bigscreen, custom QML), driven by a Bluetooth remote.
+Jellyfin, YouTube (VacuumTube), RiksTV (Chrome), Steam/Moonlight (Wolf), Trakt recommendations, Jellyseerr requests,
+voice control (whisper.cpp) and its own settings panel. See `CLAUDE.md` for decisions, config format and rules.
+
+## What it looks like (2026-10-29, laptop panel)
+
+![Browsing the home screen](docs/media/browse.gif)
+
+| | |
+|---|---|
+| ![Home](docs/media/01-home.jpg) Home: Trakt banner, apps, clock and weather | ![Banner](docs/media/03-banner-next.jpg) Banner rotates through Trakt picks |
+| ![Continue watching](docs/media/04-continue-watching.jpg) Continue watching (Jellyfin) | ![Recommended](docs/media/06-recommended.jpg) Recommended for you (Trakt, on the server) |
+| ![Get more](docs/media/07-get-more.jpg) Get more: Trakt picks not on the server | ![Request](docs/media/15-request-dialog.jpg) Request through Jellyseerr |
+| ![YouTube](docs/media/09-youtube-channels.jpg) YouTube channels and recommendations | ![Recently added](docs/media/08-recently-added.jpg) Recently added (posters) |
+| ![Settings](docs/media/11-settings.jpg) Settings slide-in | ![Display](docs/media/13-settings-display.jpg) Display: sliders, Apply, auto-revert |
+| ![Loading Steam](docs/media/16-loading-steam.jpg) Loading screen while Steam starts (Wolf) | ![Steam](docs/media/17-steam-stream.jpg) Steam Big Picture over Moonlight |
+
+Videos (recorded as ~2.5 screenshots/s, so motion is choppy):
+[browsing](docs/media/browse.mp4) · [settings](docs/media/settings.mp4) · [starting Steam](docs/media/steam.mp4)
 
 ## Run on the Bazzite laptop
 ```bash
