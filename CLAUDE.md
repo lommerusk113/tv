@@ -175,6 +175,9 @@ homescreen/
                     fallback (~25 km). Settings "Use my location" switch (system.py location on|off|status); on =
                     look up now + daily (HomeScreen runs location.py before weather.py); off = location removed,
                     weather.py deletes weather.json, the clock pill hides the weather.
+  audio.py          sound follows the TV: `auto` sets the default sink to the HDMI sink whose port is "available"
+                    (the TV is HDMI1 of HDMI1-3), else the speaker, and moves playing streams; HomeScreen runs it on
+                    activation and every 10 s (WirePlumber kept the speaker as default with the TV plugged in).
   system.py         backend for those pages: nmcli, bluetoothctl, kscreen-doctor; JSON out ({"error"} + exit 1);
                     refuses to disable the last screen
   apps.py           (not in the layout since 2026-10-29) "More apps" row (installedApps): every exported Flatpak .desktop not pinned in apps.json, with its
@@ -341,6 +344,9 @@ an unknown key name and an unknown app id.
 - The remote can NOT wake the laptop (tested 2026-10-29, s2idle, Intel AX211): with USB wakeup enabled on the adapter
   (3-10) a connected remote wakes it instantly (the link drops at suspend: "ACL packet for unknown connection
   handle"; GPE wake via IRQ 9), a disconnected one never ("Controller resume with wake event 0x0"). Rule removed again.
+  2026-10-29: with the TV and laptop panel both on, apps opened on the panel (sound but the TV kept the home screen):
+  eDP-1 disabled with the TV connected (`kscreen-doctor output.eDP-1.disable`; KScreen remembers it per screen set,
+  so the panel comes back without the TV). Battery/LowBattery lid + auto-suspend also 0 (it slept on battery, lid shut).
   So the laptop does not sleep on AC (powerdevilrc [AC][SuspendAndShutdown] AutoSuspendAction=0, LidAction=0: a
   closed lid with the TV off would otherwise suspend); Off = TV off only. Used ~once a week: battery sits at 100 % on
   AC (ThinkPad, BAT0 charge_control_end_threshold supported) -> user sets a charge limit (System Settings > Power).

@@ -34,6 +34,16 @@ Item {
         runScript("jellyfin.py", tv.reloadLive);
         runScript("youtube.py", tv.reloadLive);
         runScript("location.py", () => runScript("weather.py", tv.reloadWeather));  // location: daily, if switched on
+        runScript("audio.py auto", () => {});
+    }
+
+    // Sound follows the TV: WirePlumber keeps the laptop speaker as default after the TV is plugged in (audio.py).
+    Timer {
+        interval: 10000
+        repeat: true
+        running: true
+        triggeredOnStart: true
+        onTriggered: root.runScript("audio.py auto", () => {})
     }
 
     // Home Page is Bigscreen's global "Toggle Bigscreen Home Screen" shortcut: upstream main.qml minimizes all apps,
