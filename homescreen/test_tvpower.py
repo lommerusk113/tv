@@ -18,7 +18,7 @@ def main():
     listener = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     listener.bind(("127.0.0.1", 0))
     listener.settimeout(5)
-    env = dict(os.environ, XDG_CONFIG_HOME=str(home / "config"), TV_WOL_PORT=str(listener.getsockname()[1]),
+    env = dict(os.environ, TV_DISCOVER="0", XDG_CONFIG_HOME=str(home / "config"), TV_WOL_PORT=str(listener.getsockname()[1]),
                TV_BOOT_WAIT="3")
     script = str(Path(__file__).with_name("tvpower.py"))
 

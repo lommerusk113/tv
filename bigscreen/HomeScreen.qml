@@ -420,6 +420,11 @@ Item {
                     exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/moonlight.py")) + "' quit", () => {});
                     return true;
                 }
+                if (action.startsWith("save_app_order:")) {
+                    // The "Your apps" row after moving a tile (Home.qml): kept in ~/.config/tv-project/app-order.json.
+                    root.runScript("apps.py order " + action.slice(15).replace(/[^A-Za-z0-9_,.-]/g, ""), () => {});
+                    return true;
+                }
                 if (action.startsWith("request_search:")) {
                     // A title that is not on Jellyfin (voice): Jellyseerr's hits in GetDialog, OK downloads one.
                     // The dialog needs the arrows, so the home screen comes to the front first.

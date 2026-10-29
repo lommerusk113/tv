@@ -20,11 +20,13 @@ FocusScope {
 
     // Live rows written by trakt.py sync; their keys override data/placeholder.json. Optional.
     readonly property string liveUrl: StandardPaths.writableLocation(StandardPaths.GenericCacheLocation) + "/tv-project/content.json"
+    readonly property string appOrderUrl: StandardPaths.writableLocation(StandardPaths.GenericConfigLocation) + "/tv-project/app-order.json"
     readonly property string weatherUrl: StandardPaths.writableLocation(StandardPaths.GenericCacheLocation) + "/tv-project/weather.json"
     property var placeholder: ({})
     property string liveText: ""
 
-    property int pending: 7
+    property var appOrder: []        // ~/.config/tv-project/app-order.json: app ids in the order the user moved them to
+    property int pending: 8
     // True when Back has nothing left to do in Home (start row, first tile); Bigscreen then opens its overlay.
     readonly property bool atTop: loader.item ? loader.item.atRoot : false
 
@@ -52,6 +54,10 @@ FocusScope {
             live = JSON.parse(liveText);
         } catch (e) {}
         Config.content = Object.assign({}, placeholder, live);
+        // Apps the user moved (hold OK on an app tile): saved ids first in that order, new apps after them.
+        const rank = id => { const i = appOrder.indexOf(id); return i < 0 ? 1000 : i; };
+        Config.apps = Config.apps.map((a, i) => [a, i]).sort((x, y) => rank(x[0].id) - rank(y[0].id) || x[1] - y[1])
+                                 .map(x => x[0]);
     }
 
     // Re-read the live content (after a sync). Only rebuilds the rows when it changed, keeping focus where it was
@@ -151,6 +157,7 @@ FocusScope {
         loadJson("config/keymap.json", v => Config.keymap = v);
         loadJson("config/voice.json", v => Config.voice = v);
         loadJson(liveUrl, v => root.liveText = JSON.stringify(v), true);
+        loadJson(appOrderUrl, v => root.appOrder = Array.isArray(v) ? v : [], true);
     }
 
     Loader {

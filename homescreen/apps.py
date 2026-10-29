@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """"More apps" row: every installed Flatpak app that is not already in config/apps.json. Standard library only.
 
+  python3 apps.py order <id>,<id>,...   saves the order of the "Your apps" row (hold OK on an app tile to move it) in
+                                        ~/.config/tv-project/app-order.json; TvHome.qml sorts apps.json by it
+
   python3 apps.py   writes the installedApps key into ~/.cache/tv-project/content.json; OK on a tile starts the app
                     (action "launch_desktop:<desktop id>"), so apps installed from the App Store show up by themselves
 
@@ -51,7 +54,19 @@ def installed():
     return sorted(found.values(), key=lambda a: a[1].lower())
 
 
+def save_order(ids):
+    config = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "tv-project"
+    config.mkdir(parents=True, exist_ok=True)
+    tmp = config / "app-order.json.tmp"
+    tmp.write_text(json.dumps([i for i in ids if i]))
+    tmp.replace(config / "app-order.json")
+
+
 def main():
+    import sys
+    if sys.argv[1:2] == ["order"] and len(sys.argv) == 3:
+        save_order(sys.argv[2].split(","))
+        return
     pinned = {a.get("desktopId") for a in json.loads((HERE / "config/apps.json").read_text())}
     items = []
     for desktop_id, name, icon in installed():

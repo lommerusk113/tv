@@ -190,6 +190,11 @@ homescreen/
                     Home routes keys to it and atRoot is false (Back does not open Bigscreen's overlay). Look: cards
                     with Breeze icons (icons/settings/, copied from breeze-dark, tinted with MultiEffect), toggles,
                     sliders, section headers. Avoid property names Item already has (`top` is FINAL: page fails to load)
+  Moving apps (2026-10-29): hold OK ~0.6 s on a "Your apps" tile (Home.qml holdTimer; on that row OK acts on
+                    release) -> TileRow.moving, ‹ › on the tile, left/right swap (Config.apps in place), anything else
+                    finishes -> Config.system("save_app_order:<ids>") -> apps.py order -> ~/.config/tv-project/
+                    app-order.json; TvHome.applyContent sorts apps.json by it (unknown apps after). Home (goHome)
+                    closes every window: request, Did you mean, Not on your server, settings, move mode.
   OnScreenKeyboard.qml  remote-driven keyboard (arrows + OK; æøå, ⇧, #+=, space, ⌫, OK) on the Wi-Fi password page.
                     The password is a plain string (SettingsPanel.password); a real keyboard types via
                     SettingsPanel.typeKey() from Home's key handler. Never give a hidden TextInput focus: it kept the
@@ -221,6 +226,9 @@ homescreen/
                     laptop on HDMI_3, paired; off -> unreachable, WOL on -> Active in ~9 s on HDMI 3. Remote Off =
                     tv_power toggle, Input = tv_input, voice "turn off the TV" = tv_off. tv-sleep.service not needed:
                     the laptop no longer sleeps)
+                    Cable-proof (2026-10-29): "mac" may be a list (WOL to each); when the TV does not answer at "ip",
+                    relocate() finds it with SSDP, saves the new ip + MAC (from ip neigh) and copies the pairing key
+                    (lgtv-keys.sqlite, table "unnamed", keyed by ip). TV_DISCOVER=0 turns that off (test_tvpower.py).
                     LG TV on/off: WOL + bscpylgtv (venv ~/.local/share/tv-project/venv, reruns itself there);
                     `on|off|pair|status|watch-sleep`; settings "tv": {ip, mac, input}; test_tvpower.py (no TV needed)
   test_trakt.py     runs trakt.py auth + sync against a local mock Trakt API: python3 homescreen/test_trakt.py

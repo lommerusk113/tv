@@ -124,8 +124,19 @@ FocusScope {
         scrollToSection();
     }
 
+    // Home closes whatever window is open on the home screen (request, "Did you mean", "Not on your server", settings).
+    function closeWindows() {
+        stopMoving();
+        requestDialog.open = false;
+        choiceDialog.open = false;
+        getDialog.open = false;
+        if (settingsPanel.open)
+            settingsPanel.close();
+    }
+
     // Back to the start state: every row at its first tile, focus on layout.initialFocus.
     function goHome() {
+        closeWindows();
         for (let i = 0; i < sections.length; i++)
             sectionAt(i).current = 0;
         section = initialSection;
@@ -151,6 +162,15 @@ FocusScope {
     }
 
     function runAction(action) {
+        if (moving) {  // moving an app tile: left/right move it, anything else finishes
+            if (action === "left" || action === "right")
+                sectionAt(section).swap(action === "left" ? -1 : 1);
+            else
+                stopMoving();
+            return;
+        }
+        if (action === "home")
+            closeWindows();
         if (loadingScreen.open) {  // a Moonlight stream is starting: only Back cancels it
             if (action === "back" && !(Config.system && Config.system("moonlight_cancel")))
                 loadingScreen.hide();
@@ -244,19 +264,72 @@ FocusScope {
         });
     }
 
+    function keyAction(event) {
+        let action = event.key ? keyActions[event.key] : undefined;
+        // On Linux the native scan code is the evdev code + 8.
+        if (action === undefined && event.nativeScanCode > 8)
+            action = keyActions["evdev:" + (event.nativeScanCode - 8)];
+        return action;
+    }
+
+    // OK on an app tile waits for the release: a short press opens the app, holding it moves the tile (like Google TV).
+    readonly property bool onAppRow: !!sections[section] && sections[section].action === "launch" && atHomeLevel
+    readonly property bool atHomeLevel: !settingsPanel.open && !requestDialog.open && !choiceDialog.open
+                                        && !getDialog.open && !loadingScreen.open
+    Timer {
+        id: holdTimer
+        interval: 600
+        onTriggered: home.startMoving()
+    }
+
+    function startMoving() {
+        const row = sectionAt(section);
+        if (!row)
+            return;
+        row.moving = true;
+        showMessage("Move with ‹ › · OK when done");
+    }
+
+    // Leaves move mode and saves the order (Config.system("save_app_order:<ids>"): apps.py order).
+    function stopMoving() {
+        const row = sectionAt(section);
+        if (!row || !row.moving)
+            return false;
+        row.moving = false;
+        const ids = Config.apps.map(a => a.id);
+        if (!(Config.system && Config.system("save_app_order:" + ids.join(","))))
+            console.log("action:save_app_order:" + ids.join(","));
+        showMessage("Apps saved in this order");
+        return true;
+    }
+
+    readonly property bool moving: !!sectionAt(section) && sectionAt(section).moving === true
+
     Keys.onPressed: event => {
         if (settingsPanel.typeKey(event)) {
             event.accepted = true;
             return;
         }
-        let action = event.key ? keyActions[event.key] : undefined;
-        // On Linux the native scan code is the evdev code + 8.
-        if (action === undefined && event.nativeScanCode > 8)
-            action = keyActions["evdev:" + (event.nativeScanCode - 8)];
+        const action = keyAction(event);
         if (action === undefined)
             return;
-        runAction(action);
         event.accepted = true;
+        if (action === "select" && onAppRow && !moving) {
+            if (!event.isAutoRepeat && !holdTimer.running)
+                holdTimer.restart();
+            return;
+        }
+        if (event.isAutoRepeat && action === "select")
+            return;
+        runAction(action);
+    }
+
+    Keys.onReleased: event => {
+        if (event.isAutoRepeat || keyAction(event) !== "select" || !holdTimer.running)
+            return;
+        holdTimer.stop();  // a short press: open the app
+        event.accepted = true;
+        runAction("select");
     }
 
     Component.onCompleted: {

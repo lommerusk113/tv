@@ -10,6 +10,9 @@
 
 Settings in ~/.config/tv-project/secrets.json:
   "tv": {"ip": "192.168.1.50", "mac": "aa:bb:cc:dd:ee:ff", "input": "HDMI_1"}   (input defaults to HDMI_1)
+  "mac" may be a list (Wi-Fi and cable have different MACs: the magic packet goes to each). When the TV does not answer
+  at "ip" (e.g. it moved from Wi-Fi to a cable and got a new address), it is found again with SSDP; the new ip and MAC
+  are saved and the pairing key is copied to the new ip, so no new prompt on the TV.
 The client key is kept in ~/.config/tv-project/lgtv-keys.sqlite (not in the repo). bscpylgtv is installed in the
 venv ~/.local/share/tv-project/venv (scripts/install-tv-power.sh); the script reruns itself there when needed.
 Without "tv" settings every command does nothing and exits 0.
@@ -46,18 +49,71 @@ def magic_packet(mac):
     return b"\xff" * 6 + bytes.fromhex(digits) * 16
 
 
+def macs(tv):
+    mac = tv.get("mac") or []
+    return [mac] if isinstance(mac, str) else list(mac)
+
+
 def wake(tv):
-    """Magic packet to the broadcast address and to the TV's own IP (works when the router keeps its ARP entry)."""
-    if not tv.get("mac"):
-        return
-    packet = magic_packet(tv["mac"])
+    """Magic packet (for every known MAC) to the broadcast address and to the TV's own IP (works when the router keeps
+    its ARP entry)."""
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
         s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        for target in ("255.255.255.255", tv["ip"]):
-            try:
-                s.sendto(packet, (target, WOL_PORT))
-            except OSError as e:
-                print(f"tvpower: wake {target}: {e}", file=sys.stderr)
+        for mac in macs(tv):
+            packet = magic_packet(mac)
+            for target in ("255.255.255.255", tv["ip"]):
+                try:
+                    s.sendto(packet, (target, WOL_PORT))
+                except OSError as e:
+                    print(f"tvpower: wake {target}: {e}", file=sys.stderr)
+
+
+def discover(timeout=3):
+    """IP of an LG webOS TV on the network (SSDP M-SEARCH for its second-screen service), or None."""
+    msg = ("M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nMAN: \"ssdp:discover\"\r\nMX: 2\r\n"
+           "ST: urn:lge-com:service:webos-second-screen:1\r\n\r\n").encode()
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        s.settimeout(timeout)
+        try:
+            s.sendto(msg, ("239.255.255.250", 1900))
+            while True:
+                data, addr = s.recvfrom(4096)
+                if b"webos-second-screen" in data:
+                    return addr[0]
+        except OSError:
+            return None
+
+
+def relocate(tv):
+    """Finds the TV again when it moved to another IP; saves ip + MAC, copies the pairing key. True when it moved."""
+    if os.environ.get("TV_DISCOVER") == "0":  # test_tvpower.py: never find the real TV
+        return False
+    ip = discover()
+    if not ip or ip == tv["ip"]:
+        return False
+    import sqlite3
+    try:
+        with sqlite3.connect(KEYS) as db:
+            row = db.execute('SELECT value FROM unnamed WHERE key = ?', (tv["ip"],)).fetchone()
+            if row:
+                db.execute('INSERT OR REPLACE INTO unnamed (key, value) VALUES (?, ?)', (ip, row[0]))
+    except sqlite3.Error as e:
+        print(f"tvpower: pairing key: {e}", file=sys.stderr)
+    neigh = subprocess.run(["ip", "neigh", "show", ip], capture_output=True, text=True).stdout
+    found = re.search(r"lladdr ([0-9a-f:]{17})", neigh)
+    known = macs(tv)
+    if found and found.group(1) not in known:
+        known.append(found.group(1))
+    print(f"tvpower: the TV moved from {tv['ip']} to {ip}", file=sys.stderr)
+    tv.update(ip=ip, mac=known)
+    path = CONFIG / "secrets.json"
+    data = json.loads(path.read_text())
+    data["tv"] = tv
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, indent=2))
+    os.chmod(tmp, 0o600)
+    tmp.replace(path)
+    return True
 
 
 def use_venv():
@@ -72,7 +128,8 @@ def use_venv():
         sys.exit(f"tvpower: bscpylgtv is not installed (run scripts/install-tv-power.sh)")
 
 
-async def connect(tv, attempts=1):
+async def connect(tv, attempts=1, look=True):
+    """Connected client; when the TV does not answer at its ip, look for it once elsewhere (relocate)."""
     from bscpylgtv import WebOsClient
     client = await WebOsClient.create(tv["ip"], key_file_path=str(KEYS))
     for attempt in range(attempts):
@@ -81,6 +138,8 @@ async def connect(tv, attempts=1):
             return client
         except Exception as e:  # bscpylgtv raises plain OSErrors, timeouts and websocket errors
             if attempt == attempts - 1:
+                if look and relocate(tv):
+                    return await connect(tv, attempts, look=False)
                 raise SystemExit(f"tvpower: cannot reach the TV at {tv['ip']}: {e}")
             await asyncio.sleep(2)
 

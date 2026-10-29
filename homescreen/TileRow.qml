@@ -8,6 +8,7 @@ Item {
     property var section: null
     property bool focused: false
     property int current: 0
+    property bool moving: false   // app row: the focused tile is being moved (left/right), see Home.qml
     readonly property bool isRow: true
     readonly property var theme: Config.theme
     readonly property var items: section ? section.items : []
@@ -66,6 +67,19 @@ Item {
     ScrollArrow {
         x: row.width - list.rightMargin / 2 - width / 2
         show: row.moreRight && row.focused
+    }
+
+    // Move mode: swap the focused tile with its neighbour (the items array is changed in place: it is Config.apps).
+    function swap(d) {
+        const n = current + d;
+        if (n < 0 || n >= items.length)
+            return;
+        const tmp = items[current];
+        items[current] = items[n];
+        items[n] = tmp;
+        list.model = Qt.binding(() => row.items);  // same array object: force the ListView to re-read it
+        current = n;
+        ensureVisible();
     }
 
     function move(d) {
@@ -173,6 +187,28 @@ Item {
                 index: cell.index
                 style: row.style
                 focused: row.focused && cell.index === row.current
+            }
+
+            // Move mode: arrows beside the tile being moved, "Moving" under it.
+            Repeater {
+                model: row.moving && tile.focused ? [-1, 1] : []
+                delegate: Rectangle {
+                    required property int modelData
+                    x: modelData < 0 ? -width / 2 - Config.px(6) : tile.width - width / 2 + Config.px(6)
+                    y: row.glowPad + tile.height / 2 - height / 2
+                    z: 2
+                    width: Config.px(44)
+                    height: width
+                    radius: width / 2
+                    color: row.theme.colors.accent
+                    Text {
+                        anchors.centerIn: parent
+                        text: parent.modelData < 0 ? "‹" : "›"
+                        color: row.theme.colors.onFocused
+                        font.pixelSize: Config.px(34)
+                        font.weight: Font.Bold
+                    }
+                }
             }
         }
 
