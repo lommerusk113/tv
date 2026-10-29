@@ -3,7 +3,8 @@
 
   python3 media.py pause             pause every media player that is playing (MPRIS: Jellyfin Desktop, VacuumTube,
                                      Chrome/RiksTV), so switching apps does not leave the old one playing
-  python3 media.py leave [app id]    pause (except the given app, the one being opened), then send Jellyfin back to its start page (unless it is the given app,
+  python3 media.py leave [app id]    pause (except the given app, the one being opened), close Moonlight (ends the
+                                     stream; the game keeps running on the host), then send Jellyfin back to its start page (unless it is the given app,
                                      the one being opened), so it starts from there next time
   python3 media.py youtube-home      a running VacuumTube goes to YouTube's start page (and comes to the front: a
                                      link always raises VacuumTube, so this is done when opening it, not when leaving)
@@ -56,8 +57,14 @@ def running(flatpak_id):
     return flatpak_id in res.stdout.split()
 
 
+MOONLIGHT_FLATPAK = "com.moonlight_stream.Moonlight"
+
+
 def leave(keep=None):
     pause(keep)
+    # Moonlight: leaving it ends the stream (the game keeps running on the host; the tile resumes it).
+    if keep != "moonlight" and running(MOONLIGHT_FLATPAK):
+        subprocess.run(["flatpak", "kill", MOONLIGHT_FLATPAK], capture_output=True, timeout=15)
     if keep != "jellyfin":
         subprocess.run([sys.executable, str(HERE / "jellyfin.py"), "home"], timeout=60)
 

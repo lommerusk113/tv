@@ -152,7 +152,7 @@ homescreen/
                     hicolor icon; action launch_desktop:<id>; test_apps.py
   youtube.py        "New from your channels" (channel /videos pages, config/youtube.json) + "Recommended on YouTube"
                     and history progress (youtube_tv.py + youtube_tv.js, VacuumTube's DevTools port); test_youtube.py
-  media.py          pause (MPRIS), leave (pause + Jellyfin GoHome), YouTube deeplinks (search, history, watch, home)
+  media.py          pause (MPRIS), leave (pause + close Moonlight + Jellyfin GoHome), YouTube deeplinks (search, history, watch, home)
   remote.py         global remote buttons (config/remote.json -> X-KDE-Shortcuts .desktop files) and the FIFO to Home
   jellyfin_back.py  Back on Jellyfin's start page -> home screen (see DevTools ports)
   jellyfin_curtain.py  loading screen over Jellyfin's page while a tile starts a video (`on [item id]`/`off`): built
