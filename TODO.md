@@ -107,9 +107,6 @@ Status and conventions: see CLAUDE.md. Do phases in order. Each phase ends with 
   arrows/OK in its host list; better still, skip the UI: the tile runs `moonlight stream <host> "<app>"` (e.g.
   "Steam Big Picture" on the gaming PC) so it goes straight into the stream, with one tile per host/app if needed.
   Needs the host paired first (user) and a way out (exit-stream shortcut on a remote button, see Phase 3).
-- Remote wakes the laptop (2026-10-29): s2idle; BlueZ has the remote WakeAllowed, but the AX211 adapter (USB 8087:0033,
-  3-10) and its root hub usb3 had power/wakeup disabled. scripts/install-remote-wake.sh installs a udev rule (user runs
-  it: auto mode refuses persistence). Then test: Settings > Power > Sleep, press OK on the remote (maybe twice: a BLE
-  remote has to reconnect first). If it does not wake: check /proc/acpi/wakeup, journal "PM: Wakeup", or keep the
-  laptop awake and only turn the TV off (the remote's Off button already does only that).
-
+- [x] (2026-10-29) Remote waking the laptop: not possible here (see CLAUDE.md "Remote"); instead no automatic sleep on
+  AC, screen lock off. Autologin into Bigscreen ready (scripts/install-autologin.sh, user runs it), then test a real
+  Bigscreen login after a reboot. Possible later: Chrome/KWallet may ask for a password without a login password.

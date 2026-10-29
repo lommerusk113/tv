@@ -134,7 +134,7 @@ Item {
         case "power":
             return [
                 { key: "tv_off", label: "Turn off the TV", icon: "tv", kind: "action" },
-                { key: "sleep", label: "Sleep", icon: "sleep", kind: "action" },
+                { key: "sleep", label: "Sleep", icon: "sleep", kind: "action", sub: "Wake it with the laptop's power button" },
                 { key: "restart", label: "Restart", icon: "restart", kind: "action", confirm: true,
                   sub: c === "restart" ? "Press OK again to restart" : "", warn: c === "restart" },
                 { key: "shutdown", label: "Shut down", icon: "power", kind: "action", confirm: true,

@@ -261,8 +261,13 @@ an unknown key name and an unknown app id.
 | Back | c0224 | BACK (VacuumTube quits on it) | ESC | Escape | back |
 | arrows, home, vol +/-, mute | | as named | unchanged | | keymap.json / Plasma |
 
-- Wake from sleep: scripts/remote/71-bluetooth-wake.rules (scripts/install-remote-wake.sh, user runs it) enables
-  power/wakeup on the AX211 Bluetooth adapter and root hub usb3 (both disabled by default).
+- The remote can NOT wake the laptop (tested 2026-10-29, s2idle, Intel AX211): with USB wakeup enabled on the adapter
+  (3-10) a connected remote wakes it instantly (the link drops at suspend: "ACL packet for unknown connection
+  handle"; GPE wake via IRQ 9), a disconnected one never ("Controller resume with wake event 0x0"). Rule removed again.
+  So the laptop does not sleep on AC (powerdevilrc [AC][SuspendAndShutdown] AutoSuspendAction=0); Off = TV off only.
+  Screen lock off (kscreenlockerrc Autolock/LockOnResume=false; needs `qdbus org.freedesktop.ScreenSaver /ScreenSaver
+  configure` to take effect). Autologin into Bigscreen: scripts/install-autologin.sh (Plasma Login Manager drop-in;
+  user runs it).
 - Remap: scripts/remote/70-strong-remote.hwdb → /etc/udev/hwdb.d (scripts/install-remote-keys.sh, pkexec). Afterwards the
   remote must reconnect (turn off/on, or `bluetoothctl disconnect`, then press a key): libinput drops keys the device did
   not declare when it appeared (PROG1-4).
