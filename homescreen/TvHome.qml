@@ -106,6 +106,11 @@ FocusScope {
             loader.item.runAction(action);
     }
 
+    function showChoices(text, options) {
+        if (loader.item)
+            loader.item.showChoices(text, options);
+    }
+
     // Re-read weather.json (written by weather.py); a missing or unreadable file keeps what is shown.
     function reloadWeather() {
         readFile(weatherUrl, text => {

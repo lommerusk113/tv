@@ -36,7 +36,8 @@ FREE = ("jellyfin_play:", "jellyfin_search:", "youtube_search:")
 FROM_TILES = ("jellyfin_play_id:", "youtube_watch:", "moonlight_stream:", "request:", "launch_desktop:")
 
 PROMPT = """You control a living-room TV home screen by voice. The user speaks English or Norwegian; speech-to-text
-may have misheard words (names especially), so guess what they meant. Reply with JSON {"action": ..., "say": ...}.
+may have misheard words (names especially), so guess what they meant. Reply with JSON
+{"action": ..., "say": ..., "options": [...]}.
 
 action is ONE of these, or null:
 - home, volume_up, volume_down, volume_mute, tv_off, settings
@@ -55,6 +56,10 @@ action is ONE of these, or null:
 Prefer a tile's exact action when the user means it ("continue Merlin", "the new Lanterns episode"). Fix misheard
 titles to their real names ("dead mans chest" -> "Pirates of the Caribbean: Dead Man's Chest"). Use null when it is
 not a command for the TV.
+options: when you are NOT sure (misheard words, several titles fit), set action to null and give 2-3 guesses, best
+first, each {"label": what it does in a few words, e.g. "Play Merlin", "Search YouTube for Asmongold", "action": ...};
+otherwise options is []. Think about what the words could sound like: "mot i brystet" -> "Mot i brøstet",
+"the lord of the ring two" -> The Two Towers.
 say is a short reply (max 15 words, the user's language) shown on screen: an answer to a question (weather, time,
 "what should I watch?" -> suggest one tile and also play nothing), or null when the action speaks for itself.
 """
@@ -137,8 +142,11 @@ def ask_model(model, text, hint, ctx, timeout):
             "messages": [{"role": "system", "content": PROMPT},
                          {"role": "user", "content": json.dumps(user, ensure_ascii=False)}],
             "response_format": {"type": "json_schema", "json_schema": {"name": "tv_command", "strict": True, "schema": {
-                "type": "object", "additionalProperties": False, "required": ["action", "say"],
-                "properties": {"action": {"type": ["string", "null"]}, "say": {"type": ["string", "null"]}}}}}}
+                "type": "object", "additionalProperties": False, "required": ["action", "say", "options"],
+                "properties": {"action": {"type": ["string", "null"]}, "say": {"type": ["string", "null"]},
+                               "options": {"type": "array", "items": {
+                                   "type": "object", "additionalProperties": False, "required": ["label", "action"],
+                                   "properties": {"label": {"type": "string"}, "action": {"type": "string"}}}}}}}}}
     if model.startswith(("gpt-5", "o")):
         body["reasoning_effort"] = "minimal"  # a command, not a puzzle: answer fast
     res = post("chat/completions", json.dumps(body).encode(), {"Content-Type": "application/json"}, timeout)
@@ -146,7 +154,8 @@ def ask_model(model, text, hint, ctx, timeout):
 
 
 def ask(text, hint=None):
-    """{"action", "say", "model"} for a sentence; None when there is no key or every model failed."""
+    """{"action", "say", "options" ([{label, action}] when unsure), "model"} for a sentence; None when there is no key
+    or every model failed."""
     conf = settings()
     if not api_key() or not conf.get("enabled", True):
         return None
@@ -162,10 +171,11 @@ def ask(text, hint=None):
         if action and not allowed(action, ctx):
             print(f"agent: {model} gave an unknown action {action!r}", file=sys.stderr)
             action = None
-        print(f"agent: {model} {time.monotonic() - started:.1f}s -> {action!r} / {answer.get('say')!r}",
-              file=sys.stderr)
-        if action or answer.get("say"):
-            return {"action": action, "say": answer.get("say"), "model": model}
+        options = [o for o in answer.get("options") or [] if allowed(o.get("action"), ctx) and o.get("label")][:3]
+        print(f"agent: {model} {time.monotonic() - started:.1f}s -> {action!r} / {answer.get('say')!r}"
+              f" / {[o['label'] for o in options]}", file=sys.stderr)
+        if action or answer.get("say") or options:
+            return {"action": action, "say": answer.get("say"), "options": options, "model": model}
     return None
 
 

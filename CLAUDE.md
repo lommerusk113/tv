@@ -157,6 +157,13 @@ homescreen/
                     then mini). Context = apps, home-screen tiles (content.json), weather, time. Returns
                     {action, say}; actions checked against an allow-list (ids only from tiles; no restart/shutdown).
                     `say` is shown in the voice pill. Could later be exposed as an MCP server (user idea).
+                    Unsure -> "options" (2-3 {label, action}, allow-listed) -> ChoiceDialog.qml "Did you mean…?"
+                    (up/down, OK runs, "None of these", Back); from inside an app it opens on the home screen.
+                    Test the screens without speaking: write a result JSON to ~/.cache/tv-project/voice-fake.json,
+                    the next `voice.py listen` prints it once. remote_mic: no speech -> no transcription (whisper
+                    invents "volume down mute…" from silence).
+  recommend.py rotation: traktRecommended, the banner and trakt-missing (Get more) are a shuffle of the best 60,
+                    new every ROTATE_HOURS (3).
   VoiceOverlay.qml  push-to-talk feedback pill (bottom centre) (also "busy" status: showStatus("Starting…"))
   SettingsPanel.qml slide-in from the right (Settings tile, gear button, "open settings"), pages: main (volume
                     left/right; links), Wi-Fi (on/off, rescan, networks: OK connects/disconnects, unknown secured ->

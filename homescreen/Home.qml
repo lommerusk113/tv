@@ -16,7 +16,7 @@ FocusScope {
     // its overlay).
     readonly property bool atRoot: {
         const loader = sectionRepeater.count > section ? sectionRepeater.itemAt(section) : null;
-        return !settingsPanel.open && !requestDialog.open && !loadingScreen.open && section === initialSection
+        return !settingsPanel.open && !requestDialog.open && !choiceDialog.open && !loadingScreen.open && section === initialSection
                 && (!loader || !loader.item || loader.item.current === 0);
     }
 
@@ -158,6 +158,8 @@ FocusScope {
         }
         if (requestDialog.open && requestDialog.handle(action))
             return;
+        if (choiceDialog.open && choiceDialog.handle(action))
+            return;
         if (action.startsWith("request:")) {  // a "Get more" tile: ask first
             requestDialog.ask(action);
             return;
@@ -183,6 +185,11 @@ FocusScope {
             Config.launch(action.slice(7));
         else if (!(Config.system && Config.system(action)))
             console.log("action:" + action); // the prototype has no system hook: volume etc. are only logged
+    }
+
+    // "Did you mean…?" with the AI step's guesses ([{label, action}]); the chosen one runs.
+    function showChoices(text, options) {
+        choiceDialog.ask(text, options);
     }
 
     // Short message in the pill at the bottom; goes away by itself.
@@ -215,6 +222,11 @@ FocusScope {
             }
             console.log("voice: \"" + result.text + "\" -> " + result.action + " (" + result.by + ")");
             // say = the AI step's short answer ("12° and cloudy"), shown instead of the sentence it heard
+            if (!result.action && result.options && result.options.length) {
+                voiceOverlay.hide();
+                showChoices(result.text, result.options);
+                return;
+            }
             if (result.say)
                 voiceOverlay.show("message", result.say);
             else
@@ -388,6 +400,11 @@ FocusScope {
 
     SettingsPanel {
         id: settingsPanel
+    }
+
+    ChoiceDialog {
+        id: choiceDialog
+        onChosen: action => home.runAction(action)
     }
 
     RequestDialog {

@@ -121,6 +121,12 @@ Item {
         appVoice.show("listening", "");
         Config.voiceListener(result => {
             const action = result ? result.action : null;
+            if (result && !action && result.options && result.options.length) {
+                appVoice.hide();  // "Did you mean…?" needs the arrows: on the home screen
+                Shortcuts.toggleHomeScreen();
+                tv.showChoices(result.text, result.options);
+                return;
+            }
             if (!result)
                 appVoice.show("error", "");
             else if (result.say)

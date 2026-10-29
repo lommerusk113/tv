@@ -163,6 +163,7 @@ def transcribe(wav, conf):
     return " ".join(res.stdout.split())
 
 
+FAKE = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "tv-project/voice-fake.json"
 LAST = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "tv-project/last-voice.wav"
 
 
@@ -188,13 +189,17 @@ AGENT_FIXES = ("jellyfin_play:", "jellyfin_search:", "youtube_search:")
 
 
 def result(text, conf, use_agent=True):
-    """{"text", "action", "say" (a short answer to show, or null), "by" ("rules" or the model)}."""
+    """{"text", "action", "say" (a short answer to show, or null), "options" ([{label, action}]: guesses to choose
+    from when the AI step is unsure), "by" ("rules" or the model)}."""
     action = parse(text, conf)
-    out = {"text": normalize(text), "action": action, "say": None, "by": "rules"}
+    out = {"text": normalize(text), "action": action, "say": None, "options": [], "by": "rules"}
     if use_agent and out["text"] and (action is None or action.startswith(AGENT_FIXES)):
         answer = agent.ask(text, action)
         if answer:
-            out.update(action=answer["action"] or action, say=answer["say"], by=answer["model"])
+            # Unsure: no action, a few guesses to pick from ("Did you mean…?") instead of the rules' guess.
+            unsure = not answer["action"] and answer["options"]
+            out.update(action=answer["action"] or (None if unsure else action), say=answer["say"],
+                       options=answer["options"], by=answer["model"])
     return out
 
 
@@ -207,6 +212,10 @@ def main():
         return
     if sys.argv[1] == "file":
         print(json.dumps(result(transcribe(sys.argv[2], conf), conf), ensure_ascii=False))
+        return
+    if FAKE.exists():  # testing the screens: ~/.cache/tv-project/voice-fake.json is used once instead of the mic
+        print(FAKE.read_text().strip())
+        FAKE.unlink()
         return
     with tempfile.TemporaryDirectory() as tmp:
         wav = Path(tmp) / "voice.wav"
