@@ -286,6 +286,15 @@ an unknown key name and an unknown app id.
   (~/.var/app/org.jellyfin.JellyfinDesktop/data/jellyfin-desktop/profiles/<id>/), "main": "layout": "tv",
   "webMode": "tv" (edit with Jellyfin closed; `--tv` does the same for one start). Set on the host 2026-10-28.
 
+## Jellyfin picture quality (2026-10-29)
+- Jellyfin Desktop 2.0 ignores mpv.conf (tested: ~/.var/app/.../config/mpv, data/jellyfin-desktop, profile dir).
+  Extra mpv options go in the profile's jellyfin-desktop.conf "other": {"other_conf": "key=value\n..."} (tested with
+  vf=hflip); "video": {"deinterlace": true} turns on bwdif (SD TV recordings were combed).
+- scripts/install-jellyfin-video.sh (--remove): deinterlace + FSRCNNX_x2_8-0-4-1.glsl (igv, LGPL, sha256-checked,
+  in ~/.var/app/org.jellyfin.JellyfinDesktop/data/shaders) + scale/cscale=ewa_lanczossharp. Host-verified on a 700x574
+  episode: no comb lines, no errors/drops in profiles/<id>/logs/jellyfin-desktop.log. Not yet checked on the 4K TV
+  (heavier: if it stutters, drop scale/cscale or the shader). The .before-upscaling backup of the conf is next to it.
+
 ## DevTools ports (127.0.0.1 only; the user accepted this on 2026-10-29: "its just youtube, its not that sensitive")
 - VacuumTube: `--remote-debugging-port=9231` in its flags.txt (scripts/install-youtube-debug.sh). homescreen/youtube_tv.py
   runs youtube_tv.js inside the YouTube TV page: InnerTube browse (FEwhat_to_watch = recommendations, FEhistory =
