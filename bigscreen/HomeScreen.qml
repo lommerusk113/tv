@@ -32,6 +32,7 @@ Item {
         });
         runScript("tmdb.py", tv.reloadLive);
         runScript("jellyfin.py", tv.reloadLive);
+        runScript("moonlight.py", tv.reloadLive);  // Games row (nothing until a PC is paired)
         runScript("youtube.py", tv.reloadLive);
         runScript("weather.py", tv.reloadWeather);
     }
@@ -206,6 +207,16 @@ Item {
         Component.onCompleted: {
             Config.launcher = app => {
                 const model = Plasmoid.applicationListModel;
+                // Moonlight with a paired PC: straight into the configured app (moonlight.py stream) instead of
+                // Moonlight's PC-style host list; without a host (exit code 1) it opens normally.
+                if (app.id === "moonlight" && !model.isApplicationRunning(app.desktopId)) {
+                    root.leaveApps("moonlight");
+                    exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/moonlight.py")) + "' stream", data => {
+                        if (data["exit code"] !== 0)
+                            model.runApplication(app.desktopId);
+                    });
+                    return;
+                }
                 // Switching to another app pauses whatever plays (Jellyfin keeps playing in the background otherwise)
                 // and sends the other apps back to their start page.
                 if (!root.appIsActive(app.desktopId))
@@ -265,6 +276,18 @@ Item {
                     "restart": "systemctl reboot",
                     "shutdown": "systemctl poweroff"
                 };
+                if (action.startsWith("moonlight_stream:") || action === "moonlight_quit") {
+                    // Games row / red button: straight into a game on the PC, or end the stream (back here).
+                    const arg = action === "moonlight_quit" ? "quit"
+                              : "stream '" + action.slice(17).replace(/'/g, "'\\''") + "'";
+                    if (action !== "moonlight_quit")
+                        root.leaveApps("moonlight");
+                    exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/moonlight.py")) + "' " + arg, data => {
+                        if (data["exit code"] !== 0)
+                            tv.showMessage(data.stderr.trim().split("\n").pop().replace(/^moonlight: /, ""));
+                    });
+                    return true;
+                }
                 if (action.startsWith("jellyseerr_request:")) {
                     // "Get more" tile, confirmed in RequestDialog: Jellyseerr requests it (Sonarr/Radarr download it).
                     const [, kind, tmdb, ...rest] = action.split(":");

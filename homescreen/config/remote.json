@@ -36,6 +36,10 @@
     "Launch (1)": {
       "button": "TV",
       "action": "launch:rikstv"
+    },
+    "Red": {
+      "button": "Red",
+      "action": "moonlight_quit"
     }
   }
 }

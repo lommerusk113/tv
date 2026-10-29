@@ -1,0 +1,6 @@
+{
+  "comment": "Moonlight (Sunshine/Apollo game streaming). host: the gaming PC's name or IP (empty until paired). The Moonlight tile streams `tileApp` directly; moonlight.py lists the host's apps for the Games row. options are passed to `moonlight stream` (resolution follows the screen when not set).",
+  "host": "",
+  "tileApp": "Steam Big Picture",
+  "options": ["--display-mode", "fullscreen", "--fps", "60", "--audio-config", "stereo", "--quit-after"]
+}

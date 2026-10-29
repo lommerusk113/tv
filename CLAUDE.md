@@ -100,6 +100,12 @@ homescreen/
                     /api/v1/request (tv: seasons "all"). secrets "jellyseerr": {url, apiKey}; the key's user is
                     admin, so requests are auto-approved. Tile action request:<kind>:<tmdb>:<title> -> RequestDialog.qml
                     (Request/Cancel) -> Config.system("jellyseerr_request:...") -> message on the home screen.
+  moonlight.py      Moonlight (Flatpak CLI list/stream/pair/quit), config/moonlight.json {host, tileApp, options}:
+                    "Games" row (moonlightApps from `list --csv`), `stream [app]` (the Moonlight tile does this when a
+                    host is paired, else opens Moonlight), `pair <host> <pin>` (PIN typed on Sunshine's web page,
+                    saves host), `quit` = Ctrl+Alt+Shift+Q via ydotool (red button, global shortcut "Red"). No host
+                    paired yet (2026-10-29: Sunshine PC not found on the LAN). Untested: whether the red global
+                    shortcut still fires while Moonlight grabs the keyboard in fullscreen.
   trakt.py          Trakt "Up next": `auth` (device code login), `sync` (writes content.json); stdlib only;
                     update_content() = locked, atomic merge into content.json (each script owns its keys)
   tmdb.py           TMDb "trending" key (posters); test_tmdb.py = mock test (`--keep DIR` to view it in the prototype)
@@ -283,7 +289,8 @@ an unknown key name and an unknown app id.
 | Prime Video | c0079 | KBDILLUMUP (keyboard light) | PROG3 | Launch (3) | launch:moonlight (global) |
 | Disney+ | c007a | KBDILLUMDOWN (keyboard light) | PROG4 | Launch (4) | launch:rikstv (global) |
 | TV | c008d | PROGRAM 362 | PROG1 | Launch (1) | launch:rikstv (global) |
-| 0-9, red/green/yellow/blue, list (SUBTITLE), ⓘ (INFO 358), profile (LOGOFF), ch +/- (402/403) | | as named | unchanged | | keymap.json (ch +/- = up/down) |
+| Red | | RED | unchanged | Red | moonlight_quit (global) |
+| 0-9, green/yellow/blue, list (SUBTITLE), ⓘ (INFO 358), profile (LOGOFF), ch +/- (402/403) | | as named | unchanged | | keymap.json (ch +/- = up/down) |
 | OK | c0041 | SELECT (apps ignore it) | ENTER | Return | select |
 | Back | c0224 | BACK (VacuumTube quits on it) | ESC | Escape | back |
 | arrows, home, vol +/-, mute | | as named | unchanged | | keymap.json / Plasma |

@@ -105,10 +105,10 @@ Status and conventions: see CLAUDE.md. Do phases in order. Each phase ends with 
 - Voice feedback: say/show what was understood more clearly (e.g. "Playing Breaking Bad S2 E3"), errors visible on
   the TV ("Nothing called X on Jellyfin") instead of only in the log.
 - Remote: red/green/yellow/blue and number keys are still unused (shortcuts? jump to rows?).
-- Moonlight opens in its desktop (PC) UI. Make it TV-like: check its fullscreen/"gamepad" settings and the remote's
-  arrows/OK in its host list; better still, skip the UI: the tile runs `moonlight stream <host> "<app>"` (e.g.
-  "Steam Big Picture" on the gaming PC) so it goes straight into the stream, with one tile per host/app if needed.
-  Needs the host paired first (user) and a way out (exit-stream shortcut on a remote button, see Phase 3).
+- Moonlight TV mode built (2026-10-29, moonlight.py): tile streams tileApp ("Steam Big Picture") directly, Games row,
+  red button = end stream. Still needed: [ME] gaming PC on with Sunshine + its name/IP, then `moonlight.py pair <host>
+  <pin>` (PIN typed on https://<host>:47990), then test streaming, the Games row, the red button inside a stream, and
+  a game controller (pair it in Settings > Bluetooth).
 - [x] (2026-10-29) Remote waking the laptop: not possible here (see CLAUDE.md "Remote"); instead no automatic sleep on
   AC, screen lock off. Autologin into Bigscreen ready (scripts/install-autologin.sh, user runs it), then test a real
   Bigscreen login after a reboot. Possible later: Chrome/KWallet may ask for a password without a login password.
