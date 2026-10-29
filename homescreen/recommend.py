@@ -10,6 +10,7 @@ Needs the Trakt login (trakt.py auth) and Jellyfin settings. Trakt's answer is c
 ~/.cache/tv-project/trakt-recommendations.json (stale cache when Trakt is down). Without either, content.json is left alone.
 """
 import json
+import random
 import sys
 import time
 import urllib.error
@@ -23,6 +24,10 @@ RAW = CACHE / "trakt-recommendations.json"
 MISSING = CACHE / "trakt-missing.json"  # picks NOT on the server, for jellyseerr.py ("Get more" row)
 MAX_AGE = 6 * 3600
 MAX_ITEMS = 20
+# The rows and the banner show a different pick every ROTATE_HOURS: a shuffle (same all slot long, so the home screen
+# does not jump between visits) of the best POOL matches, not always Trakt's top 20.
+ROTATE_HOURS = 3
+POOL = 60
 HERO_ITEMS = 8
 FETCH = 100  # per kind; only those on the server are kept
 
@@ -75,6 +80,13 @@ def matches(recs, library):
     return out
 
 
+def rotate(items, limit=None):
+    """items shuffled for the current ROTATE_HOURS slot, from the first POOL; limit = how many to keep."""
+    pool = list(items[:POOL])
+    random.Random(int(time.time() // (ROTATE_HOURS * 3600))).shuffle(pool)
+    return pool[:limit] if limit else pool
+
+
 def missing(recs, library):
     """Recommendations (interleaved order) that match nothing in the library: [{type: movie|tv, tmdb, title, year}]."""
     ids = {(k.lower(), str(v)) for item in library for k, v in (item.get("ProviderIds") or {}).items()}
@@ -110,8 +122,8 @@ def main():
         for rec in recs.get(kind) or []:
             rec["_kind"] = kind
     ordered = interleave(recs.get("movies") or [], recs.get("shows") or [])
-    MISSING.write_text(json.dumps(missing(ordered, library)))
-    items = matches(ordered, library)[:MAX_ITEMS]
+    MISSING.write_text(json.dumps(rotate(missing(ordered, library))))
+    items = rotate(matches(ordered, library), MAX_ITEMS)
     tiles = []
     for item in items:
         tile = jellyfin.tile(conf, item)
