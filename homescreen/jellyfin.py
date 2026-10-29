@@ -45,6 +45,9 @@ START_WAIT = float(os.environ.get("JELLYFIN_START_WAIT", "10"))  # seconds for t
 DESKTOP_CLIENTS = ("jellyfin desktop", "jellyfin media player")
 MIN_MATCH = 0.6   # below this a search hit is not what was asked for
 GOOD_MATCH = 0.85  # stop searching more terms once a hit is this close
+# "play <title>" looks for films and series only: an episode name ("Breaking Bad Habits") never wins; a series then
+# continues where it was left (playable()).
+PLAYABLE_TYPES = ("Movie", "Series")
 STOP_WORDS = {"the", "and", "of", "a", "an", "on", "in", "to", "for", "with", "og", "en", "et", "av", "på", "med", "til"}
 TICKS_PER_MINUTE = 600_000_000
 TICKS_PER_SECOND = 10_000_000
@@ -272,7 +275,7 @@ def pick(items, query):
     """The search hit to play: the closest title; among equally close ones (e.g. three Lord of the Rings films) the one
     in progress, then the first unwatched, then the oldest."""
     scored = [(match_score(query, i.get("Name", "")), i) for i in items
-              if i.get("Type") in ("Movie", "Series", "Episode", "Video")]
+              if i.get("Type") in PLAYABLE_TYPES]
     scored = [(s, i) for s, i in scored if s >= MIN_MATCH]
     if not scored:
         return None
@@ -281,8 +284,7 @@ def pick(items, query):
 
     def order(item):
         user = item.get("UserData") or {}
-        return (not user.get("PlaybackPositionTicks"), bool(user.get("Played")), item.get("Type") == "Episode",
-                item.get("ProductionYear") or 9999)
+        return (not user.get("PlaybackPositionTicks"), bool(user.get("Played")), item.get("ProductionYear") or 9999)
 
     return min(close, key=order)
 
@@ -300,7 +302,7 @@ def find(conf, uid, query):
     found = {}
     for term in search_terms(query):
         search = urllib.parse.urlencode({"userId": uid, "searchTerm": term, "recursive": "true", "limit": 25,
-                                         "includeItemTypes": "Movie,Series,Episode,Video", "fields": "UserData"})
+                                         "includeItemTypes": ",".join(PLAYABLE_TYPES), "fields": "UserData"})
         for item in (get(conf, "/Items?" + search) or {}).get("Items") or []:
             found.setdefault(item["Id"], item)
         best = pick(list(found.values()), query)
@@ -310,10 +312,15 @@ def find(conf, uid, query):
 
 
 def playable(conf, uid, item):
-    """(item to play, start position in ticks): a series becomes its next-up episode (or its first one)."""
+    """(item to play, start position in ticks): a series becomes the episode left halfway (from that point), else its
+    next-up episode, else its first one; a film starts from where it was left (or the beginning)."""
     if item.get("Type") == "Series":
-        query = urllib.parse.urlencode({"userId": uid, "seriesId": item["Id"], "limit": 1, "fields": "UserData"})
-        episodes = (get(conf, "/Shows/NextUp?" + query) or {}).get("Items") or []
+        query = urllib.parse.urlencode({"userId": uid, "parentId": item["Id"], "limit": 1, "fields": "UserData",
+                                        "mediaTypes": "Video"})
+        episodes = (get(conf, "/UserItems/Resume?" + query) or {}).get("Items") or []
+        if not episodes:
+            query = urllib.parse.urlencode({"userId": uid, "seriesId": item["Id"], "limit": 1, "fields": "UserData"})
+            episodes = (get(conf, "/Shows/NextUp?" + query) or {}).get("Items") or []
         if not episodes:
             query = urllib.parse.urlencode({"userId": uid, "limit": 1, "fields": "UserData"})
             episodes = (get(conf, "/Shows/%s/Episodes?%s" % (item["Id"], query)) or {}).get("Items") or []
