@@ -302,7 +302,7 @@ Item {
                     // Voice "play <title> on Jellyfin" / OK on a Jellyfin tile or the banner: the server starts the
                     // item on Jellyfin Desktop (jellyfin.py waits for it to connect, then for the video to run).
                     // Jellyfin must be in front first: minimized it gets no animation frames and the start page stays
-                    // on top of the player. When it already runs, a black "Starting…" curtain hides its start page.
+                    // on top of the player. When it already runs, a loading screen (jellyfin_curtain.py) hides its start page.
                     const jellyfinApp = Config.apps.find(app => app.id === "jellyfin");
                     const running = Plasmoid.applicationListModel.isApplicationRunning(jellyfinApp.desktopId);
                     const byId = action.startsWith("jellyfin_play_id:");
@@ -319,7 +319,7 @@ Item {
                         Config.launch("jellyfin");
                         play();
                     } else {
-                        exec.run(scripts + "jellyfin_curtain.py' on", () => {
+                        exec.run(scripts + "jellyfin_curtain.py' on" + (byId ? " '" + arg + "'" : ""), () => {
                             Config.launch("jellyfin");
                             play();
                         });
