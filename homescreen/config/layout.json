@@ -1,7 +1,7 @@
 {
   "initialFocus": "apps",
   "rows": [
-    { "id": "hero", "type": "hero", "source": ["jellyfinFeatured", "featured"] },
+    { "id": "hero", "type": "hero", "source": ["homeFeatured", "jellyfinFeatured", "featured"] },
     { "id": "apps", "title": "Your apps", "source": "apps", "style": "app" },
     { "id": "continue", "title": "Continue watching", "source": ["jellyfinContinue", "upNext"], "style": "landscape" },
     { "id": "recommended", "title": "Recommended for you", "source": "traktRecommended", "style": "landscape" },

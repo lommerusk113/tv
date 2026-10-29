@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """"Recommended for you" row: Trakt's personal recommendations that are on the Jellyfin server. Standard library only.
 
-  python3 recommend.py   writes the traktRecommended key into ~/.cache/tv-project/content.json: films and series in
+  python3 recommend.py   writes into ~/.cache/tv-project/content.json homeFeatured (the banner: Trakt's top picks
+                         alternating with the newest unwatched titles) and traktRecommended: films and series in
                          Trakt's order (alternating), matched to Jellyfin by tmdb/imdb/tvdb id, finished and started ones left out;
                          tiles look and play like the other Jellyfin tiles (OK starts it)
 
@@ -21,6 +22,7 @@ from trakt import CACHE, update_content
 RAW = CACHE / "trakt-recommendations.json"
 MAX_AGE = 6 * 3600
 MAX_ITEMS = 20
+HERO_ITEMS = 8
 FETCH = 100  # per kind; only those on the server are kept
 
 
@@ -84,7 +86,8 @@ def main():
     try:
         uid = jellyfin.user_id(conf)
         query = urllib.parse.urlencode({"userId": uid, "includeItemTypes": "Movie,Series", "recursive": "true",
-                                        "fields": "ProviderIds,UserData", "enableImageTypes": jellyfin.IMAGE_TYPES})
+                                        "fields": "ProviderIds,UserData,Overview,Genres,ChildCount",
+                                        "enableImageTypes": jellyfin.IMAGE_TYPES})
         library = (jellyfin.get(conf, "/Items?" + query) or {}).get("Items", [])
     except (urllib.error.URLError, OSError, ValueError) as e:
         print(f"recommend: {conf['url']}: {e}; keeping content.json", file=sys.stderr)
@@ -96,7 +99,18 @@ def main():
         tile["subtitle"] = " · ".join(p for p in ("Series" if item.get("Type") == "Series" else "Film",
                                                   str(item["ProductionYear"]) if item.get("ProductionYear") else "") if p)
         tiles.append(tile)
-    print(f"recommend: {len(tiles)} on the server; wrote {update_content({'traktRecommended': tiles})}")
+    # Banner: Trakt's top picks alternating with the newest unwatched titles (jellyfin.py's banner), no repeats.
+    try:
+        newest = jellyfin.featured(conf, jellyfin.newest(conf, uid))
+    except (urllib.error.URLError, OSError, ValueError):
+        newest = []
+    hero, seen = [], set()
+    for entry in interleave(jellyfin.featured(conf, items), newest):
+        if entry["id"] not in seen:
+            seen.add(entry["id"])
+            hero.append(entry)
+    print(f"recommend: {len(tiles)} on the server; wrote "
+          f"{update_content({'traktRecommended': tiles, 'homeFeatured': hero[:HERO_ITEMS]})}")
 
 
 if __name__ == "__main__":

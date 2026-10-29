@@ -86,7 +86,9 @@ homescreen/
   main.qml          prototype Window 1920x1080 containing TvHome
   TvHome.qml        loads the JSON into Config (readFile: XHR by default), then loads Home.qml; atTop for Bigscreen's Back;
                     overlays ~/.cache/tv-project/content.json (live rows) on placeholder.json; reloadLive()
-  recommend.py      "Recommended for you" (traktRecommended): Trakt /recommendations/movies+shows (100 each, cached 6 h
+  recommend.py      banner homeFeatured (Trakt top picks alternating with jellyfin.featured(newest), 8, no repeats;
+                    layout hero source ["homeFeatured", "jellyfinFeatured", "featured"]) and
+                    "Recommended for you" (traktRecommended): Trakt /recommendations/movies+shows (100 each, cached 6 h
                     in trakt-recommendations.json), interleaved, matched to Jellyfin by tmdb/imdb/tvdb ProviderIds,
                     finished/started left out, max 20, Jellyfin tiles ("Film · 2025"). Run on every home-screen
                     activation (instead of `trakt.py sync`). test_recommend.py. Login done 2026-10-29: new Trakt apps
