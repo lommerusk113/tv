@@ -239,7 +239,8 @@ homescreen/
   Seasons (2026-10-30, user: "you need to be able to select what seasons to get"): RequestDialog for a series has
                     "Choose seasons" (status 1) or "More seasons" (partly there / requested) -> step "seasons":
                     `jellyseerr.py seasons <tmdb>` (state per season from mediaInfo.seasons + open requests' seasons;
-                    specials last, not pre-ticked; "All seasons" = regular requestable ones), up/down + OK ticks, the
+                    specials last; only the first missing season is pre-ticked (user asked: not all); "All seasons"
+                    = regular requestable ones), up/down + OK ticks, the
                     request button stays under the list -> jellyseerr_request:tv:<tmdb>:s3,4,5:<title> ->
                     `jellyseerr.py request tv <tmdb> 3,4,5` (body seasons [3,4,5]). GetDialog (voice "download X")
                     sends series to this list too (chooseSeasons). Not yet exercised with a real request.

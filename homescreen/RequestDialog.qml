@@ -87,9 +87,11 @@ Item {
             if (asked !== dialog.tmdb)
                 return;
             dialog.seasons = data && data.ok ? data.seasons : [];
+            // Only the first season that is not there yet (not the specials); the rest is up to you.
+            const firstMissing = dialog.seasons.find(x => x.state === "" && x.number !== 0);
             const ticks = {};
-            for (const x of dialog.seasons)
-                ticks[x.number] = x.state === "" && x.number !== 0;  // everything missing, but not the specials
+            if (firstMissing)
+                ticks[firstMissing.number] = true;
             dialog.picked = ticks;
             const first = dialog.seasons.findIndex(x => x.state === "");
             dialog.seasonRow = first >= 0 ? first + 1 : dialog.seasons.length + 1;
