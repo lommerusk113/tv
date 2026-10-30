@@ -12,6 +12,8 @@ import voice
 CASES = {
     "Åpne Jellyfin": "launch:jellyfin",
     "start riks tv": "launch:rikstv",
+    "open jelly seer": "launch:jellyseerr",
+    "åpne seerr": "launch:jellyseerr",
     "Play Moonlight please": "launch:moonlight",
     "spill moon light": "launch:moonlight",
     "open your cube": "launch:youtube",

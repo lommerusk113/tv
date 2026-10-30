@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Jellyseerr
+Comment=Jellyseerr requests in Chrome kiosk mode (installed by tv-project scripts/install-bigscreen.sh)
+Exec=python3 @REPO@/homescreen/jellyseerr.py open
+Icon=@REPO@/homescreen/icons/jellyseerr.png
+StartupWMClass=tv-jellyseerr

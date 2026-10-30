@@ -2,7 +2,7 @@
 # Install the TV home screen into Plasma Bigscreen, without touching /usr:
 # copies the stock org.kde.bigscreen.homescreen plasmoid to ~/.local/share/plasma/plasmoids/ (the user copy wins),
 # replaces only its HomeScreen.qml with bigscreen/HomeScreen.qml and links homescreen/ in as contents/ui/tv.
-# Also installs homescreen/desktop/*.desktop (RiksTV kiosk) into ~/.local/share/applications/.
+# Also installs homescreen/desktop/*.desktop (RiksTV and Jellyseerr kiosks; @REPO@ = this checkout) into ~/.local/share/applications/.
 # Usage: scripts/install-bigscreen.sh            install (again after a KDE update or a HomeScreen.qml change)
 #        scripts/install-bigscreen.sh --remove   back to the stock home screen
 # Restart plasmashell afterwards. Edits under homescreen/ only need the restart, not a reinstall.
@@ -32,5 +32,5 @@ mkdir -p "$(dirname "$dst")" "$apps"
 cp -r "$src" "$dst"
 cp "$repo/bigscreen/HomeScreen.qml" "$dst/contents/ui/HomeScreen.qml"
 ln -s "$repo/homescreen" "$dst/contents/ui/tv"
-cp "$repo"/homescreen/desktop/*.desktop "$apps/"
+for f in "$repo"/homescreen/desktop/*.desktop; do sed "s|@REPO@|$repo|g" "$f" > "$apps/$(basename "$f")"; done
 echo "installed into $dst; restart plasmashell"

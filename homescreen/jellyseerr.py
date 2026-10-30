@@ -8,17 +8,21 @@
   python3 jellyseerr.py search <title>       films/series matching a title (voice: "play X" when X is not on the server,
                                              "download X"): {"ok", "query", "results": [{kind, tmdb, title, year,
                                              image, status, label, overview}]}, best first, max SEARCH_ITEMS
+  python3 jellyseerr.py open                 the Jellyseerr website full screen (the "Jellyseerr" app tile,
+                                             desktop/tv-jellyseerr.desktop): Chrome kiosk with its own profile
 
 Settings in ~/.config/tv-project/secrets.json: "jellyseerr": {"url": "http://...:5055", "apiKey": "..."} (Settings ->
 General -> API Key). Requests are made as the API key's user (admin = approved at once, then Sonarr/Radarr).
 Details are cached for a day in ~/.cache/tv-project/jellyseerr-details.json (status for an hour).
 """
 import json
+import os
 import sys
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from pathlib import Path
 
 from trakt import CACHE, colors, download, secrets, update_content
 
@@ -167,11 +171,23 @@ def search(conf, query):
     return {"ok": True, "query": query, "results": out}
 
 
+def open_site(conf):
+    """Replace this process with Chrome in kiosk mode on the Jellyseerr site. Its own profile (--user-data-dir) makes
+    it a separate Chrome from RiksTV's, so --class sticks (Bigscreen raises it by that) and the login is remembered;
+    spatial navigation lets the remote's arrows move between buttons, Back is the browser's back."""
+    profile = Path.home() / ".var/app/com.google.Chrome/data/tv-jellyseerr"
+    profile.mkdir(parents=True, exist_ok=True)
+    os.execvp("flatpak", ["flatpak", "run", "com.google.Chrome", "--class=tv-jellyseerr", f"--user-data-dir={profile}",
+                          "--enable-spatial-navigation", "--no-first-run", "--kiosk", conf["url"].rstrip("/") + "/"])
+
+
 def main():
     conf = settings()
     if not conf:
         print("jellyseerr: no \"jellyseerr\" url/apiKey in secrets.json", file=sys.stderr)
         return
+    if sys.argv[1:] == ["open"]:
+        open_site(conf)
     if len(sys.argv) == 4 and sys.argv[1] == "request" and sys.argv[2] in ("movie", "tv") and sys.argv[3].isdigit():
         print(json.dumps(request(conf, sys.argv[2], sys.argv[3])))
         return

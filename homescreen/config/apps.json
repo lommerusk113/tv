@@ -45,6 +45,22 @@
     ]
   },
   {
+    "id": "jellyseerr",
+    "name": "Jellyseerr",
+    "colors": [
+      "#2a2340",
+      "#131928"
+    ],
+    "image": "icons/jellyseerr.png",
+    "imageScale": 0.55,
+    "desktopId": "tv-jellyseerr.desktop",
+    "voiceNames": [
+      "jellyseerr",
+      "seerr",
+      "ønskeliste"
+    ]
+  },
+  {
     "id": "moonlight",
     "name": "Moonlight",
     "colors": [

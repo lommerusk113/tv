@@ -244,6 +244,11 @@ homescreen/
   config/theme.json, config/apps.json, config/layout.json, config/keymap.json
   data/placeholder.json   placeholder featured/upNext/trending content; keys in content.json override it
   desktop/tv-rikstv.desktop  Chrome kiosk on rikstv.no; install-bigscreen.sh copies it to ~/.local/share/applications
+  desktop/tv-jellyseerr.desktop  "Jellyseerr" app tile (2026-10-30): runs `jellyseerr.py open` = Chrome kiosk on secrets
+                    jellyseerr.url (the URL stays out of the repo; install-bigscreen.sh fills in @REPO@), own profile
+                    ~/.var/app/com.google.Chrome/data/tv-jellyseerr (separate process from RiksTV's Chrome, so --class
+                    sticks and the login is kept), --enable-spatial-navigation (arrows move between buttons). Sign in
+                    once with a keyboard. Voice: "open jellyseerr/seerr" (not "request": "request dune" = request_search)
 bigscreen/HomeScreen.qml    replaces the stock plasmoid's HomeScreen.qml (see Bigscreen below)
 scripts/install-bigscreen.sh  host: install/--remove the home screen in Bigscreen; container: used by bigscreen-start.sh
 scripts/install-tv-power.sh   host: bscpylgtv venv + tv-sleep.service (systemd user unit, systemd-inhibit delay lock + gdbus
