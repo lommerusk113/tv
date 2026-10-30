@@ -486,6 +486,9 @@ an unknown key name and an unknown app id.
 - Mouse pointer hidden (2026-10-30, user asked): KWin effect "hidecursor" on in ~/.config/kwinrc ([Plugins]
   hidecursorEnabled, [Effect-hidecursor] HideOnTyping=true, InactivityDuration=2), loaded live with
   `qdbus org.kde.KWin /Effects org.kde.kwin.Effects.loadEffect hidecursor`; scripts/install.sh does the same.
+  The user still saw the pointer, so the home screen also parks it (media.py park-pointer: ydotool mousemove +20000
+  +20000 -> bottom-right corner, only a 5 px tip left at 4K) every time it becomes active. Finding the pointer in a
+  screenshot: diff `spectacle -b -n -f -p` against one without -p.
 - Remap: scripts/remote/70-strong-remote.hwdb → /etc/udev/hwdb.d (scripts/install-remote-keys.sh, pkexec). Afterwards the
   remote must reconnect (turn off/on, or `bluetoothctl disconnect`, then press a key): libinput drops keys the device did
   not declare when it appeared (PROG1-4).

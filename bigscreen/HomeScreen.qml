@@ -37,6 +37,7 @@ Item {
         runScript("youtube.py", tv.reloadLive);
         runScript("location.py", () => runScript("weather.py", tv.reloadWeather));  // location: daily, if switched on
         runScript("audio.py auto", () => {});
+        runScript("media.py park-pointer", () => {});  // no mouse pointer on the TV
     }
 
     // Sound follows the TV: WirePlumber keeps the laptop speaker as default after the TV is plugged in (audio.py).

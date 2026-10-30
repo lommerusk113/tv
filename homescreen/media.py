@@ -11,6 +11,9 @@
   python3 media.py youtube-history   open the YouTube account's watch history (newest first) to pick from
   python3 media.py youtube-watch <id>  play that YouTube video in VacuumTube (tiles of the "New from your channels" row)
   python3 media.py youtube <query>   open YouTube's search results for the query in VacuumTube (started if needed)
+  python3 media.py park-pointer      moves the mouse pointer into the bottom-right corner, where it is drawn off the
+                                     screen (a 5 px tip is left; KWin's Hide Cursor effect alone did not hide it on
+                                     the TV). Uses ydotool, starting ydotoold like moonlight.py when needed.
   python3 media.py status            {"playing": bool, "player": identity, "position": seconds | null} of the player
                                      that is playing (the sleep timer's "Still watching?" check)
 """
@@ -73,6 +76,19 @@ def status():
     return {"playing": False, "player": "", "position": None}
 
 
+def park_pointer():
+    import os
+    import time
+    socket = "/run/user/%d/.ydotool_socket" % os.getuid()
+    if not os.path.exists(socket):
+        subprocess.Popen(["ydotoold", "-p", socket, "-P", "0600"], stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL, start_new_session=True)
+        time.sleep(0.5)
+    # Far right and down: KWin stops the pointer at the corner of the screen.
+    subprocess.run(["ydotool", "mousemove", "--", "20000", "20000"], env=dict(os.environ, YDOTOOL_SOCKET=socket),
+                   capture_output=True, timeout=10)
+
+
 def running(flatpak_id):
     res = subprocess.run(["flatpak", "ps", "--columns=application"], capture_output=True, text=True, timeout=10)
     return flatpak_id in res.stdout.split()
@@ -113,6 +129,8 @@ def main():
         pause()
     elif sys.argv[1:2] == ["leave"] and len(sys.argv) <= 3:
         leave(sys.argv[2] if len(sys.argv) == 3 else None)
+    elif sys.argv[1:] == ["park-pointer"]:
+        park_pointer()
     elif sys.argv[1:] == ["status"]:
         print(json.dumps(status()))
     elif sys.argv[1:] == ["youtube-home"]:
