@@ -19,6 +19,8 @@ import sys
 import time
 from pathlib import Path
 
+import tvconfig
+
 HERE = Path(__file__).resolve().parent
 FIFO = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "tv-project/remote.fifo"
 APPS_DIR = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share")) / "applications"
@@ -44,7 +46,7 @@ def send(action):
 def fallback(action):
     """Without the home screen (e.g. the normal Plasma desktop) only app launches make sense."""
     if action.startswith("launch:"):
-        apps = json.loads((HERE / "config/apps.json").read_text())
+        apps = tvconfig.load("apps")
         app = next((a for a in apps if a["id"] == action[7:]), None)
         if app and app.get("desktopId"):
             subprocess.Popen(["gtk-launch", app["desktopId"].removesuffix(".desktop")], start_new_session=True,
@@ -74,7 +76,7 @@ def wait():
 
 
 def install():
-    conf = json.loads((HERE / "config/remote.json").read_text())["global"]
+    conf = tvconfig.load("remote")["global"]
     # Remove first and let Plasma notice, otherwise it keeps the old key of a button whose key changed.
     uninstall()
     rebuild_menu()

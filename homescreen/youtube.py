@@ -25,6 +25,7 @@ import urllib.request
 from pathlib import Path
 
 from trakt import CACHE, colors, download, update_content
+import tvconfig
 
 HERE = Path(__file__).resolve().parent
 YOUTUBE = os.environ.get("YOUTUBE_URL", "https://www.youtube.com")
@@ -141,7 +142,7 @@ def tv_feeds(now):
 
 
 def main():
-    conf = json.loads((HERE / "config/youtube.json").read_text())
+    conf = tvconfig.load("youtube")
     try:
         cache = json.loads(RAW.read_text())
     except (OSError, ValueError):

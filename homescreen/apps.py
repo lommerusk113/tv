@@ -16,6 +16,7 @@ import os
 from pathlib import Path
 
 from trakt import colors, update_content
+import tvconfig
 
 HERE = Path(__file__).resolve().parent
 EXPORTS = [Path(os.environ.get("FLATPAK_SYSTEM_EXPORTS", "/var/lib/flatpak/exports/share")),
@@ -67,7 +68,7 @@ def main():
     if sys.argv[1:2] == ["order"] and len(sys.argv) == 3:
         save_order(sys.argv[2].split(","))
         return
-    pinned = {a.get("desktopId") for a in json.loads((HERE / "config/apps.json").read_text())}
+    pinned = {a.get("desktopId") for a in tvconfig.load("apps", with_hidden=True)}
     items = []
     for desktop_id, name, icon in installed():
         if desktop_id in pinned:

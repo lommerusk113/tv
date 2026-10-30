@@ -1,5 +1,8 @@
 # TV project – Google TV-style living room setup
 
+Machine-specific values (IP addresses, MAC, service ids) are placeholders here (`<tv-ip>`...); the real ones are in
+CLAUDE.local.md, which is not in git. Personal settings live in ~/.config/tv-project/ (tvconfig.py).
+
 Remaining work and decisions: see TODO.md
 
 ## Decisions (already made, do not re-litigate)
@@ -30,7 +33,7 @@ Remaining work and decisions: see TODO.md
   `scripts/vnc.sh` shares the screen over VNC (README). `scripts/bigscreen-start.sh` instead runs it inside the real Bigscreen 6.7.5 containment (plasmoidviewer + openbox,
   same key.sh/shot.sh/stop.sh). Apps don't exist there, so launches do nothing. Upstream logs `appletsLayout is not defined`
   (harmless, from the dummy clock applet plasmoidviewer requires).
-- Repo: https://github.com/lommerusk113/tv (private).
+- Repo: see CLAUDE.local.md.
 
 ## Screenshot command (Bazzite host only, works)
 ```bash
@@ -109,11 +112,11 @@ homescreen/
                     (not in the layout since 2026-10-29) "Games" row (moonlightApps, plain `list` output: `--csv` hangs against Wolf), `stream [app]` (the
                     Moonlight tile does this; without a host it opens Moonlight), `pair <host> <pin>`, `quit` =
                     Ctrl+Alt+Shift+Q via ydotool (red button, global shortcut "Red"; verified to work during a stream).
-                    Host: Wolf (games-on-whales) on 192.168.0.100, run by Coolify (service usnnqk2hwn9yjp419cdp8zd0),
+                    Host: Wolf (games-on-whales) on <game-server>, run by Coolify (service <coolify-service>),
                     paired 2026-10-29. Steam tile (apps.json, action moonlight_stream:Steam, icons/steam.svg =
                     Wikimedia Steam_icon_logo.svg) goes straight into Steam; Moonlight tile = tileApp "Wolf UI". The Steam app was copied from Wolf's `user` profile into
                     `moonlight-profile-id` in /etc/wolf/cfg/config.toml (backup .before-steam-shortcut), and
-                    /etc/wolf/9078250509390541011/Steam (this laptop's app folder, named after the app title) is a
+                    /etc/wolf/<moonlight-app-id>/Steam (this laptop's app folder, named after the app title) is a
                     symlink to /etc/wolf/profile-data/user/WolfSteam, so it is the same logged-in Steam with the games.
                     Do not run it from Wolf UI and the shortcut at the same time.
                     Stream start (startStream in HomeScreen.qml): LoadingScreen.qml ("Starting Steam", logo/colours from
@@ -140,7 +143,7 @@ homescreen/
                     gow/nvidia-driver for `cat /sys/module/nvidia/version` (docker build from an EMPTY dir), remove
                     the containers using the volume, `docker volume rm <volume>`, `docker create --mount
                     source=<volume>,...` (only fills an EMPTY volume), then restart Wolf. Coolify prefixes volume
-                    names (usnnqk..._nvidia-driver-vol, see NVIDIA_DRIVER_VOLUME_NAME) and its Docker cleanup deletes
+                    names (<coolify-service>_nvidia-driver-vol, see NVIDIA_DRIVER_VOLUME_NAME) and its Docker cleanup deletes
                     unused images (Wolf app images too). Recreate Wolf: sudo docker compose -p <uuid> -f
                     /data/coolify/services/<uuid>/docker-compose.yml --project-directory <same> up -d.
   trakt.py          Trakt "Up next": `auth` (device code login), `sync` (writes content.json); stdlib only;
@@ -248,7 +251,7 @@ homescreen/
   jellyfin_back.py  Back on Jellyfin's start page -> home screen (see DevTools ports)
   jellyfin_curtain.py  loading screen over Jellyfin's page while a tile starts a video (`on [item id]`/`off`): built
                     in the page with its ApiClient (backdrop, logo, episode line, bar), fades out
-  tvpower.py        (set up 2026-10-29: TV 192.168.0.83 found via SSDP webos-second-screen, MAC e0:51:63:8c:93:ba,
+  tvpower.py        (set up 2026-10-29: TV <tv-ip> found via SSDP webos-second-screen, MAC <tv-mac>,
                     laptop on HDMI_3, paired; off -> unreachable, WOL on -> Active in ~9 s on HDMI 3. Remote Off =
                     tv_power toggle, Input = tv_input, voice "turn off the TV" = tv_off. tv-sleep.service not needed:
                     the laptop no longer sleeps)

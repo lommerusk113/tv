@@ -29,7 +29,8 @@
     "image": "icons/rikstv.png",
     "imageScale": 1.0,
     "showName": false,
-    "desktopId": "tv-rikstv.desktop"
+    "desktopId": "tv-rikstv.desktop",
+    "hidden": true
   },
   {
     "id": "steam",
@@ -42,7 +43,8 @@
     "action": "moonlight_stream:Steam",
     "voiceNames": [
       "steam"
-    ]
+    ],
+    "hidden": true
   },
   {
     "id": "jellyseerr",
@@ -58,7 +60,8 @@
       "seerr",
       "ønskeliste"
     ],
-    "action": "seerr"
+    "action": "seerr",
+    "hidden": true
   },
   {
     "id": "moonlight",

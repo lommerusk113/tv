@@ -19,7 +19,7 @@
                                     {"ok": false, "error"}. Waits up to PLAY_WAIT seconds for Jellyfin Desktop to start.
 
 Needs in ~/.config/tv-project/secrets.json:
-  "jellyfin": {"url": "http://192.168.1.10:8096", "apiKey": "...", "user": "joakim"}
+  "jellyfin": {"url": "http://192.168.1.10:8096", "apiKey": "...", "user": "me"}
 (apiKey: Jellyfin Dashboard -> API Keys; user: the Jellyfin user name, optional when the server has one user).
 Artwork is cached in ~/.cache/tv-project/images/. Without settings, or when the server is unreachable,
 content.json is left alone. Enter on a tile opens Jellyfin Desktop (the item's "app").

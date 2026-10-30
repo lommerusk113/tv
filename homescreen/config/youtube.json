@@ -1,24 +1,7 @@
 {
-  "comment": "Channels for the \"New from your channels\" row (youtube.py). id is the channel id (UC...); find it on the channel page (youtube.com/@handle -> share -> copy channel ID) or ask Claude.",
+  "comment": "Channels for the \"New from your channels\" row (youtube.py); the row is hidden while the list is empty. Put your own in ~/.config/tv-project/youtube.json: {\"channels\": [{\"name\": \"Fireship\", \"id\": \"UCsBjURrPoezykLs9EqgamOA\"}]} (id = the channel id, UC...: youtube.com/@handle -> About -> Share -> Copy channel ID).",
   "perChannel": 6,
   "maxItems": 20,
   "hideWatchedFrom": 0.9,
-  "channels": [
-    {
-      "name": "Asmongold TV",
-      "id": "UCQeRaTukNYft1_6AZPACnog"
-    },
-    {
-      "name": "WestJett",
-      "id": "UCZIuYUzkmEXgSSXzReOmeLw"
-    },
-    {
-      "name": "Fireship",
-      "id": "UCsBjURrPoezykLs9EqgamOA"
-    },
-    {
-      "name": "Nerdrotic",
-      "id": "UC5T0tXJN5CrMZUEJuz4oovw"
-    }
-  ]
+  "channels": []
 }

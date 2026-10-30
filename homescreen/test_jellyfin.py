@@ -67,7 +67,7 @@ class Mock(BaseHTTPRequestHandler):
         if not self.path.startswith("/Items/"):
             assert 'Token="jk"' in self.headers.get("Authorization", ""), self.headers
         if self.path == "/Users":
-            body = json.dumps([{"Name": "Joakim", "Id": "u1"}, {"Name": "Guest", "Id": "u2"}]).encode()
+            body = json.dumps([{"Name": "Alice", "Id": "u1"}, {"Name": "Guest", "Id": "u2"}]).encode()
         elif self.path.startswith("/UserItems/Resume?userId=u1&") and state["new_api"]:
             body = json.dumps({"Items": ITEMS}).encode()
         elif self.path.startswith("/Users/u1/Items/Resume?") and not state["new_api"]:
@@ -135,10 +135,10 @@ def main():
     # Two users and no "user": a clear error, nothing written.
     (config / "secrets.json").write_text(json.dumps(secrets))
     res = run()
-    assert res.returncode != 0 and "Joakim, Guest" in res.stderr, res.stderr
+    assert res.returncode != 0 and "Alice, Guest" in res.stderr, res.stderr
     assert not (cache / "content.json").exists()
 
-    secrets["jellyfin"]["user"] = "joakim"
+    secrets["jellyfin"]["user"] = "alice"
     (config / "secrets.json").write_text(json.dumps(secrets))
     cache.mkdir(parents=True, exist_ok=True)
     (cache / "content.json").write_text(json.dumps({"upNext": [{"id": "kept"}]}))

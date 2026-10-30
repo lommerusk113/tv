@@ -23,6 +23,8 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
+import tvconfig
+
 HERE = Path(__file__).resolve().parent
 CONFIG = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "tv-project"
 CACHE = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "tv-project"
@@ -87,7 +89,7 @@ def api_key():
 
 
 def settings():
-    return json.loads((HERE / "config/voice.json").read_text()).get("agent", {})
+    return tvconfig.load("voice").get("agent", {})
 
 
 def post(path, body, headers, timeout):
@@ -150,7 +152,7 @@ def library():
 
 
 def context():
-    apps = json.loads((HERE / "config/apps.json").read_text())
+    apps = tvconfig.load("apps")
     return {"time": datetime.now().strftime("%A %Y-%m-%d %H:%M"),
             "apps": [{"id": a["id"], "name": a["name"]} for a in apps],
             "tiles": tiles(), "weather": weather(), "library": library()}

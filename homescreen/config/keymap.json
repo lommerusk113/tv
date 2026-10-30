@@ -11,7 +11,7 @@
   "HomePage": "home",
   "F1": "launch:youtube",
   "F2": "launch:jellyfin",
-  "F3": "launch:rikstv",
+  "F3": "launch:jellyseerr",
   "F4": "launch:moonlight",
   "VolumeUp": "volume_up",
   "VolumeDown": "volume_down",
@@ -22,9 +22,9 @@
   "evdev:403": "down",
   "evdev:588": "launch:youtube",
   "evdev:589": "launch:jellyfin",
-  "KeyboardBrightnessUp": "launch:rikstv",
+  "KeyboardBrightnessUp": "launch:jellyseerr",
   "KeyboardBrightnessDown": "launch:moonlight",
-  "evdev:362": "launch:rikstv",
+  "evdev:362": "launch:jellyseerr",
   "Info": "options",
   "evdev:358": "options"
 }

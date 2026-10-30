@@ -40,10 +40,61 @@ FocusScope {
                 }
                 console.log("config: no " + path + ", using placeholders");
             }
-            if (--root.pending === 0) {
-                applyContent();
-                loader.source = "Home.qml";
+            root.loaded();
+        });
+    }
+
+    function loaded() {
+        if (--root.pending === 0) {
+            applyContent();
+            loader.source = "Home.qml";
+        }
+    }
+
+    // Your own settings: ~/.config/tv-project/<name>.json on top of config/<name>.json (tvconfig.py does the same
+    // for the scripts: objects merge key by key, apps match by id and "hidden": true leaves one out, other lists
+    // replace the default).
+    readonly property string userConfigDir: StandardPaths.writableLocation(StandardPaths.GenericConfigLocation) + "/tv-project/"
+
+    function mergeConfig(base, mine) {
+        if (base && mine && typeof base === "object" && typeof mine === "object" && !Array.isArray(base) && !Array.isArray(mine)) {
+            const out = Object.assign({}, base);
+            for (const key in mine)
+                out[key] = key in base ? mergeConfig(base[key], mine[key]) : mine[key];
+            return out;
+        }
+        if (Array.isArray(base) && Array.isArray(mine) && base.concat(mine).every(a => a && typeof a === "object" && "id" in a)) {
+            const out = base.map(a => Object.assign({}, a));
+            for (const a of mine) {
+                const hit = out.find(b => b.id === a.id);
+                if (hit)
+                    Object.assign(hit, a);
+                else
+                    out.push(Object.assign({}, a));
             }
+            return out;
+        }
+        return mine;
+    }
+
+    function loadConfig(name, apply) {
+        root.readFile(Qt.resolvedUrl("config/" + name + ".json"), text => {
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (e) {
+                console.error("config: failed to load config/" + name + ".json: " + e);
+                return;
+            }
+            root.readFile(root.userConfigDir + name + ".json", mine => {
+                try {
+                    data = mergeConfig(data, JSON.parse(mine));
+                } catch (e) {}  // no file of your own: the defaults
+                if (Array.isArray(data))
+                    data = data.filter(a => !(a && a.hidden));
+                apply(data);
+                root.loaded();
+            });
         });
     }
 
@@ -149,12 +200,12 @@ FocusScope {
     }
 
     Component.onCompleted: {
-        loadJson("config/theme.json", v => Config.theme = v);
-        loadJson("config/apps.json", v => Config.apps = v);
-        loadJson("config/layout.json", v => Config.layout = v);
+        loadConfig("theme", v => Config.theme = v);
+        loadConfig("apps", v => Config.apps = v);
+        loadConfig("layout", v => Config.layout = v);
         loadJson("data/placeholder.json", v => root.placeholder = v);
-        loadJson("config/keymap.json", v => Config.keymap = v);
-        loadJson("config/voice.json", v => Config.voice = v);
+        loadConfig("keymap", v => Config.keymap = v);
+        loadConfig("voice", v => Config.voice = v);
         loadJson(liveUrl, v => root.liveText = JSON.stringify(v), true);
         loadJson(appOrderUrl, v => Config.appOrder = Array.isArray(v) ? v : [], true);
     }

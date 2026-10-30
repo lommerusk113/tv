@@ -6,7 +6,7 @@
   python3 moonlight.py stream [app] [--wait]   streams the app (default: config tileApp), fullscreen; --wait returns
                                        once the picture arrives (Moonlight's output goes to ~/.cache/tv-project/moonlight.log)
   python3 moonlight.py pair <host> <pin>   pairs once: type the PIN on Sunshine's web page (https://<host>:47990, PIN);
-                                       on success the host is saved in config/moonlight.json
+                                       on success the host is saved in ~/.config/tv-project/moonlight.json
   python3 moonlight.py stop            Home: closes Moonlight now and quits the app on the host after
                                        keepRunningMinutes (config; at least 10 s); a new start in between cancels that
   python3 moonlight.py wake            mouse wiggle into the stream (wakes Steam's screensaver; done after a start)
@@ -23,9 +23,9 @@ import time
 from pathlib import Path
 
 from trakt import colors, update_content
+import tvconfig
 
 HERE = Path(__file__).resolve().parent
-CONFIG = HERE / "config/moonlight.json"
 MOONLIGHT = ["flatpak", "run", "com.moonlight_stream.Moonlight"]
 PENDING_STOP = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "tv-project/moonlight-stop.pid"
 STOP_DELAY = 10  # minimum seconds between ending the stream and quitting the app (sooner hung Wolf)
@@ -37,7 +37,7 @@ KEYS = {"ctrl": 29, "alt": 56, "shift": 42, "q": 16}
 
 
 def config():
-    return json.loads(CONFIG.read_text())
+    return tvconfig.load("moonlight")
 
 
 def apps(host):
@@ -103,9 +103,7 @@ def pair(host, pin):
     out = (res.stdout + res.stderr).strip()
     if res.returncode != 0:
         sys.exit("moonlight: pairing failed: " + (out.splitlines() or ["?"])[-1])
-    conf = config()
-    conf["host"] = host
-    CONFIG.write_text(json.dumps(conf, indent=2, ensure_ascii=False) + "\n")
+    tvconfig.update_user("moonlight", {"host": host})  # ~/.config/tv-project/moonlight.json
     print("moonlight: paired with", host)
 
 

@@ -28,13 +28,14 @@ import tempfile
 from pathlib import Path
 
 import agent
+import tvconfig
 
 HERE = Path(__file__).resolve().parent
 WHISPER = shutil.which("whisper-cli") or "/home/linuxbrew/.linuxbrew/bin/whisper-cli"
 
 
 def config():
-    return json.loads((HERE / "config/voice.json").read_text())
+    return tvconfig.load("voice")
 
 
 def normalize(text):
@@ -117,7 +118,7 @@ def parse(text, conf=None, apps=None):
     """Action for a sentence, or None. "play <title> [on Jellyfin]" plays the title; otherwise app names win over the
     fixed phrases ("play youtube" opens YouTube)."""
     conf = conf or config()
-    apps = apps if apps is not None else json.loads((HERE / "config/apps.json").read_text())
+    apps = apps if apps is not None else tvconfig.load("apps")
     text = normalize(text)
     if not text:
         return None
@@ -149,7 +150,7 @@ def parse(text, conf=None, apps=None):
 
 def transcribe(wav, conf):
     # The prompt biases whisper toward the words it should expect (app names, a few commands).
-    apps = json.loads((HERE / "config/apps.json").read_text())
+    apps = tvconfig.load("apps")
     prompt = ", ".join([a["name"] for a in apps] + ["open", "home", "volume up", "volume down", "mute"])
     text = agent.transcribe(wav, prompt)
     if text is not None:

@@ -75,7 +75,7 @@ def main():
     # The real config lists other channels; point a copy of the script's directory at test channels instead.
     test_dir = home / "app"
     (test_dir / "config").mkdir(parents=True)
-    for f in ("youtube.py", "trakt.py", "youtube_tv.py", "youtube_tv.js"):
+    for f in ("youtube.py", "trakt.py", "tvconfig.py", "youtube_tv.py", "youtube_tv.js"):
         (test_dir / f).write_text(Path(__file__).with_name(f).read_text())
     (test_dir / "config/youtube.json").write_text(json.dumps({"perChannel": 6, "maxItems": 20, "channels": [
         {"name": "Alpha", "id": "UCaaaaaaaaaaaaaaaaaaaaaa"}, {"name": "Beta", "id": "UCbbbbbbbbbbbbbbbbbbbbbb"}]}))

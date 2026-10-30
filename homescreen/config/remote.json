@@ -31,11 +31,11 @@
     },
     "Launch (4)": {
       "button": "Disney+",
-      "action": "launch:rikstv"
+      "action": "launch:jellyseerr"
     },
     "Launch (1)": {
       "button": "TV",
-      "action": "launch:rikstv"
+      "action": "home"
     },
     "Red": {
       "button": "Red",
