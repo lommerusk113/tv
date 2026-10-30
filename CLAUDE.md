@@ -201,7 +201,18 @@ homescreen/
                     focus after leaving the page and swallowed the arrows (2026-10-29 bug).
                     Plasma Keyboard (plasma-keyboard, KWin /VirtualKeyboard mode 2 = any input) does pop up for text
                     fields, but arrow keys go to the app, so it cannot be used with the remote; left at mode 1.
-                    Jellyfin (TV layout) and YouTube TV have their own remote keyboards in search.
+                    Jellyfin's search has an A-Z picker (no æøå); YouTube TV has its own keyboard.
+  TextEntry.qml + osk.py  keyboard over apps (2026-10-30): `osk.py watch` (started by HomeScreen.qml) injects a
+                    handler into Jellyfin (DevTools 9232) and the Jellyseerr kiosk (9233, jellyseerr.py open); OK on a
+                    text field (Chrome: DOM Enter; Jellyfin: hostInput command "enter", not "select") -> console marker
+                    -> remote.py send keyboard:<app>:<url-encoded {type, value, label}> (password values not sent) ->
+                    TextEntry in a layer-shell overlay window with KeyboardInteractivityExclusive (the remote drives it,
+                    focus returns to the app when it closes). Typing = `osk.py set <app> <text>` (select all +
+                    Input.insertText, one at a time, newest wins), live; done key ("Search"/"Enter ⏎") = `osk.py enter`
+                    (Enter, skipped by our handler via __tvKeyboardSkip); Back/Home close. Login pages start on their
+                    first field (else spatial navigation's first arrow went to Seerr's language button). The handler
+                    is re-sent every 5 s and calls time out after 5 s: a watcher that connected during a reload hung.
+                    Host-verified: Seerr login (typed, password dots, submit), Jellyfin search "dune" + remote after.
   jellyfin_nav.py   `search <text>`: Jellyfin's search page with the text typed in (voice "search for X")
   location.py       weather location without GPS (user chose BeaconDB, 2026-10-29): nearby Wi-Fi BSSIDs (nmcli) +
                     considerIp to api.beacondb.net; BeaconDB did not know the home networks yet, so it is the IP

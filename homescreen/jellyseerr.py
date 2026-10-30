@@ -174,11 +174,13 @@ def search(conf, query):
 def open_site(conf):
     """Replace this process with Chrome in kiosk mode on the Jellyseerr site. Its own profile (--user-data-dir) makes
     it a separate Chrome from RiksTV's, so --class sticks (Bigscreen raises it by that) and the login is remembered;
-    spatial navigation lets the remote's arrows move between buttons, Back is the browser's back."""
+    spatial navigation lets the remote's arrows move between buttons, Back is the browser's back. DevTools on
+    127.0.0.1:9233 is for the on-screen keyboard (osk.py)."""
     profile = Path.home() / ".var/app/com.google.Chrome/data/tv-jellyseerr"
     profile.mkdir(parents=True, exist_ok=True)
     os.execvp("flatpak", ["flatpak", "run", "com.google.Chrome", "--class=tv-jellyseerr", f"--user-data-dir={profile}",
-                          "--enable-spatial-navigation", "--no-first-run", "--kiosk", conf["url"].rstrip("/") + "/"])
+                          "--enable-spatial-navigation", "--no-first-run",
+                          "--remote-debugging-port=9233", "--kiosk", conf["url"].rstrip("/") + "/"])
 
 
 def main():

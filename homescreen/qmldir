@@ -11,3 +11,4 @@ RequestDialog 1.0 RequestDialog.qml
 ChoiceDialog 1.0 ChoiceDialog.qml
 GetDialog 1.0 GetDialog.qml
 LoadingScreen 1.0 LoadingScreen.qml
+TextEntry 1.0 TextEntry.qml

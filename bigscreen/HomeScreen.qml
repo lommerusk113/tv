@@ -52,6 +52,7 @@ Item {
     Connections {
         target: Shortcuts
         function onToggleHomeScreen() {
+            textEntry.open = false;
             root.cancelStream();  // Home while a stream starts: give up on it (media.py leave closes Moonlight)
             root.leaveApps(""); // like a TV box: going home pauses, and apps start from their start page next time
             tv.goHome();
@@ -166,11 +167,83 @@ Item {
         }
     }
 
+    // On-screen keyboard over an app (osk.py, TextEntry.qml): OK on a text field in Jellyseerr or Jellyfin opens it.
+    // The overlay window takes the keyboard while open (layer-shell exclusive), so the remote drives it, not the app.
+    // Text goes into the field as it is typed, one `osk.py set` at a time (the newest text wins); the done key sends
+    // Enter after the last one.
+    property var keyboardPending: null
+    property bool keyboardBusy: false
+    property bool keyboardSubmit: false
+
+    function keyboardFlush() {
+        if (keyboardBusy)
+            return;
+        const osk = "python3 '" + localPath(Qt.resolvedUrl("tv/osk.py")) + "' ";
+        const done = data => {
+            if (data["exit code"] !== 0)
+                console.warn("tv: osk.py: " + data.stderr.trim());
+            keyboardBusy = false;
+            keyboardFlush();
+        };
+        if (keyboardPending !== null) {
+            const text = encodeURIComponent(keyboardPending).replace(/'/g, "%27");
+            keyboardPending = null;
+            keyboardBusy = true;
+            exec.run(osk + "set " + textEntry.app + " '" + text + "'", done);
+        } else if (keyboardSubmit) {
+            keyboardSubmit = false;
+            keyboardBusy = true;
+            exec.run(osk + "enter " + textEntry.app, done);
+        }
+    }
+
+    Window {
+        id: keyboardWindow
+        LayerShell.Window.scope: "tv-keyboard"
+        LayerShell.Window.layer: LayerShell.Window.LayerOverlay
+        LayerShell.Window.anchors: LayerShell.Window.AnchorBottom
+        LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityExclusive
+        LayerShell.Window.exclusionZone: -1
+        width: Config.px(1440)
+        height: Config.px(720)
+        color: "transparent"
+        flags: Qt.FramelessWindowHint
+        visible: textEntry.visible
+        onVisibleChanged: if (visible) requestActivate()
+
+        TextEntry {
+            id: textEntry
+            anchors.fill: parent
+            focus: true
+            Keys.onPressed: event => key(event)
+            onEdited: text => {
+                root.keyboardPending = text;
+                root.keyboardFlush();
+            }
+            onSubmitted: {
+                open = false;
+                root.keyboardSubmit = true;
+                root.keyboardFlush();
+            }
+        }
+    }
+
     // Global remote buttons (config/remote.json, shortcuts installed by `remote.py install`) work inside apps too:
     // remote.py send hands the action over through `remote.py wait`, which is rerun after every action.
     function waitForRemote() {
         exec.run("python3 '" + localPath(Qt.resolvedUrl("tv/remote.py")) + "' wait", data => {
             const action = data.stdout.trim();
+            if (action.startsWith("keyboard:")) { // OK on a text field in an app (osk.py watch)
+                const [, app, field] = action.match(/^keyboard:([^:]+):(.*)$/) || [];
+                try {
+                    if (app && !root.windowActive)
+                        textEntry.show(app, JSON.parse(decodeURIComponent(field)));
+                } catch (e) {
+                    console.warn("tv: keyboard: " + e);
+                }
+                remoteRestart.restart();
+                return;
+            }
             if (action === "show_home") { // Back on Jellyfin's start page (jellyfin_back.py)
                 Shortcuts.toggleHomeScreen();
                 remoteRestart.restart();
@@ -573,6 +646,10 @@ Item {
             // Back on Jellyfin's start page returns here (runs as long as the home screen does).
             exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/jellyfin_back.py")) + "'", data => {
                 console.warn("tv: jellyfin_back.py ended: " + data.stderr.trim().slice(-300));
+            });
+            // OK on a text field in Jellyseerr/Jellyfin opens the on-screen keyboard (runs as long as the home screen does).
+            exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/osk.py")) + "' watch", data => {
+                console.warn("tv: osk.py watch ended: " + data.stderr.trim().slice(-300));
             });
             // Wake the TV and switch it to this laptop's input (no-op without "tv" in secrets.json).
             root.runScript("tvpower.py on", () => {});

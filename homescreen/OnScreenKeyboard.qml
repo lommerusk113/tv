@@ -11,6 +11,7 @@ Item {
     property bool shift: false
     property bool symbols: false
     property bool focused: true
+    property string doneLabel: "OK"
     readonly property var theme: Config.theme
 
     signal typed(string text)
@@ -35,7 +36,7 @@ Item {
         { key: "symbols", label: "#+=", span: 2 },
         { key: "space", label: "Space", span: 3 },
         { key: "back", label: "⌫", span: 1 },
-        { key: "done", label: "OK", span: 2 }
+        { key: "done", label: kb.doneLabel, span: 2 }
     ]
     readonly property var grid: symbols ? signs : letters
     readonly property real unit: (width - Config.px(8) * 9) / 10
