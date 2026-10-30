@@ -11,6 +11,9 @@
   python3 jellyseerr.py browse               the Jellyseerr page (SeerrPage.qml): {"ok", "rows": [{id, title, items}]} -
                                              trending, popular films/series, upcoming, your requests; tiles like
                                              search's (poster = TMDb URL, loaded by QML; kind, tmdb, status, label)
+  python3 jellyseerr.py ready               requests that became available since the last check: {"ok", "ready":
+                                             [{title, kind, tmdb, image, action}]} (the "ready to watch" card; the
+                                             first run only remembers the current state, READY_STATE)
   python3 jellyseerr.py details movie|tv <tmdb>   {"ok", "trailer", "overview", "status"} (RequestDialog, lazily)
   python3 jellyseerr.py search --all <title> up to BROWSE_ITEMS results instead of SEARCH_ITEMS
   python3 jellyseerr.py open                 the Jellyseerr website full screen (the "Jellyseerr" app tile,
@@ -33,6 +36,7 @@ from trakt import CACHE, colors, download, secrets, update_content
 
 MISSING = CACHE / "trakt-missing.json"
 DETAILS = CACHE / "jellyseerr-details.json"
+READY_STATE = CACHE / "jellyseerr-ready.json"
 TMDB_IMAGES = "https://image.tmdb.org/t/p/w342"
 MAX_ITEMS = 20
 SEARCH_ITEMS = 6
@@ -223,6 +227,39 @@ def browse(conf):
     return {"ok": bool(rows), "rows": rows}
 
 
+def ready(conf):
+    """Requests whose media went to available (5), or partly available (4, e.g. a new season), since last time."""
+    try:
+        requests = api(conf, "/request?take=50&skip=0&sort=modified&filter=all").get("results") or []
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        return {"ok": False, "error": str(e)}
+    try:
+        before = json.loads(READY_STATE.read_text())
+    except (OSError, ValueError):
+        before = None  # first run: nothing is "new"
+    now, out = {}, []
+    cache = json.loads(DETAILS.read_text()) if DETAILS.exists() else {}
+    for req in requests:
+        media = req.get("media") or {}
+        kind, tmdb, status = media.get("mediaType"), media.get("tmdbId"), media.get("status") or 1
+        if kind not in ("movie", "tv") or not tmdb:
+            continue
+        key = "%s:%s" % (kind, tmdb)
+        now[key] = max(status, now.get(key, 0))
+        if before is None or before.get(key, 1) >= 4 or status < 4 or key in [o["key"] for o in out]:
+            continue
+        try:
+            info = details(conf, kind, tmdb, cache)
+        except (urllib.error.URLError, OSError, ValueError):
+            continue
+        out.append({"key": key, "kind": kind, "tmdb": tmdb, "title": info["title"], "partly": status == 4,
+                    "image": TMDB_POSTERS + info["poster"] if info.get("poster") else "",
+                    "action": "jellyfin_play:" + info["title"]})
+    DETAILS.write_text(json.dumps(cache))
+    READY_STATE.write_text(json.dumps({**(before or {}), **now}))
+    return {"ok": True, "ready": out}
+
+
 def details_of(conf, kind, tmdb):
     try:
         cache = json.loads(DETAILS.read_text()) if DETAILS.exists() else {}
@@ -287,6 +324,9 @@ def main():
         return
     if len(sys.argv) >= 3 and sys.argv[1] == "search":
         print(json.dumps(search(conf, " ".join(sys.argv[2:])), ensure_ascii=False))
+        return
+    if sys.argv[1:] == ["ready"]:
+        print(json.dumps(ready(conf), ensure_ascii=False))
         return
     if sys.argv[1:] == ["browse"]:
         print(json.dumps(browse(conf), ensure_ascii=False))

@@ -231,6 +231,44 @@ Item {
         }
     }
 
+    // "Ready to watch": every 5 minutes, requests that became available (jellyseerr.py ready) slide in as a card at
+    // the top right, over apps too (an overlay window that never takes the keyboard).
+    function checkReady() {
+        Config.scriptQuery && Config.scriptQuery("jellyseerr", ["ready"], result => {
+            if (result && result.ok && result.ready.length)
+                readyToast.show(result.ready);
+        });
+    }
+    Timer {
+        interval: 300000
+        repeat: true
+        running: true
+        triggeredOnStart: true  // the first run only remembers the current state
+        onTriggered: root.checkReady()
+    }
+
+    Window {
+        id: readyWindow
+        LayerShell.Window.scope: "tv-ready"
+        LayerShell.Window.layer: LayerShell.Window.LayerOverlay
+        LayerShell.Window.anchors: LayerShell.Window.AnchorTop | LayerShell.Window.AnchorRight
+        LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityNone
+        LayerShell.Window.exclusionZone: -1
+        width: Config.px(720)
+        height: Config.px(380)
+        color: "transparent"
+        flags: Qt.FramelessWindowHint | Qt.WindowDoesNotAcceptFocus
+        visible: readyToast.showing
+
+        ReadyToast {
+            id: readyToast
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.rightMargin: Config.px(72)
+            anchors.topMargin: Config.px(140)  // below the clock
+        }
+    }
+
     // Global remote buttons (config/remote.json, shortcuts installed by `remote.py install`) work inside apps too:
     // remote.py send hands the action over through `remote.py wait`, which is rerun after every action.
     function waitForRemote() {
@@ -664,6 +702,8 @@ Item {
                             play();
                         });
                     }
+                } else if (action === "check_ready") {  // the "ready to watch" check now, instead of in 5 minutes
+                    root.checkReady();
                 } else if (action === "refresh_rows") {  // after "Mark as watched": Continue watching changes
                     root.runScript("jellyfin.py", tv.reloadLive);
                 } else if (action.startsWith("jellyfin_show:")) {
