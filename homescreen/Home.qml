@@ -16,7 +16,7 @@ FocusScope {
     // its overlay).
     readonly property bool atRoot: {
         const loader = sectionRepeater.count > section ? sectionRepeater.itemAt(section) : null;
-        return !settingsPanel.open && !seerrPage.open && !requestDialog.open && !choiceDialog.open && !getDialog.open && !loadingScreen.open && section === initialSection
+        return !settingsPanel.open && !seerrPage.open && !detailsSheet.open && !requestDialog.open && !choiceDialog.open && !getDialog.open && !loadingScreen.open && section === initialSection
                 && (!loader || !loader.item || loader.item.current === 0);
     }
 
@@ -143,6 +143,7 @@ FocusScope {
         requestDialog.open = false;
         choiceDialog.open = false;
         getDialog.open = false;
+        detailsSheet.open = false;
         seerrPage.close();
         if (settingsPanel.open)
             settingsPanel.close();
@@ -191,9 +192,13 @@ FocusScope {
         }
         if (action === "home")
             closeWindows();
-        if (action === "options") {  // ⓘ: move the focused app tile
+        if (action === "options" && !detailsSheet.open && atHomeLevel) {  // ⓘ: move an app tile, or details
             if (onAppRow)
                 startMoving();
+            else if (focusedItem && (focusedItem.action || "").startsWith("request:"))
+                requestDialog.ask(focusedItem.action, focusedItem);
+            else if (focusedItem)
+                detailsSheet.show(focusedItem);
             return;
         }
         if (loadingScreen.open) {  // a Moonlight stream is starting: only Back cancels it
@@ -207,6 +212,8 @@ FocusScope {
             return;
         if (getDialog.open && getDialog.handle(action))
             return;
+        if (detailsSheet.open && ["left", "right", "up", "down", "select", "back", "options"].includes(action))
+            return detailsSheet.handle(action === "options" ? "back" : action);
         if (action.startsWith("request:")) {  // a "Get more" or Jellyseerr-page tile: ask first
             requestDialog.ask(action, seerrPage.open ? seerrPage.itemFor(action) : null);
             return;
@@ -307,7 +314,7 @@ FocusScope {
     // Some remotes send press/release over and over while a button is held, so a release only counts once no new
     // press follows within releaseGrace; the ⓘ button ("options") on an app tile starts moving too.
     readonly property bool onAppRow: !!sections[section] && sections[section].action === "launch" && atHomeLevel
-    readonly property bool atHomeLevel: !settingsPanel.open && !seerrPage.open && !requestDialog.open && !choiceDialog.open
+    readonly property bool atHomeLevel: !settingsPanel.open && !seerrPage.open && !detailsSheet.open && !requestDialog.open && !choiceDialog.open
                                         && !getDialog.open && !loadingScreen.open
     Timer {
         id: holdTimer
@@ -568,6 +575,11 @@ FocusScope {
 
     SeerrPage {
         id: seerrPage
+    }
+
+    DetailsSheet {
+        id: detailsSheet
+        onMessage: text => home.showMessage(text)
     }
 
     GetDialog {

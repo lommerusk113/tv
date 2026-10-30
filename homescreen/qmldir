@@ -15,3 +15,4 @@ TextEntry 1.0 TextEntry.qml
 SeerrPage 1.0 SeerrPage.qml
 Showcase 1.0 Showcase.qml
 AmbientMode 1.0 AmbientMode.qml
+DetailsSheet 1.0 DetailsSheet.qml

@@ -664,6 +664,8 @@ Item {
                             play();
                         });
                     }
+                } else if (action === "refresh_rows") {  // after "Mark as watched": Continue watching changes
+                    root.runScript("jellyfin.py", tv.reloadLive);
                 } else if (action.startsWith("jellyfin_show:")) {
                     // ⓘ Go to series: Jellyfin in front, on the series' page (the server's DisplayContent command).
                     const id = action.slice(14).replace(/[^A-Za-z0-9]/g, "");
