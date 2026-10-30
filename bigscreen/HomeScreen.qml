@@ -337,6 +337,30 @@ Item {
         }
     }
 
+    // Low batteries (game controllers, the remote): a message once when one is at 15 % or less, over a game too;
+    // again only after it has been charged above 30 %.
+    property var lowWarned: ({})
+    Timer {
+        interval: 120000
+        repeat: true
+        running: true
+        onTriggered: Config.systemQuery && Config.systemQuery(["controllers"], r => {
+            if (!r || !r.batteries)
+                return;
+            const warned = Object.assign({}, root.lowWarned);
+            for (const b of r.batteries) {
+                if (b.percent > 30)
+                    delete warned[b.name];
+                else if (b.percent <= 15 && !warned[b.name]) {
+                    warned[b.name] = true;
+                    root.notify((b.kind === "gaming-input" ? "Controller" : "Battery") + " low: " + b.name + " "
+                                + b.percent + " %");
+                }
+            }
+            root.lowWarned = warned;
+        })
+    }
+
     // "Ready to watch": every 5 minutes, requests that became available (jellyseerr.py ready) slide in as a card at
     // the top right, over apps too (an overlay window that never takes the keyboard).
     function checkReady() {

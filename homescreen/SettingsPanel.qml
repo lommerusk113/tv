@@ -18,6 +18,7 @@ Item {
     property real volume: -1         // 0..1 from Config.volumeReader; -1 = unknown
     property var wifi: null          // system.py wifi
     property var bt: null            // system.py bt / bt-scan
+    property var pads: null          // system.py controllers (game controllers and battery levels)
     property var display: null       // system.py display
     property var place: null         // system.py location (status of "Use my location")
     property var pending: ({})       // display: "<output id>:mode" / ":scale" -> chosen slider index, not applied yet
@@ -56,7 +57,7 @@ Item {
 
     // Rows of the current page: {key, label, sub, icon, kind: link|action|toggle|slider|button|header|input, ...}
     readonly property var entries: {
-        const w = wifi, b = bt, d = display, p = pending, r = revert, c = confirming;
+        const w = wifi, b = bt, d = display, p = pending, r = revert, c = confirming, g = pads;
         switch (page) {
         case "main": {
             const net = w && w.networks ? w.networks.find(n => n.connected) : null;
@@ -69,6 +70,8 @@ Item {
                   sub: w ? (!w.enabled ? "Off" : net ? net.ssid : "Not connected") : " " },
                 { key: "bluetooth", label: "Bluetooth", icon: "bluetooth", kind: "link",
                   sub: b ? (!b.powered ? "Off" : devs ? devs + " connected" : "On") : " " },
+                { key: "controllers", label: "Controllers", icon: "gamepad", kind: "link",
+                  sub: g ? (g.controllers.length ? g.controllers.length + " connected" : "None connected") : " " },
                 { key: "display", label: "Display", icon: "display", kind: "link",
                   sub: out ? out.modeLabel + " · " + Math.round(out.scale * 100) + " %" : " " },
                 { key: "location", label: "Use my location", icon: "location", kind: "toggle", on: !!(place && place.auto),
@@ -100,13 +103,31 @@ Item {
                 rows.push({ key: "hdr-dev", label: "Devices", kind: "header" });
                 for (const dev of b.devices) {
                     const n = dev.name.toLowerCase();
-                    const icon = /remote|tv/.test(n) ? "tv" : /keyboard/.test(n) ? "keyboard" : /mouse/.test(n) ? "mouse"
+                    const icon = /controller|gamepad|xbox|dualsense|dualshock|joy-?con/.test(n) ? "gamepad"
+                               : /remote|tv/.test(n) ? "tv" : /keyboard/.test(n) ? "keyboard" : /mouse/.test(n) ? "mouse"
                                : /bud|head|ear|pods|speaker|sound/.test(n) ? "headphones" : /phone/.test(n) ? "phone" : "bluetooth";
                     rows.push({ key: "dev:" + dev.mac, label: dev.name, kind: "action", dev: dev, icon: icon,
                                 sub: dev.connected ? "Connected" : dev.paired ? "Paired · OK to connect" : "OK to pair" });
                 }
                 rows.push({ key: "bt-scan", label: "Search for devices", icon: "search", kind: "action" });
             }
+            return rows;
+        }
+        case "controllers": {
+            if (!g)
+                return [{ key: "loading", label: "Loading…", kind: "header" }];
+            const rows = [{ key: "hdr-pads", label: g.controllers.length ? "Connected" : "No controllers connected",
+                            kind: "header" }];
+            for (const pad of g.controllers)
+                rows.push({ key: "pad:" + pad.name, label: pad.name, icon: "gamepad", kind: "action",
+                            sub: pad.percent !== null ? "Battery " + pad.percent + " %" : "Connected" });
+            for (const other of g.batteries.filter(x => x.kind !== "gaming-input"))
+                rows.push({ key: "bat:" + other.name, label: other.name, kind: "action", sub: "Battery " + other.percent + " %",
+                            icon: /remote|tv|g20/i.test(other.name) ? "tv" : /key/i.test(other.name) ? "keyboard"
+                                : /mouse/i.test(other.name) ? "mouse" : "bluetooth" });
+            rows.push({ key: "hdr-pair", label: "Add a controller", kind: "header" });
+            rows.push({ key: "pad-pair", label: "Pair a controller", icon: "search", kind: "action",
+                        sub: "Xbox: pair button · PS: PS + Create · Switch: sync" });
             return rows;
         }
         case "display": {
@@ -165,6 +186,7 @@ Item {
         query(["wifi"], r => wifi = r);
         query(["bt"], r => bt = r);
         query(["display"], r => display = r);
+        query(["controllers"], r => pads = r);
         query(["location", "status"], r => place = r);
     }
 
@@ -175,6 +197,15 @@ Item {
         busy = "";
         pending = {};
         password = "";
+    }
+
+    // Back from a sub page: the main page, focus on that page's row.
+    function backToMain() {
+        const from = page;
+        go("main", 0);
+        const i = entries.findIndex(e => e.key === from);
+        if (i >= 0)
+            current = i;
     }
 
     function go(newPage, index) {
@@ -264,6 +295,8 @@ Item {
             go(e.key, 0);
             if (e.key === "wifi" && wifi && wifi.enabled)
                 query(["wifi-rescan"], r => wifi = r);  // fresh list in the background
+            if (e.key === "controllers")
+                query(["controllers"], r => pads = r);
             return;
         }
         if (e.confirm && confirming !== e.key) {
@@ -279,6 +312,10 @@ Item {
         case "wifi-rescan": query(["wifi-rescan"], r => wifi = r, "Searching…"); return;
         case "bt-power": query(["bt-power", e.on ? "off" : "on"], r => bt = r, e.on ? "Turning off…" : "Turning on…"); return;
         case "bt-scan": query(["bt-scan", "8"], r => bt = r, "Searching for devices…"); return;
+        case "pad-pair":  // the Bluetooth page, searching: the controller shows up there, OK pairs it
+            go("bluetooth", 0);
+            query(["bt-scan", "10"], r => bt = r, "Searching… put the controller in pairing mode");
+            return;
         case "location":
             query(["location", e.on ? "off" : "on"], r => {
                 place = r;
@@ -384,7 +421,7 @@ Item {
             else if (page === "password")
                 go("wifi", 0);
             else if (page !== "main")
-                go("main", ["main", "wifi", "bluetooth", "display", "power"].indexOf(page));
+                backToMain();
             else
                 close();
             return true;

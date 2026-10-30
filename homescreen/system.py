@@ -187,6 +187,43 @@ def power(command, args, status):
     return status()
 
 
+def batteries():
+    """Battery-powered devices UPower knows (Bluetooth remotes, game controllers...): [{name, percent, kind}]."""
+    out = []
+    for path in run("upower", "-e", check=False).split():
+        if any(skip in path for skip in ("battery_BAT", "line_power", "DisplayDevice")):
+            continue
+        info = run("upower", "-i", path, check=False)
+        fields = dict(re.findall(r"^\s+([\w -]+):\s+(.*)$", info, re.M))
+        kind = next((line.strip() for line in info.splitlines() if line.startswith("  ") and ":" not in line), "")
+        percent = re.match(r"(\d+)", fields.get("percentage", ""))
+        if percent:
+            out.append({"name": fields.get("model") or fields.get("serial") or kind, "percent": int(percent.group(1)),
+                        "kind": kind})
+    return out
+
+
+def controllers():
+    """Connected game controllers (input devices with a joystick handler) with their battery when UPower knows it,
+    plus every battery-powered device (the remote too): {"controllers": [{name, percent}], "batteries": [...]}."""
+    try:
+        devices = Path("/proc/bus/input/devices").read_text()
+    except OSError:
+        devices = ""
+    names = []
+    for block in devices.split("\n\n"):
+        name = re.search(r'^N: Name="(.*)"', block, re.M)
+        if name and re.search(r"^H: Handlers=.*\bjs\d+", block, re.M) and name.group(1) not in names:
+            names.append(name.group(1))
+    power = batteries()
+    pads = []
+    for name in names:
+        hit = next((b for b in power if b["kind"] == "gaming-input" and (b["name"] in name or name in b["name"])),
+                   next((b for b in power if b["kind"] == "gaming-input"), None))
+        pads.append({"name": name, "percent": hit["percent"] if hit else None})
+    return {"controllers": pads, "batteries": power}
+
+
 def main():
     cmd, args = (sys.argv[1] if len(sys.argv) > 1 else ""), sys.argv[2:]
     commands = {
@@ -203,6 +240,7 @@ def main():
         "bt-pair": lambda: bt_action("pair", args[0]),
         "bt-forget": lambda: bt_action("forget", args[0]),
         "display": display,
+        "controllers": controllers,
         "location": lambda: location(args[0] if args else "status"),
         "display-set": lambda: display_set(args[0], args[1], args[2] if len(args) > 2 else None),
     }

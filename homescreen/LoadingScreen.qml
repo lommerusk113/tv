@@ -3,12 +3,15 @@ import "."
 
 // Full-screen "Starting Steam…" while a Moonlight stream connects (Moonlight's own windows are kept hidden meanwhile,
 // see bigscreen/HomeScreen.qml). show(name) picks the tile with that name from apps.json for its logo and colours
-// (Steam), else Moonlight's. Back/Home cancel (Home routes them to Config.system("moonlight_cancel")).
+// (Steam), else Moonlight's. Back/Home cancel (Home routes them to Config.system("moonlight_cancel")). The connected
+// game controllers (system.py controllers) show at the bottom with their battery, so a friend's pad that is still
+// asleep gets noticed before the game starts.
 Item {
     id: loading
     property bool open: false
     property string name: ""
     property var app: null
+    property var pads: null       // [{name, percent}] once system.py has answered
     readonly property var theme: Config.theme
     readonly property var fallback: Config.apps.find(a => a.id === "moonlight") || {}
     readonly property var look: app || fallback
@@ -16,7 +19,10 @@ Item {
     function show(appName) {
         name = appName || "Moonlight";
         app = Config.apps.find(a => (a.name || "").toLowerCase() === name.toLowerCase()) || null;
+        pads = null;
         open = true;
+        if (Config.systemQuery)
+            Config.systemQuery(["controllers"], r => loading.pads = r && r.controllers ? r.controllers : []);
     }
 
     function hide() {
@@ -107,7 +113,56 @@ Item {
         }
     }
 
+    // Controllers: a chip each, or how to pair one.
+    Row {
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: cancelHint.top
+        anchors.bottomMargin: Config.px(28)
+        spacing: Config.px(16)
+        visible: loading.pads !== null
+        Repeater {
+            model: loading.pads || []
+            delegate: Rectangle {
+                id: padChip
+                required property var modelData
+                readonly property bool low: modelData.percent !== null && modelData.percent <= 15
+                width: chip.implicitWidth + Config.px(40)
+                height: Config.px(56)
+                radius: height / 2
+                color: Config.withAlpha("#ffffff", 0.1)
+                Row {
+                    id: chip
+                    anchors.centerIn: parent
+                    spacing: Config.px(12)
+                    Image {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: Config.px(28)
+                        height: width
+                        sourceSize: Qt.size(width * 2, height * 2)
+                        source: Qt.resolvedUrl("icons/settings/gamepad.svg")
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: padChip.modelData.name
+                              + (padChip.modelData.percent !== null ? "  ·  " + padChip.modelData.percent + " %" : "")
+                        color: padChip.low ? "#ffb4a9" : loading.theme.colors.text
+                        font.family: loading.theme.font.family
+                        font.pixelSize: Config.px(22)
+                    }
+                }
+            }
+        }
+        Text {
+            visible: loading.pads !== null && loading.pads.length === 0
+            text: "No controller connected · pair one in Settings → Controllers"
+            color: Config.withAlpha(loading.theme.colors.text, 0.6)
+            font.family: loading.theme.font.family
+            font.pixelSize: Config.px(22)
+        }
+    }
+
     Text {
+        id: cancelHint
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
         anchors.bottomMargin: Config.px(64)
