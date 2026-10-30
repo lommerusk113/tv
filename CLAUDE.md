@@ -213,6 +213,11 @@ homescreen/
                     first field (else spatial navigation's first arrow went to Seerr's language button). The handler
                     is re-sent every 5 s and calls time out after 5 s: a watcher that connected during a reload hung.
                     Host-verified: Seerr login (typed, password dots, submit), Jellyfin search "dune" + remote after.
+                    Jellyseerr also gets TV_FOCUS (osk.py): its own focus ring was a dark 1 px outline (user: "i cant
+                    see what is selected") -> white ring + glow + scale on :focus-visible, focused thing scrolled to the
+                    middle near an edge. Cards: spatial navigation lands on the card's Request button (card shows its
+                    details). jellyseerr.py quiet_chrome() turns off Chrome's "Save password?" bubble (unreachable with
+                    the remote) in the profile's Preferences before each start.
   jellyfin_nav.py   `search <text>`: Jellyfin's search page with the text typed in (voice "search for X")
   location.py       weather location without GPS (user chose BeaconDB, 2026-10-29): nearby Wi-Fi BSSIDs (nmcli) +
                     considerIp to api.beacondb.net; BeaconDB did not know the home networks yet, so it is the IP

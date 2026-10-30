@@ -3,8 +3,8 @@
 the home screen's keyboard (bigscreen/HomeScreen.qml, TextEntry.qml), which types into that field over DevTools.
 
   python3 osk.py watch               runs until the home screen (its parent) goes away: adds a handler to each app's
-                                     page; OK (Enter / Jellyfin's "enter" command) on a text field logs a marker, and this
-                                     sends "keyboard:<app>:<url-encoded {type, value, label}>" to the home screen
+                                     page (Jellyseerr also gets a visible TV focus, TV_FOCUS); OK (Enter /
+                                     Jellyfin's "enter" command) on a text field logs a marker, and this sends "keyboard:<app>:<url-encoded {type, value, label}>" to the home screen
                                      (remote.py send). Password values are not sent.
   python3 osk.py set <app> <text>    replace the focused field's text (url-encoded, so any character fits a command
                                      line); typed with Input.insertText, so the page sees real typing (React etc.)
@@ -82,6 +82,42 @@ if (!window.__tvKeyboard) {
 }
 """.replace("MARKER", MARKER)
 
+# Jellyseerr is a desktop site: Chrome's spatial navigation moves the focus, but the site's focus outline is a dark
+# 1 px line. A TV focus instead (white ring + glow, like the home screen's tiles), and the focused thing is scrolled
+# to the middle when it gets near an edge (spatial navigation only scrolls it just into view).
+TV_FOCUS = r"""
+if (!window.__tvFocus) {
+    window.__tvFocus = true;
+    const css = `
+        :focus { outline: none !important; }
+        :focus-visible {
+            outline: 4px solid #ffffff !important;
+            outline-offset: -4px !important;
+            box-shadow: 0 0 0 4px #ffffff, 0 0 32px 8px rgba(255, 255, 255, 0.5) !important;
+            border-radius: 10px;
+            filter: brightness(1.12);
+            transform: scale(1.06) !important;
+            transition: transform 120ms ease-out, box-shadow 120ms ease-out;
+            z-index: 10;
+        }`;
+    const addStyle = () => {
+        const style = document.createElement("style");
+        style.textContent = css;
+        document.head.appendChild(style);
+    };
+    if (document.head)
+        addStyle();
+    else
+        document.addEventListener("DOMContentLoaded", addStyle);
+    document.addEventListener("focusin", e => {
+        const r = e.target.getBoundingClientRect();
+        if (r.top < 90 || r.bottom > innerHeight - 60)
+            e.target.scrollIntoView({block: "center", inline: "nearest", behavior: "smooth"});
+    }, true);
+}
+"""
+SCRIPTS = {"jellyfin": HANDLER, "jellyseerr": HANDLER + TV_FOCUS}
+
 
 def page_socket(port):
     try:
@@ -113,8 +149,9 @@ async def watch_app(app, port, parent):
         try:
             async with websockets.connect(url, max_size=None, open_timeout=5) as ws:
                 since = time.time() * 1000  # Runtime.enable replays older console messages
-                await call(ws, [("Page.addScriptToEvaluateOnNewDocument", {"source": HANDLER}),
-                                ("Runtime.evaluate", {"expression": HANDLER}),
+                script = SCRIPTS[app]
+                await call(ws, [("Page.addScriptToEvaluateOnNewDocument", {"source": script}),
+                                ("Runtime.evaluate", {"expression": script}),
                                 ("Runtime.enable", {})])
                 injected = time.monotonic()
                 while os.getppid() == parent:
@@ -123,7 +160,7 @@ async def watch_app(app, port, parent):
                     if time.monotonic() - injected > 5:
                         injected = time.monotonic()
                         await ws.send(json.dumps({"id": 1000, "method": "Runtime.evaluate",
-                                                  "params": {"expression": HANDLER}}))
+                                                  "params": {"expression": script}}))
                     try:
                         msg = json.loads(await asyncio.wait_for(ws.recv(), 5))
                     except asyncio.TimeoutError:

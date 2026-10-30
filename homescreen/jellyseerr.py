@@ -171,6 +171,21 @@ def search(conf, query):
     return {"ok": True, "query": query, "results": out}
 
 
+def quiet_chrome(path):
+    """No "Save password?" bubble (the remote cannot reach it) and no "Restore pages?" after a kill. Only works while
+    this Chrome is closed (it rewrites the file on exit), which is the case when open_site runs."""
+    try:
+        prefs = json.loads(path.read_text())
+    except (OSError, ValueError):
+        prefs = {}
+    prefs["credentials_enable_service"] = False
+    prefs.setdefault("profile", {}).update({"password_manager_enabled": False, "exit_type": "Normal"})
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tv-tmp")
+    tmp.write_text(json.dumps(prefs))
+    tmp.replace(path)
+
+
 def open_site(conf):
     """Replace this process with Chrome in kiosk mode on the Jellyseerr site. Its own profile (--user-data-dir) makes
     it a separate Chrome from RiksTV's, so --class sticks (Bigscreen raises it by that) and the login is remembered;
@@ -178,6 +193,7 @@ def open_site(conf):
     127.0.0.1:9233 is for the on-screen keyboard (osk.py)."""
     profile = Path.home() / ".var/app/com.google.Chrome/data/tv-jellyseerr"
     profile.mkdir(parents=True, exist_ok=True)
+    quiet_chrome(profile / "Default/Preferences")
     os.execvp("flatpak", ["flatpak", "run", "com.google.Chrome", "--class=tv-jellyseerr", f"--user-data-dir={profile}",
                           "--enable-spatial-navigation", "--no-first-run",
                           "--remote-debugging-port=9233", "--kiosk", conf["url"].rstrip("/") + "/"])
