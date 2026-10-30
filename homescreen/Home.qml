@@ -43,6 +43,18 @@ FocusScope {
         return out;
     }
 
+    // Background follows the selection: on a media row the focused tile's picture fills the screen behind the
+    // rows (dimmed) with its title and details above the row, which sits lower (showcaseTop) like Google TV.
+    readonly property var focusedItem: {
+        const s = sections[section];
+        if (!s || s.type === "hero" || s.action === "launch" || !atHomeLevel || sectionRepeater.count <= section)
+            return null;
+        const row = sectionAt(section);
+        return row ? (row.orderedItems || s.items)[row.current] || null : null;
+    }
+    readonly property bool showcase: !!focusedItem
+    readonly property real showcaseTop: Config.px(440)
+
     function sectionAt(i) {
         const loader = sectionRepeater.itemAt(i);
         return loader ? loader.item : null;
@@ -92,7 +104,7 @@ FocusScope {
             const it = sectionRepeater.itemAt(section);
             const top = column.y + it.y - Config.px(theme.topBar.height);
             const bottom = column.y + it.y + it.height + Config.px(theme.spacing.row);
-            target = bottom <= page.height ? 0 : top;
+            target = showcase ? column.y + it.y - showcaseTop : bottom <= page.height ? 0 : top;
         }
         target = Math.max(0, Math.min(target, page.contentHeight - page.height));
         vScroll.stop();
@@ -164,6 +176,12 @@ FocusScope {
     }
 
     function runAction(action) {
+        idle.restart();
+        if (ambient.open) {  // e.g. a global remote button: wake up; moving around only wakes
+            ambient.open = false;
+            if (["left", "right", "up", "down", "select", "back"].includes(action))
+                return;
+        }
         if (moving) {  // moving an app tile: left/right move it, anything else finishes
             if (action === "left" || action === "right")
                 sectionAt(section).swap(action === "left" ? -1 : 1);
@@ -343,6 +361,12 @@ FocusScope {
     property bool moving: false
 
     Keys.onPressed: event => {
+        idle.restart();
+        if (ambient.open) {  // the first key only wakes the screen
+            ambient.open = false;
+            event.accepted = true;
+            return;
+        }
         if (settingsPanel.typeKey(event)) {
             event.accepted = true;
             return;
@@ -392,6 +416,12 @@ FocusScope {
         color: home.theme.colors.background
     }
 
+    Showcase {
+        anchors.fill: parent
+        item: home.focusedItem
+        wide: !!home.sections[home.section] && home.sections[home.section].style === "landscape"
+    }
+
     Flickable {
         id: page
         anchors.fill: parent
@@ -428,6 +458,9 @@ FocusScope {
                     required property int index
                     width: column.width
                     sourceComponent: modelData.type === "hero" ? heroComponent : rowComponent
+                    // Showcase: the rows above the focused one make room for its details.
+                    opacity: home.showcase && index < home.section ? 0 : 1
+                    Behavior on opacity { NumberAnimation { duration: home.theme.animationMs * 2 } }
 
                     Component {
                         id: heroComponent
@@ -565,6 +598,21 @@ FocusScope {
 
     function hideLoading() {
         loadingScreen.hide();
+    }
+
+    // Ambient mode after layout.json "ambientMinutes" (default 10, 0 = never) without a key, while the home screen
+    // is in front with nothing open.
+    readonly property real ambientMinutes: Config.layout.ambientMinutes !== undefined ? Config.layout.ambientMinutes : 10
+    Timer {
+        id: idle
+        interval: Math.max(0.05, home.ambientMinutes) * 60000
+        running: home.ambientMinutes > 0 && Config.homeActive && home.atHomeLevel && !ambient.open && !home.moving
+                 && voiceOverlay.state !== "listening" && voiceOverlay.state !== "thinking"
+        onTriggered: ambient.show()
+    }
+
+    AmbientMode {
+        id: ambient
     }
 
     VoiceOverlay {

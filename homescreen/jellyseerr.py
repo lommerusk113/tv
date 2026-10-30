@@ -41,6 +41,7 @@ BROWSE_ROWS = [("trending", "Trending", "/discover/trending"), ("movies", "Popul
                ("tv", "Popular series", "/discover/tv"), ("upcomingMovies", "Coming soon: films",
                "/discover/movies/upcoming"), ("upcomingTv", "Coming soon: series", "/discover/tv/upcoming")]
 TMDB_POSTERS = "https://image.tmdb.org/t/p/w342"
+TMDB_BACKDROPS = "https://image.tmdb.org/t/p/w1280"
 STATUS_AGE = 3600
 DETAILS_AGE = 86400
 # Jellyseerr media status: 1 unknown, 2 pending, 3 processing, 4 partially available, 5 available, 6 blacklisted
@@ -71,13 +72,14 @@ def details(conf, kind, tmdb, cache):
     key = "%s:%s" % (kind, tmdb)
     old = cache.get(key)
     now = time.time()
-    if old and "trailer" in old and now - old["fetched"] < DETAILS_AGE and now - old.get("checked", 0) < STATUS_AGE:
+    if old and "backdrop" in old and now - old["fetched"] < DETAILS_AGE and now - old.get("checked", 0) < STATUS_AGE:
         return old
     d = api(conf, "/%s/%s" % (kind, tmdb))
     date = d.get("releaseDate") or d.get("firstAirDate") or ""
     cache[key] = {"title": d.get("title") or d.get("name") or "", "year": date[:4], "poster": d.get("posterPath"),
                   "status": (d.get("mediaInfo") or {}).get("status") or 1, "fetched": now, "checked": now,
-                  "trailer": trailer(d), "overview": (d.get("overview") or "")[:400]}
+                  "trailer": trailer(d), "overview": (d.get("overview") or "")[:400],
+                  "backdrop": d.get("backdropPath") or ""}
     return cache[key]
 
 
@@ -103,6 +105,8 @@ def tile(kind, tmdb, info):
     }
     if info.get("trailer"):
         out["trailer"] = info["trailer"]  # RequestDialog's "Trailer" button (youtube_watch)
+    if info.get("backdrop"):
+        out["backdrop"] = TMDB_BACKDROPS + info["backdrop"]  # the home screen's background (a URL: QML loads it)
     if info.get("poster"):
         image = download(TMDB_IMAGES + info["poster"], "tmdb-%s-%s-w342.jpg" % (kind, tmdb))
         if image:
@@ -160,7 +164,7 @@ def request(conf, kind, tmdb):
     return {"ok": True, "status": res.get("status")}
 
 
-def browse_tile(kind, tmdb, title, date, poster, status, overview=""):
+def browse_tile(kind, tmdb, title, date, poster, status, overview="", wide=""):
     """A poster tile for SeerrPage / search: OK = request:<kind>:<tmdb>:<title> (RequestDialog)."""
     label = LABEL.get(status, "")
     return {"id": "seerr-%s-%s" % (kind, tmdb), "kind": kind, "tmdb": tmdb, "title": title, "year": date[:4],
@@ -168,7 +172,8 @@ def browse_tile(kind, tmdb, title, date, poster, status, overview=""):
             # under a poster there is room for about 20 characters: the status alone when it has one
             "meta": SHORT_LABEL.get(status) or " · ".join(p for p in ("Series" if kind == "tv" else "Film", date[:4]) if p),
             "overview": (overview or "")[:400], "image": TMDB_POSTERS + poster if poster else "",
-            "colors": colors("%s-%s" % (kind, tmdb)), "action": "request:%s:%s:%s" % (kind, tmdb, title)}
+            "colors": colors("%s-%s" % (kind, tmdb)), "action": "request:%s:%s:%s" % (kind, tmdb, title),
+            "backdrop": TMDB_BACKDROPS + wide if wide else ""}
 
 
 def result_tile(r):
@@ -177,7 +182,7 @@ def result_tile(r):
         return None
     return browse_tile(r["mediaType"], r["id"], r.get("title") or r.get("name") or "",
                        r.get("releaseDate") or r.get("firstAirDate") or "", r["posterPath"],
-                       (r.get("mediaInfo") or {}).get("status") or 1, r.get("overview"))
+                       (r.get("mediaInfo") or {}).get("status") or 1, r.get("overview"), r.get("backdropPath"))
 
 
 def browse(conf):
@@ -206,7 +211,8 @@ def browse(conf):
             except (urllib.error.URLError, OSError, ValueError):
                 continue
             status = media.get("status") or info["status"]
-            tile = browse_tile(kind, tmdb, info["title"], info["year"], info.get("poster"), status, info.get("overview"))
+            tile = browse_tile(kind, tmdb, info["title"], info["year"], info.get("poster"), status, info.get("overview"),
+                               info.get("backdrop"))
             tile["trailer"] = info.get("trailer") or ""
             items.append(tile)
         DETAILS.write_text(json.dumps(cache))

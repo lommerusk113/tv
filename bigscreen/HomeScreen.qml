@@ -23,6 +23,7 @@ Item {
     // the rows (Trakt recommendations, TMDb, Jellyfin, YouTube channels) and the weather.
     readonly property bool windowActive: Window.active
     onWindowActiveChanged: {
+        Config.homeActive = windowActive;  // ambient mode only starts while the home screen is in front
         if (!windowActive)
             return;
         tv.forceActiveFocus();
@@ -452,6 +453,20 @@ Item {
                 });
             };
             // Wi-Fi, Bluetooth and display for the Settings panel: system.py prints one JSON object.
+            // Any helper script's JSON answer: Config.scriptQuery("jellyfin", ["info", id], result => ...).
+            Config.scriptQuery = (script, args, callback) => {
+                const quoted = args.map(a => "'" + String(a).replace(/'/g, "'\\''") + "'").join(" ");
+                exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/" + script.replace(/[^a-z_]/g, "") + ".py"))
+                         + "' " + quoted, data => {
+                    let result = null;
+                    try {
+                        result = JSON.parse(data.stdout);
+                    } catch (e) {
+                        console.warn("tv: " + script + " " + args.join(" ") + ": " + data.stderr.trim().slice(-200));
+                    }
+                    callback(result);
+                });
+            };
             Config.seerrQuery = (args, callback) => {
                 const quoted = args.map(a => "'" + String(a).replace(/'/g, "'\\''") + "'").join(" ");
                 exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/jellyseerr.py")) + "' " + quoted, data => {
@@ -628,9 +643,11 @@ Item {
                     // cold start it waits for the page to come up.
                     const jellyfinApp = Config.apps.find(app => app.id === "jellyfin");
                     const running = Plasmoid.applicationListModel.isApplicationRunning(jellyfinApp.desktopId);
-                    const id = action.slice(17).replace(/[^A-Za-z0-9]/g, "");
+                    // "jellyfin_play_id:<id>:start" = from the beginning (ⓘ Start over)
+                    const [rawId, from] = action.slice(17).split(":");
+                    const id = rawId.replace(/[^A-Za-z0-9]/g, "");
                     const scripts = "python3 '" + root.localPath(Qt.resolvedUrl("tv/"));
-                    const play = () => exec.run(scripts + "jellyfin.py' play-id " + id, data => {
+                    const play = () => exec.run(scripts + "jellyfin.py' play-id " + id + (from === "start" ? " --start" : ""), data => {
                         exec.run(scripts + "jellyfin_curtain.py' off", () => {});
                         if (data["exit code"] !== 0 || data.stdout.indexOf('"ok": true') < 0) {
                             console.warn("tv: jellyfin.py play: " + (data.stdout + data.stderr).trim());
@@ -647,6 +664,12 @@ Item {
                             play();
                         });
                     }
+                } else if (action.startsWith("jellyfin_show:")) {
+                    // ⓘ Go to series: Jellyfin in front, on the series' page (the server's DisplayContent command).
+                    const id = action.slice(14).replace(/[^A-Za-z0-9]/g, "");
+                    root.leaveApps("jellyfin");
+                    Config.launch("jellyfin");
+                    root.runScript("jellyfin.py show " + id, () => {});
                 } else if (action === "tv_off" || action === "tv_power" || action === "tv_input")
                     root.runScript("tvpower.py " + {"tv_off": "off", "tv_power": "toggle", "tv_input": "on"}[action], () => {});
                 else if (commands[action])

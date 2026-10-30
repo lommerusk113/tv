@@ -13,6 +13,13 @@
   python3 jellyfin.py pull          "move to TV": stops what this user is watching on another device (phone, browser)
                                     and continues it here from the same position. Prints {"ok", "title"} like play.
   python3 jellyfin.py home          sends Jellyfin Desktop on this computer to its start page (when leaving the app)
+  python3 jellyfin.py info <id>     details for the ⓘ sheet: {"ok", "title", "episode", "overview", "year",
+                                    "runtime"/"position" (minutes), "played", "type", "seriesId", "backdrop"}
+  python3 jellyfin.py play-id <id> --start   plays it from the beginning (ⓘ "Start over")
+  python3 jellyfin.py played <id>   marks it watched; `unplayed <id>` unmarks
+  python3 jellyfin.py show <id>     opens the item's page (a series: the series) in Jellyfin Desktop here
+  python3 jellyfin.py subtitles <off|next|language>   on what plays in Jellyfin Desktop here ("nor", "norwegian",
+  python3 jellyfin.py audio <next|language>           "english"...); prints {"ok", "label"} for the voice card
   python3 jellyfin.py play <title>  finds the title on the server and plays it in Jellyfin Desktop on this computer
                                     (remote control through the server, like casting from the phone). A series plays
                                     its next-up episode; a started video resumes. Prints {"ok", "title"} or
@@ -78,6 +85,16 @@ def get(conf, path, method="GET"):
         raise
 
 
+def post_json(conf, path, body):
+    req = urllib.request.Request(conf["url"].rstrip("/") + path, method="POST", data=json.dumps(body).encode(), headers={
+        "Authorization": 'MediaBrowser Client="tv-project", Device="tv", DeviceId="tv-project", Version="1.0", '
+                         'Token="%s"' % conf["apiKey"],
+        "Content-Type": "application/json",
+    })
+    with urllib.request.urlopen(req, timeout=20) as res:
+        res.read()
+
+
 def user_id(conf):
     users = get(conf, "/Users") or []
     wanted = (conf.get("user") or "").lower()
@@ -88,7 +105,8 @@ def user_id(conf):
 
 
 def resume_items(conf, uid):
-    query = urllib.parse.urlencode({"limit": MAX_ITEMS, "mediaTypes": "Video", "enableImageTypes": IMAGE_TYPES})
+    query = urllib.parse.urlencode({"limit": MAX_ITEMS, "mediaTypes": "Video", "enableImageTypes": IMAGE_TYPES,
+                                    "fields": "Overview"})
     data = get(conf, "/UserItems/Resume?userId=%s&%s" % (uid, query))  # Jellyfin 10.9+
     if data is None:
         data = get(conf, "/Users/%s/Items/Resume?%s" % (uid, query))  # older servers
@@ -97,7 +115,7 @@ def resume_items(conf, uid):
 
 def next_up(conf, uid):
     query = urllib.parse.urlencode({"userId": uid, "limit": MAX_ITEMS, "enableImageTypes": IMAGE_TYPES,
-                                    "fields": "UserData", "enableResumable": "false"})
+                                    "fields": "UserData,Overview", "enableResumable": "false"})
     return (get(conf, "/Shows/NextUp?" + query) or {}).get("Items", [])
 
 
@@ -127,7 +145,8 @@ def newest(conf, uid):
 def latest(conf, uid):
     """Recently added films and series (new episodes count for their series), newest first."""
     query = urllib.parse.urlencode({"userId": uid, "limit": MAX_ITEMS + 5, "includeItemTypes": "Movie,Episode",
-                                    "groupItems": "true", "enableImageTypes": "Primary", "fields": "ProductionYear"})
+                                    "groupItems": "true", "enableImageTypes": "Primary,Backdrop",
+                                    "fields": "ProductionYear,Overview"})
     items = get(conf, "/Items/Latest?" + query) or []
     return [i for i in items if i.get("Type") in ("Movie", "Series")][:MAX_ITEMS + 5]
 
@@ -148,6 +167,11 @@ def poster(conf, item):
                              "jellyfin-%s-poster-%s.jpg" % (item["Id"], tag))
     if image:
         out["image"] = image
+    wide = backdrop(conf, item)
+    if wide:
+        out["backdrop"] = wide
+    if item.get("Overview"):
+        out["overview"] = item["Overview"][:400]
     return out
 
 
@@ -208,6 +232,16 @@ def artwork(item):
     return next(((i, kind, tag) for i, kind, tag in candidates if i and tag), None)
 
 
+def backdrop(conf, item):
+    """A wide backdrop file for the item (episodes: their series'), for the home screen's background; or None."""
+    for item_id, tags in ((item["Id"], item.get("BackdropImageTags")),
+                          (item.get("ParentBackdropItemId"), item.get("ParentBackdropImageTags"))):
+        if item_id and tags:
+            return download(image_url(conf, item_id, "Backdrop/0", tags[0], 1280),
+                            "jellyfin-%s-backdrop-%s-1280.jpg" % (item_id, tags[0]))
+    return None
+
+
 def episode_label(item):
     """ "S2 E5", or as much of it as the episode has ("E5", "S2"); "" without numbers (no "S? E?")."""
     season, number = item.get("ParentIndexNumber"), item.get("IndexNumber")
@@ -236,6 +270,11 @@ def tile(conf, item):
     }
     if user.get("PlayedPercentage") is not None:
         out["progress"] = round(user["PlayedPercentage"] / 100, 3)
+    wide = backdrop(conf, item)
+    if wide:
+        out["backdrop"] = wide
+    if item.get("Overview"):
+        out["overview"] = item["Overview"][:400]
     art = artwork(item)
     if art:
         image_id, kind, tag = art
@@ -372,7 +411,7 @@ def play(query):
         return {"ok": False, "error": str(e)}
 
 
-def play_id(item_id):
+def play_id(item_id, from_start=False):
     conf = settings()
     if not conf:
         return {"ok": False, "error": "no \"jellyfin\" url/apiKey in secrets.json"}
@@ -382,17 +421,19 @@ def play_id(item_id):
         item = get(conf, "/Items/%s?%s" % (urllib.parse.quote(item_id), query))
         if not item:
             return {"ok": False, "error": "no item %s" % item_id}
-        return start(conf, uid, item)
+        return start(conf, uid, item, from_start)
     except (urllib.error.URLError, OSError, ValueError) as e:
         return {"ok": False, "error": "%s: %s" % (conf["url"], e)}
     except SystemExit as e:
         return {"ok": False, "error": str(e)}
 
 
-def start(conf, uid, item):
+def start(conf, uid, item, from_start=False):
     """Plays the item (a series: its next-up episode, a started video: from its position) on this computer's
     Jellyfin Desktop, waiting for it to connect. Returns the {"ok", "title"} result."""
     target, position = playable(conf, uid, item)
+    if from_start:
+        position = 0
     if not target:
         return {"ok": False, "error": "no episodes in \"%s\"" % item.get("Name")}
     session = wait_for_desktop(conf, uid)
@@ -477,6 +518,116 @@ def pull():
     return {"ok": True, "title": item_title(item), "from": source.get("DeviceName", "")}
 
 
+LANGUAGES = {"nor": ("nor", "nob", "nno", "no", "norwegian", "norsk"), "eng": ("eng", "en", "english", "engelsk"),
+             "swe": ("swe", "sv", "swedish", "svensk"), "dan": ("dan", "da", "danish", "dansk"),
+             "ger": ("ger", "deu", "de", "german", "tysk"), "fre": ("fre", "fra", "fr", "french", "fransk"),
+             "spa": ("spa", "es", "spanish", "spansk"), "jpn": ("jpn", "ja", "japanese", "japansk")}
+
+
+def with_jellyfin(work):
+    """Runs work(conf, uid) with the error handling every command shares; returns its dict."""
+    conf = settings()
+    if not conf:
+        return {"ok": False, "error": "no \"jellyfin\" url/apiKey in secrets.json"}
+    try:
+        return work(conf, user_id(conf))
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        return {"ok": False, "error": "%s: %s" % (conf["url"], e)}
+    except SystemExit as e:
+        return {"ok": False, "error": str(e)}
+
+
+def info(item_id):
+    def work(conf, uid):
+        query = urllib.parse.urlencode({"userId": uid, "fields": "Overview,Genres,UserData"})
+        item = get(conf, "/Items/%s?%s" % (urllib.parse.quote(item_id), query))
+        if not item:
+            return {"ok": False, "error": "no item %s" % item_id}
+        user = item.get("UserData") or {}
+        out = {"ok": True, "id": item["Id"], "type": item.get("Type"), "overview": item.get("Overview") or "",
+               "title": item.get("SeriesName") if item.get("Type") == "Episode" else item.get("Name", ""),
+               "episode": " · ".join(p for p in (episode_label(item), item.get("Name")) if p)
+               if item.get("Type") == "Episode" else "",
+               "year": item.get("ProductionYear"), "genres": (item.get("Genres") or [])[:3],
+               "rating": item.get("OfficialRating") or "",
+               "runtime": (item.get("RunTimeTicks") or 0) // TICKS_PER_MINUTE,
+               "position": (user.get("PlaybackPositionTicks") or 0) // TICKS_PER_MINUTE,
+               "played": bool(user.get("Played")), "seriesId": item.get("SeriesId") or ""}
+        wide = backdrop(conf, item)
+        if wide:
+            out["backdrop"] = wide
+        return out
+    return with_jellyfin(work)
+
+
+def mark_played(item_id, played=True):
+    def work(conf, uid):
+        path = "/UserPlayedItems/%s?userId=%s" % (urllib.parse.quote(item_id), uid)
+        get(conf, path, method="POST" if played else "DELETE")
+        return {"ok": True}
+    return with_jellyfin(work)
+
+
+def show(item_id):
+    """DisplayContent on this computer's Jellyfin Desktop: its page for the item (an episode: its series)."""
+    def work(conf, uid):
+        item = get(conf, "/Items/%s?userId=%s" % (urllib.parse.quote(item_id), uid))
+        if not item:
+            return {"ok": False, "error": "no item %s" % item_id}
+        if item.get("SeriesId"):
+            item = get(conf, "/Items/%s?userId=%s" % (item["SeriesId"], uid)) or item
+        session = wait_for_desktop(conf, uid)
+        if not session:
+            return {"ok": False, "error": "Jellyfin Desktop is not connected to the server"}
+        query = urllib.parse.urlencode({"itemType": item.get("Type", ""), "itemId": item["Id"],
+                                        "itemName": item.get("Name", "")})
+        get(conf, "/Sessions/%s/Viewing?%s" % (session["Id"], query), method="POST")
+        return {"ok": True, "title": item.get("Name", "")}
+    return with_jellyfin(work)
+
+
+def stream_label(stream):
+    return stream.get("DisplayTitle") or stream.get("Language") or "track %s" % stream.get("Index")
+
+
+def pick_stream(streams, current, wanted):
+    """The stream for "next", a language, or None ("off")."""
+    if wanted == "next":
+        later = [s for s in streams if s["Index"] > (current if current is not None else -1)]
+        return later[0] if later else None  # past the last: off (subtitles) / wrap (audio, handled by caller)
+    codes = next((v for v in LANGUAGES.values() if wanted.lower() in v), (wanted.lower(),))
+    hits = [s for s in streams if (s.get("Language") or "").lower() in codes
+            or any(c in (s.get("DisplayTitle") or "").lower() for c in codes if len(c) > 3)]
+    hits.sort(key=lambda s: ("forced" in (s.get("DisplayTitle") or "").lower(), s["Index"]))  # full subs over forced
+    return hits[0] if hits else False
+
+
+def set_track(kind, wanted):
+    """kind "Subtitle" or "Audio" on what plays in this computer's Jellyfin Desktop."""
+    def work(conf, uid):
+        session = desktop_session(conf, uid)
+        now = (session or {}).get("NowPlayingItem")
+        if not now:
+            return {"ok": False, "error": "nothing is playing in Jellyfin"}
+        item = get(conf, "/Items/%s?userId=%s&fields=MediaStreams" % (now["Id"], uid)) or {}
+        streams = [s for s in item.get("MediaStreams") or [] if s.get("Type") == kind]
+        current = (session.get("PlayState") or {}).get(kind + "StreamIndex")
+        if kind == "Subtitle" and wanted == "off":
+            stream = None
+        else:
+            stream = pick_stream(streams, current, wanted)
+            if stream is None and kind == "Audio":
+                stream = streams[0] if streams else False
+            if stream is False:
+                return {"ok": False, "error": "no %s %s here" % (wanted, "subtitles" if kind == "Subtitle" else "audio")}
+        index = stream["Index"] if stream else -1
+        post_json(conf, "/Sessions/%s/Command" % session["Id"],
+                  {"Name": "Set%sStreamIndex" % kind, "Arguments": {"Index": str(index)}})
+        label = stream_label(stream) if stream else "off"
+        return {"ok": True, "label": ("Subtitles: " if kind == "Subtitle" else "Audio: ") + label}
+    return with_jellyfin(work)
+
+
 def home():
     """GoHome remote command to this computer's Jellyfin Desktop; quietly nothing when it is not running."""
     conf = settings()
@@ -499,8 +650,13 @@ def main():
     if len(sys.argv) > 2 and sys.argv[1] == "find":
         print(json.dumps(lookup(" ".join(sys.argv[2:])), ensure_ascii=False))
         return
-    if len(sys.argv) == 3 and sys.argv[1] == "play-id":
-        print(json.dumps(play_id(sys.argv[2]), ensure_ascii=False))
+    if len(sys.argv) in (3, 4) and sys.argv[1] == "play-id" and sys.argv[3:] in ([], ["--start"]):
+        print(json.dumps(play_id(sys.argv[2], from_start=sys.argv[3:] == ["--start"]), ensure_ascii=False))
+        return
+    commands = {"info": info, "played": mark_played, "unplayed": lambda i: mark_played(i, False), "show": show,
+                "subtitles": lambda w: set_track("Subtitle", w), "audio": lambda w: set_track("Audio", w)}
+    if len(sys.argv) == 3 and sys.argv[1] in commands:
+        print(json.dumps(commands[sys.argv[1]](sys.argv[2]), ensure_ascii=False))
         return
     if len(sys.argv) > 2 and sys.argv[1] == "play":
         print(json.dumps(play(" ".join(sys.argv[2:])), ensure_ascii=False))
