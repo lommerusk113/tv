@@ -585,6 +585,10 @@ FocusScope {
     GetDialog {
         id: getDialog
         onMessage: text => home.showMessage(text)
+        onChooseSeasons: item => {
+            requestDialog.ask("request:tv:" + item.tmdb + ":" + item.title, item);
+            requestDialog.showSeasons();
+        }
     }
 
     ChoiceDialog {

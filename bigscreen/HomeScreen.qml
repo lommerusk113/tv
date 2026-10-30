@@ -741,16 +741,21 @@ Item {
                 }
                 if (action.startsWith("jellyseerr_request:")) {
                     // "Get more" tile, confirmed in RequestDialog: Jellyseerr requests it (Sonarr/Radarr download it).
+                    // "jellyseerr_request:tv:<tmdb>:s1,2:<title>" = only those seasons (RequestDialog's season list)
                     const [, kind, tmdb, ...rest] = action.split(":");
+                    const chosen = /^s[0-9,]+$/.test(rest[0]) ? rest.shift().slice(1) : "";
                     const title = rest.join(":");
                     exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/jellyseerr.py")) + "' request "
-                             + (kind === "tv" ? "tv" : "movie") + " " + tmdb.replace(/[^0-9]/g, ""), data => {
+                             + (kind === "tv" ? "tv" : "movie") + " " + tmdb.replace(/[^0-9]/g, "")
+                             + (chosen ? " " + chosen : ""), data => {
                         let res = null;
                         try {
                             res = JSON.parse(data.stdout);
                         } catch (e) {}
                         if (res && res.ok) {
-                            tv.showMessage("Requested “" + title + "”");
+                            const n = chosen ? chosen.split(",").length : 0;
+                            tv.showMessage("Requested “" + title + "”"
+                                           + (n ? " (" + n + " season" + (n > 1 ? "s" : "") + ")" : ""));
                             root.runScript("jellyseerr.py", tv.reloadLive);  // the tile now says "Requested"
                         } else {
                             tv.showMessage("Could not request “" + title + "”");

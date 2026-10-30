@@ -231,6 +231,13 @@ homescreen/
                     middle near an edge. Cards: spatial navigation lands on the card's Request button (card shows its
                     details). jellyseerr.py quiet_chrome() turns off Chrome's "Save password?" bubble (unreachable with
                     the remote) in the profile's Preferences before each start.
+  Seasons (2026-10-30, user: "you need to be able to select what seasons to get"): RequestDialog for a series has
+                    "Choose seasons" (status 1) or "More seasons" (partly there / requested) -> step "seasons":
+                    `jellyseerr.py seasons <tmdb>` (state per season from mediaInfo.seasons + open requests' seasons;
+                    specials last, not pre-ticked; "All seasons" = regular requestable ones), up/down + OK ticks, the
+                    request button stays under the list -> jellyseerr_request:tv:<tmdb>:s3,4,5:<title> ->
+                    `jellyseerr.py request tv <tmdb> 3,4,5` (body seasons [3,4,5]). GetDialog (voice "download X")
+                    sends series to this list too (chooseSeasons). Not yet exercised with a real request.
   Showcase.qml      (2026-10-30) background follows the selection: on media rows (not hero/apps) Home.focusedItem's
                     "backdrop" (jellyfin.py backdrop(), jellyseerr TMDb w1280 URL; landscape rows fall back to "image")
                     fills the screen dimmed, title/subtitle/overview top-left; the focused row scrolls to showcaseTop

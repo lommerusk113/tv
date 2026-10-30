@@ -4,7 +4,11 @@
   python3 jellyseerr.py                      writes the traktMissing key into ~/.cache/tv-project/content.json:
                                              Trakt picks NOT on the server (recommend.py's trakt-missing.json) with
                                              Jellyseerr's poster, year and status; OK asks "Request X?"
-  python3 jellyseerr.py request movie|tv <tmdb id>   requests it (series: all seasons); prints {"ok", "status"}
+  python3 jellyseerr.py request movie|tv <tmdb id> [1,2,...]   requests it (series: those seasons, else all);
+                                             prints {"ok", "status"}
+  python3 jellyseerr.py seasons <tmdb id>    a series' seasons for the request window's season list: {"ok",
+                                             "seasons": [{number, name, episodes, state}]}, state "" (can be
+                                             requested), "available", "partly", "requested" or "downloading"
   python3 jellyseerr.py search <title>       films/series matching a title (voice: "play X" when X is not on the server,
                                              "download X"): {"ok", "query", "results": [{kind, tmdb, title, year,
                                              image, status, label, overview}]}, best first, max SEARCH_ITEMS
@@ -145,10 +149,10 @@ def build(conf):
         print(f"jellyseerr: wrote {update_content({'traktMissing': tiles})}")
 
 
-def request(conf, kind, tmdb):
+def request(conf, kind, tmdb, seasons=None):
     body = {"mediaType": kind, "mediaId": int(tmdb)}
     if kind == "tv":
-        body["seasons"] = "all"
+        body["seasons"] = seasons or "all"
     try:
         res = api(conf, "/request", body) or {}
     except urllib.error.HTTPError as e:
@@ -225,6 +229,27 @@ def browse(conf):
     except (urllib.error.URLError, OSError, ValueError) as e:
         print(f"jellyseerr: requests: {e}", file=sys.stderr)
     return {"ok": bool(rows), "rows": rows}
+
+
+def seasons(conf, tmdb):
+    try:
+        d = api(conf, "/tv/%s" % tmdb)
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        return {"ok": False, "error": str(e)}
+    info = d.get("mediaInfo") or {}
+    media = {s["seasonNumber"]: s.get("status") or 1 for s in info.get("seasons") or []}
+    # Seasons in an open request (1 waiting for approval, 2 approved) count as requested.
+    asked = {s["seasonNumber"] for r in info.get("requests") or [] for s in r.get("seasons") or []
+             if s.get("status") in (1, 2)}
+    out = []
+    for season in sorted(d.get("seasons") or [], key=lambda x: (x["seasonNumber"] == 0, x["seasonNumber"])):
+        number, status = season["seasonNumber"], media.get(season["seasonNumber"], 1)
+        state = {5: "available", 4: "partly", 3: "downloading", 2: "requested"}.get(status, "")
+        if not state and number in asked:
+            state = "requested"
+        out.append({"number": number, "name": "Specials" if number == 0 else "Season %d" % number,
+                    "episodes": season.get("episodeCount") or 0, "state": state})
+    return {"ok": True, "seasons": out}
 
 
 def ready(conf):
@@ -316,8 +341,13 @@ def main():
         return
     if sys.argv[1:] == ["open"]:
         open_site(conf)
-    if len(sys.argv) == 4 and sys.argv[1] == "request" and sys.argv[2] in ("movie", "tv") and sys.argv[3].isdigit():
-        print(json.dumps(request(conf, sys.argv[2], sys.argv[3])))
+    if (len(sys.argv) in (4, 5) and sys.argv[1] == "request" and sys.argv[2] in ("movie", "tv")
+            and sys.argv[3].isdigit()):
+        chosen = [int(n) for n in sys.argv[4].split(",") if n.isdigit()] if len(sys.argv) == 5 else None
+        print(json.dumps(request(conf, sys.argv[2], sys.argv[3], chosen)))
+        return
+    if len(sys.argv) == 3 and sys.argv[1] == "seasons" and sys.argv[2].isdigit():
+        print(json.dumps(seasons(conf, sys.argv[2]), ensure_ascii=False))
         return
     if len(sys.argv) >= 4 and sys.argv[1:3] == ["search", "--all"]:
         print(json.dumps(search(conf, " ".join(sys.argv[3:]), BROWSE_ITEMS), ensure_ascii=False))

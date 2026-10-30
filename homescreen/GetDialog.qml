@@ -3,7 +3,7 @@ import "."
 
 // "Not on your server": what Jellyseerr found for a title that is not on Jellyfin (voice "play X" with no match, or
 // "download X"; jellyseerr.py search). Posters left/right, OK requests the focused one through
-// Config.system("jellyseerr_request:<kind>:<tmdb>:<title>"); one on the server plays (jellyfin_play), a requested one
+// Config.system("jellyseerr_request:<kind>:<tmdb>:<title>") (a series: chooseSeasons -> RequestDialog's season list); one on the server plays (jellyfin_play), a requested one
 // says so. Back closes.
 Item {
     id: dialog
@@ -16,6 +16,7 @@ Item {
     readonly property bool anyMissing: results.some(r => r.status < 4)
 
     signal message(string text)
+    signal chooseSeasons(var item)  // a series: Home opens RequestDialog's season list for it
 
     function ask(result) {
         query = result.query || "";
@@ -42,6 +43,10 @@ Item {
                 break;
             }
             open = false;
+            if (current.kind === "tv") {
+                chooseSeasons(current);
+                break;
+            }
             const request = "jellyseerr_request:" + current.kind + ":" + current.tmdb + ":" + current.title;
             if (!(Config.system && Config.system(request)))
                 console.log("action:" + request);
@@ -191,7 +196,8 @@ Item {
             Text {
                 text: dialog.current.status >= 4 ? "OK plays it  ·  Back to close"
                       : dialog.current.status >= 2 ? "Already requested  ·  Back to close"
-                                                 : "OK downloads “" + (dialog.current.title || "") + "” (via Jellyseerr)  ·  Back to close"
+                                                 : (dialog.current.kind === "tv" ? "OK picks the seasons of “" : "OK downloads “")
+                                                   + (dialog.current.title || "") + "” (via Jellyseerr)  ·  Back to close"
                 color: Config.withAlpha(dialog.theme.colors.text, 0.6)
                 font.family: dialog.theme.font.family
                 font.pixelSize: Config.px(20)
