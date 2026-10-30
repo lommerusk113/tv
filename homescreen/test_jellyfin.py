@@ -108,7 +108,22 @@ class Mock(BaseHTTPRequestHandler):
         pass
 
 
+def test_pick_stream():
+    """Subtitle/audio choice by language and "next" (jellyfin.py subtitles/audio)."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import jellyfin
+    subs = [{"Index": 3, "Language": "eng", "DisplayTitle": "English - SUBRIP"},
+            {"Index": 4, "Language": "nor", "DisplayTitle": "Norwegian (Forced)"},
+            {"Index": 5, "Language": "nob", "DisplayTitle": "Norsk bokmål - SUBRIP"}]
+    assert jellyfin.pick_stream(subs, None, "nor")["Index"] == 5  # full subtitles before forced ones
+    assert jellyfin.pick_stream(subs, None, "english")["Index"] == 3
+    assert jellyfin.pick_stream(subs, 3, "next")["Index"] == 4
+    assert jellyfin.pick_stream(subs, 5, "next") is None  # past the last one: off
+    assert jellyfin.pick_stream(subs, None, "japanese") is False
+
+
 def main():
+    test_pick_stream()
     keep = sys.argv[sys.argv.index("--keep") + 1] if "--keep" in sys.argv else None
     server = HTTPServer(("127.0.0.1", 0), Mock)
     threading.Thread(target=server.serve_forever, daemon=True).start()

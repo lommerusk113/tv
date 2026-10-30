@@ -82,6 +82,74 @@
       "fortsett youtube",
       "fortsett youtube her",
       "youtube historikk"
+    ],
+    "sleep_timer:off": [
+      "cancel the sleep timer",
+      "cancel sleep timer",
+      "stop the sleep timer",
+      "sleep timer off",
+      "turn off the sleep timer",
+      "skru av sovetimeren",
+      "stopp sovetimeren",
+      "avbryt sovetimeren"
+    ],
+    "sleep_timer": [
+      "sleep timer",
+      "sovetimer",
+      "sovetimeren"
+    ],
+    "subtitles:off": [
+      "subtitles off",
+      "turn off subtitles",
+      "turn off the subtitles",
+      "no subtitles",
+      "undertekster av",
+      "skru av undertekster",
+      "ingen undertekster",
+      "fjern tekst"
+    ],
+    "subtitles:next": [
+      "next subtitles",
+      "change subtitles",
+      "other subtitles",
+      "bytt undertekst",
+      "neste undertekst"
+    ],
+    "subtitles:nor": [
+      "norwegian subtitles",
+      "norwegian subtitles on",
+      "subtitles in norwegian",
+      "norsk tekst",
+      "norske undertekster",
+      "norsk undertekst",
+      "tekst på norsk"
+    ],
+    "subtitles:eng": [
+      "english subtitles",
+      "english subtitles on",
+      "subtitles in english",
+      "engelsk tekst",
+      "engelske undertekster",
+      "tekst på engelsk"
+    ],
+    "audio:next": [
+      "change the language",
+      "other language",
+      "next audio track",
+      "change audio",
+      "bytt språk",
+      "bytt lydspor"
+    ],
+    "audio:eng": [
+      "english audio",
+      "english language",
+      "engelsk tale"
+    ],
+    "audio:nor": [
+      "norwegian audio",
+      "norwegian language",
+      "norsk tale",
+      "norsk lyd"
     ]
   },
   "open": [

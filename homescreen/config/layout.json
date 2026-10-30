@@ -1,5 +1,7 @@
 {
   "initialFocus": "apps",
+  "ambientMinutes": 10,
+  "stillWatchingHours": 3,
   "rows": [
     { "id": "hero", "type": "hero", "source": ["homeFeatured", "jellyfinFeatured", "featured"] },
     { "id": "apps", "title": "Your apps", "source": "apps", "style": "app" },

@@ -40,6 +40,14 @@
     "Red": {
       "button": "Red",
       "action": "moonlight_quit"
+    },
+    "Yellow": {
+      "button": "Yellow",
+      "action": "sleep_timer"
+    },
+    "Subtitle": {
+      "button": "Subtitles (list)",
+      "action": "subtitles:next"
     }
   }
 }

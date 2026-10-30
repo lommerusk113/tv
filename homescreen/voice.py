@@ -114,6 +114,22 @@ def title_request(words, conf, app, start, end):
     return " ".join(rest) or None
 
 
+SLEEP_WORDS = re.compile(r"\b(sleep|turn off|switch off|shut off|slå av|skru av|sove|sov|timer)\b")
+SLEEP_TIME = re.compile(r"\b(?:in|om|after|etter|for)\s+(\d+|an?|one|en|ei|half an?|en halv)\s*"
+                        r"(minutes?|mins?|minutter|minutt|hours?|timer?|time)\b")
+
+
+def sleep_request(text):
+    """Minutes for "turn off in 45 minutes" / "sleep timer for an hour" / "slå av om 30 minutter", else None."""
+    m = SLEEP_TIME.search(text)
+    if not m or not SLEEP_WORDS.search(text):
+        return None
+    amount = m.group(1)
+    count = 0.5 if "half" in amount or "halv" in amount else int(amount) if amount.isdigit() else 1
+    hours = m.group(2).startswith(("hour", "time"))
+    return round(count * 60) if hours or "half" in amount or "halv" in amount else int(count)
+
+
 def parse(text, conf=None, apps=None):
     """Action for a sentence, or None. "play <title> [on Jellyfin]" plays the title; otherwise app names win over the
     fixed phrases ("play youtube" opens YouTube)."""
@@ -122,6 +138,9 @@ def parse(text, conf=None, apps=None):
     text = normalize(text)
     if not text:
         return None
+    minutes = sleep_request(text)
+    if minutes:
+        return "sleep_timer:%d" % minutes
     words = text.split()
     best, best_score, start, end = best_app(words, apps)
     named = best if best and best_score >= conf.get("nameMatch", 0.75) else None

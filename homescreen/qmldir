@@ -17,3 +17,4 @@ Showcase 1.0 Showcase.qml
 AmbientMode 1.0 AmbientMode.qml
 DetailsSheet 1.0 DetailsSheet.qml
 ReadyToast 1.0 ReadyToast.qml
+SleepPrompt 1.0 SleepPrompt.qml

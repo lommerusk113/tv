@@ -32,8 +32,8 @@ API = "https://api.openai.com/v1/"
 
 # Actions the model may return: exact ones, and prefixes with free text after them.
 EXACT = {"home", "volume_up", "volume_down", "volume_mute", "tv_off", "move_to_tv", "youtube_history", "settings",
-         "weather_refresh"}
-FREE = ("jellyfin_play:", "jellyfin_search:", "youtube_search:", "request_search:")
+         "weather_refresh", "sleep_timer", "sleep_timer:off", "subtitles:off", "subtitles:next", "audio:next"}
+FREE = ("jellyfin_play:", "jellyfin_search:", "youtube_search:", "request_search:", "subtitles:", "audio:")
 # Prefixes whose value must be one of the tiles' actions (ids cannot be guessed).
 FROM_TILES = ("jellyfin_play_id:", "youtube_watch:", "moonlight_stream:", "request:", "launch_desktop:")
 
@@ -56,6 +56,9 @@ action is ONE of these, or null:
 - request_search:<title>           a film/series that is NOT in the library (or "download/request/get X"): shows
                                    what can be downloaded with that title
 - launch_desktop:<desktop id>      open an installed desktop app tile
+- sleep_timer:<minutes> / sleep_timer:off   turn the TV off after that many minutes / cancel it
+- subtitles:<off|next|language>    subtitles of what plays in Jellyfin (language as an English name: norwegian...)
+- audio:<next|language>            audio track of what plays in Jellyfin
 
 "library" is the COMPLETE list of films and series on the Jellyfin server (nothing else is there): when the words SOUND like one of them ("mobile and" ->
 MobLand, "mot i brystet" -> Mot i brøstet), play it (its tile action if it has a tile, else jellyfin_play:<exact name>). "Play X"
@@ -165,6 +168,8 @@ def allowed(action, ctx):
         return True
     if action.startswith("launch:"):
         return action[7:] in {a["id"] for a in ctx["apps"]}
+    if action.startswith("sleep_timer:"):
+        return action[12:].isdigit() and 0 < int(action[12:]) <= 600
     if action.startswith(FROM_TILES):
         return any(t.get("action") == action for row in ctx["tiles"].values() for t in row)
     return False

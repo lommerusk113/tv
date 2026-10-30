@@ -11,7 +11,10 @@
   python3 media.py youtube-history   open the YouTube account's watch history (newest first) to pick from
   python3 media.py youtube-watch <id>  play that YouTube video in VacuumTube (tiles of the "New from your channels" row)
   python3 media.py youtube <query>   open YouTube's search results for the query in VacuumTube (started if needed)
+  python3 media.py status            {"playing": bool, "player": identity, "position": seconds | null} of the player
+                                     that is playing (the sleep timer's "Still watching?" check)
 """
+import json
 import re
 import subprocess
 import sys
@@ -59,6 +62,17 @@ def pause(keep=None):
             print("paused", player[len(MPRIS):])
 
 
+def status():
+    for player in players():
+        state = gdbus(player, "org.freedesktop.DBus.Properties.Get", "org.mpris.MediaPlayer2.Player", "PlaybackStatus")
+        if "Playing" not in state.stdout:
+            continue
+        pos = gdbus(player, "org.freedesktop.DBus.Properties.Get", "org.mpris.MediaPlayer2.Player", "Position").stdout
+        m = re.search(r"(-?\d+)", pos)
+        return {"playing": True, "player": identity(player), "position": int(m.group(1)) / 1e6 if m else None}
+    return {"playing": False, "player": "", "position": None}
+
+
 def running(flatpak_id):
     res = subprocess.run(["flatpak", "ps", "--columns=application"], capture_output=True, text=True, timeout=10)
     return flatpak_id in res.stdout.split()
@@ -99,6 +113,8 @@ def main():
         pause()
     elif sys.argv[1:2] == ["leave"] and len(sys.argv) <= 3:
         leave(sys.argv[2] if len(sys.argv) == 3 else None)
+    elif sys.argv[1:] == ["status"]:
+        print(json.dumps(status()))
     elif sys.argv[1:] == ["youtube-home"]:
         youtube_home()
     elif sys.argv[1:2] == ["youtube-watch"] and len(sys.argv) == 3:

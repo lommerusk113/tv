@@ -54,6 +54,10 @@ Item {
         target: Shortcuts
         function onToggleHomeScreen() {
             textEntry.open = false;
+            if (sleepPrompt.open) {  // a button was pressed: keep watching
+                sleepPrompt.open = false;
+                sleepPrompt.kept();
+            }
             root.cancelStream();  // Home while a stream starts: give up on it (media.py leave closes Moonlight)
             root.leaveApps(""); // like a TV box: going home pauses, and apps start from their start page next time
             tv.goHome();
@@ -231,6 +235,108 @@ Item {
         }
     }
 
+    // A short message wherever you are: on the home screen, or in the overlay card over an app.
+    function notify(text) {
+        if (root.windowActive)
+            tv.showMessage(text);
+        else
+            appVoice.show("message", text);
+    }
+
+    // Sleep timer: the yellow button steps through 15/30/60/90 minutes and off; voice sets any length ("turn off in
+    // 45 minutes" = sleep_timer:45). The last minute is a countdown (SleepPrompt) that any button stops; at 0 the
+    // video pauses and the TV turns off. "Still watching?" does the same after layout.json "stillWatchingHours"
+    // (default 3, 0 = never) of playing without a pause or a jump: media.py status every minute, because KDE on
+    // Wayland gives no idle time to read. A new episode starting by itself counts as untouched.
+    property real sleepAt: 0
+    property int playedUntouched: 0   // seconds
+    property var lastPlay: null       // {position, at} of the previous check
+    property string promptReason: ""  // "sleep" or "still"
+    readonly property var sleepSteps: [15, 30, 60, 90]
+
+    function setSleep(minutes) {
+        sleepPrompt.open = false;
+        sleepAt = minutes > 0 ? Date.now() + minutes * 60000 : 0;
+        notify(minutes > 0 ? "The TV turns off in " + minutes + " min" : "Sleep timer off");
+    }
+
+    function stepSleep() {
+        const left = sleepAt ? Math.round((sleepAt - Date.now()) / 60000) : 0;
+        setSleep(sleepSteps.find(m => m > left + 1) || 0);
+    }
+
+    function goToSleep() {
+        sleepAt = 0;
+        playedUntouched = 0;
+        root.runScript("media.py pause", () => root.runScript("tvpower.py off", () => {}));
+    }
+
+    Timer {
+        interval: 1000
+        repeat: true
+        running: root.sleepAt > 0 && !sleepPrompt.open
+        onTriggered: {
+            const left = root.sleepAt - Date.now();
+            if (left > 60000)
+                return;
+            root.promptReason = "sleep";
+            root.sleepAt = 0;
+            sleepPrompt.show("Turning off the TV", Math.max(1, Math.ceil(left / 1000)));
+        }
+    }
+
+    Timer {
+        interval: 60000
+        repeat: true
+        running: (Config.layout && Config.layout.stillWatchingHours !== undefined ? Config.layout.stillWatchingHours : 3) > 0
+        onTriggered: Config.scriptQuery && Config.scriptQuery("media", ["status"], st => {
+            const now = Date.now();
+            if (!st || !st.playing || st.position === null) {
+                root.playedUntouched = 0;
+                root.lastPlay = null;
+                return;
+            }
+            const last = root.lastPlay;
+            const elapsed = last ? (now - last.at) / 1000 : 0;
+            const steady = last && (Math.abs(st.position - last.position - elapsed) < 30 || st.position < 90);
+            root.playedUntouched = steady ? root.playedUntouched + elapsed : 0;
+            root.lastPlay = { position: st.position, at: now };
+            const hours = Config.layout.stillWatchingHours !== undefined ? Config.layout.stillWatchingHours : 3;
+            if (root.playedUntouched >= hours * 3600 && !sleepPrompt.open) {
+                root.promptReason = "still";
+                sleepPrompt.show("Still watching?", 60);
+            }
+        })
+    }
+
+    Window {
+        id: sleepWindow
+        LayerShell.Window.scope: "tv-sleep"
+        LayerShell.Window.layer: LayerShell.Window.LayerOverlay
+        LayerShell.Window.anchors: LayerShell.Window.AnchorBottom
+        LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityExclusive
+        LayerShell.Window.exclusionZone: -1
+        width: Config.px(1100)
+        height: Config.px(420)
+        color: "transparent"
+        flags: Qt.FramelessWindowHint
+        visible: sleepPrompt.showing
+        onVisibleChanged: if (visible) requestActivate()
+
+        SleepPrompt {
+            id: sleepPrompt
+            anchors.fill: parent
+            focus: true
+            Keys.onPressed: event => key(event)
+            onKept: {
+                if (root.promptReason === "sleep")
+                    root.notify("Sleep timer off");
+                root.playedUntouched = 0;
+            }
+            onExpired: root.goToSleep()
+        }
+    }
+
     // "Ready to watch": every 5 minutes, requests that became available (jellyseerr.py ready) slide in as a card at
     // the top right, over apps too (an overlay window that never takes the keyboard).
     function checkReady() {
@@ -274,6 +380,10 @@ Item {
     function waitForRemote() {
         exec.run("python3 '" + localPath(Qt.resolvedUrl("tv/remote.py")) + "' wait", data => {
             const action = data.stdout.trim();
+            if (action && sleepPrompt.open) {  // any remote button keeps watching (and still does its job)
+                sleepPrompt.open = false;
+                sleepPrompt.kept();
+            }
             if (action.startsWith("keyboard:")) { // OK on a text field in an app (osk.py watch)
                 const [, app, field] = action.match(/^keyboard:([^:]+):(.*)$/) || [];
                 try {
@@ -702,6 +812,16 @@ Item {
                             play();
                         });
                     }
+                } else if (action === "sleep_timer") {  // yellow button
+                    root.stepSleep();
+                } else if (action.startsWith("sleep_timer:")) {  // voice: minutes or "off"
+                    root.setSleep(parseInt(action.slice(12)) || 0);
+                } else if (action.startsWith("subtitles:") || action.startsWith("audio:")) {
+                    // What plays in Jellyfin (voice "Norwegian subtitles", the remote's subtitle button)
+                    const [kind, wanted] = action.split(":");
+                    Config.scriptQuery("jellyfin", [kind, wanted], r => root.notify(
+                        r && r.ok ? r.label : r && r.error ? r.error.charAt(0).toUpperCase() + r.error.slice(1)
+                                                           : "Could not change it"));
                 } else if (action === "check_ready") {  // the "ready to watch" check now, instead of in 5 minutes
                     root.checkReady();
                 } else if (action === "refresh_rows") {  // after "Mark as watched": Continue watching changes
