@@ -57,6 +57,13 @@ python3 "$repo/homescreen/remote.py" install  # remote buttons that work inside 
 have_flatpak org.jellyfin.JellyfinDesktop && "$repo/scripts/install-jellyfin-debug.sh"
 have_flatpak rocks.shy.VacuumTube && "$repo/scripts/install-youtube-debug.sh"
 
+# No mouse pointer on the TV: KWin's Hide Cursor effect (hidden on any key press, i.e. the remote, and after 2 s
+# without mouse movement). Plasma setting, also in the normal desktop session.
+kwriteconfig6 --file kwinrc --group Plugins --key hidecursorEnabled true
+kwriteconfig6 --file kwinrc --group Effect-hidecursor --key HideOnTyping true
+kwriteconfig6 --file kwinrc --group Effect-hidecursor --key InactivityDuration 2
+qdbus org.kde.KWin /Effects org.kde.kwin.Effects.loadEffect hidecursor >/dev/null 2>&1 || true
+
 echo "== Optional"
 if ask "Strong RemoteG20 remote: remap its buttons (needs your password once)?"; then
     "$repo/scripts/install-remote-keys.sh"

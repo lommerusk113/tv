@@ -483,6 +483,9 @@ an unknown key name and an unknown app id.
   Screen lock off (kscreenlockerrc Autolock/LockOnResume=false; needs `qdbus org.freedesktop.ScreenSaver /ScreenSaver
   configure` to take effect). Autologin into Bigscreen: scripts/install-autologin.sh (Plasma Login Manager drop-in;
   user runs it).
+- Mouse pointer hidden (2026-10-30, user asked): KWin effect "hidecursor" on in ~/.config/kwinrc ([Plugins]
+  hidecursorEnabled, [Effect-hidecursor] HideOnTyping=true, InactivityDuration=2), loaded live with
+  `qdbus org.kde.KWin /Effects org.kde.kwin.Effects.loadEffect hidecursor`; scripts/install.sh does the same.
 - Remap: scripts/remote/70-strong-remote.hwdb → /etc/udev/hwdb.d (scripts/install-remote-keys.sh, pkexec). Afterwards the
   remote must reconnect (turn off/on, or `bluetoothctl disconnect`, then press a key): libinput drops keys the device did
   not declare when it appeared (PROG1-4).
