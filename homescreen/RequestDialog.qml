@@ -215,8 +215,9 @@ Item {
 
             Text {
                 width: parent.width
-                text: ({ 2: "Requested", 3: "Downloading", 4: "Partly on your server", 5: "On your server" }[dialog.status]
-                       || "Not on your server") + " · " + (dialog.kind === "tv" ? "Series" : "Film")
+                text: (dialog.item.downloading ? "Downloading"
+                       : { 2: "Requested", 3: "Requested", 4: "Partly on your server", 5: "On your server" }[dialog.status]
+                         || "Not on your server") + " · " + (dialog.kind === "tv" ? "Series" : "Film")
                       + (dialog.item.meta && dialog.item.meta.match(/\d{4}/) ? " · " + dialog.item.meta.match(/\d{4}/)[0] : "")
                 color: dialog.theme.colors.accent
                 font.family: dialog.theme.font.family

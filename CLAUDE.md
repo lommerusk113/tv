@@ -231,6 +231,11 @@ homescreen/
                     middle near an edge. Cards: spatial navigation lands on the card's Request button (card shows its
                     details). jellyseerr.py quiet_chrome() turns off Chrome's "Save password?" bubble (unreachable with
                     the remote) in the profile's Preferences before each start.
+  Jellyseerr labels/owner (2026-10-30, user: requests from other accounts, "downloading when it should say
+                    requested"): media status 3 ("processing") = "Requested"; "Downloading" only with
+                    mediaInfo.downloadStatus (details() caches it as "downloading"). "Your requests" and `ready` use
+                    /request?requestedBy=<my_user>: the Jellyseerr user whose jellyfinUsername/displayName is secrets
+                    jellyfin.user, else /auth/me (the API key is the admin's and sees everyone's requests).
   Seasons (2026-10-30, user: "you need to be able to select what seasons to get"): RequestDialog for a series has
                     "Choose seasons" (status 1) or "More seasons" (partly there / requested) -> step "seasons":
                     `jellyseerr.py seasons <tmdb>` (state per season from mediaInfo.seasons + open requests' seasons;

@@ -53,8 +53,31 @@ TMDB_BACKDROPS = "https://image.tmdb.org/t/p/w1280"
 STATUS_AGE = 3600
 DETAILS_AGE = 86400
 # Jellyseerr media status: 1 unknown, 2 pending, 3 processing, 4 partially available, 5 available, 6 blacklisted
-LABEL = {2: "Requested", 3: "Downloading", 4: "Partly on the server", 5: "On the server"}
-SHORT_LABEL = {2: "Requested", 3: "Downloading", 4: "✓ Partly there", 5: "✓ On your server"}
+# 3 is Jellyseerr's "processing" (accepted, Sonarr/Radarr looking for it): still "Requested" to us. "Downloading" only
+# when Jellyseerr reports a download in progress (mediaInfo.downloadStatus).
+LABEL = {2: "Requested", 3: "Requested", 4: "Partly on the server", 5: "On the server"}
+SHORT_LABEL = {2: "Requested", 3: "Requested", 4: "✓ Partly there", 5: "✓ On your server"}
+
+
+def downloading(media_info):
+    return bool((media_info or {}).get("downloadStatus") or (media_info or {}).get("downloadStatus4k"))
+
+
+def label(status, busy=False, short=False):
+    if busy and status < 5:
+        return "Downloading"
+    return (SHORT_LABEL if short else LABEL).get(status, "")
+
+
+def my_user(conf):
+    """Jellyseerr id of the person this TV belongs to: the user whose Jellyfin name is secrets jellyfin.user, else
+    the API key's owner. "Your requests" and the "ready" card only show theirs (the key is often an admin's)."""
+    wanted = ((secrets().get("jellyfin") or {}).get("user") or "").lower()
+    if wanted:
+        for user in api(conf, "/user?take=500").get("results") or []:
+            if wanted in ((user.get("jellyfinUsername") or "").lower(), (user.get("displayName") or "").lower()):
+                return user["id"]
+    return (api(conf, "/auth/me") or {}).get("id")
 
 
 def settings():
@@ -87,7 +110,7 @@ def details(conf, kind, tmdb, cache):
     cache[key] = {"title": d.get("title") or d.get("name") or "", "year": date[:4], "poster": d.get("posterPath"),
                   "status": (d.get("mediaInfo") or {}).get("status") or 1, "fetched": now, "checked": now,
                   "trailer": trailer(d), "overview": (d.get("overview") or "")[:400],
-                  "backdrop": d.get("backdropPath") or ""}
+                  "backdrop": d.get("backdropPath") or "", "downloading": downloading(d.get("mediaInfo"))}
     return cache[key]
 
 
@@ -102,7 +125,7 @@ def trailer(d):
 
 
 def tile(kind, tmdb, info):
-    status = LABEL.get(info["status"])
+    status = label(info["status"], info.get("downloading"))
     out = {
         "id": "seerr-%s-%s" % (kind, tmdb),
         "title": info["title"],
@@ -172,13 +195,13 @@ def request(conf, kind, tmdb, seasons=None):
     return {"ok": True, "status": res.get("status")}
 
 
-def browse_tile(kind, tmdb, title, date, poster, status, overview="", wide=""):
+def browse_tile(kind, tmdb, title, date, poster, status, overview="", wide="", busy=False):
     """A poster tile for SeerrPage / search: OK = request:<kind>:<tmdb>:<title> (RequestDialog)."""
-    label = LABEL.get(status, "")
     return {"id": "seerr-%s-%s" % (kind, tmdb), "kind": kind, "tmdb": tmdb, "title": title, "year": date[:4],
-            "status": status, "label": label,
+            "status": status, "label": label(status, busy), "downloading": busy and status < 5,
             # under a poster there is room for about 20 characters: the status alone when it has one
-            "meta": SHORT_LABEL.get(status) or " · ".join(p for p in ("Series" if kind == "tv" else "Film", date[:4]) if p),
+            "meta": label(status, busy, short=True)
+                    or " · ".join(p for p in ("Series" if kind == "tv" else "Film", date[:4]) if p),
             "overview": (overview or "")[:400], "image": TMDB_POSTERS + poster if poster else "",
             "colors": colors("%s-%s" % (kind, tmdb)), "action": "request:%s:%s:%s" % (kind, tmdb, title),
             "backdrop": TMDB_BACKDROPS + wide if wide else ""}
@@ -190,7 +213,8 @@ def result_tile(r):
         return None
     return browse_tile(r["mediaType"], r["id"], r.get("title") or r.get("name") or "",
                        r.get("releaseDate") or r.get("firstAirDate") or "", r["posterPath"],
-                       (r.get("mediaInfo") or {}).get("status") or 1, r.get("overview"), r.get("backdropPath"))
+                       (r.get("mediaInfo") or {}).get("status") or 1, r.get("overview"), r.get("backdropPath"),
+                       downloading(r.get("mediaInfo")))
 
 
 def browse(conf):
@@ -204,9 +228,11 @@ def browse(conf):
         items = [t for t in map(result_tile, res.get("results") or []) if t][:BROWSE_ITEMS]
         if items:
             rows.append({"id": row_id, "title": title, "items": items})
-    # Your requests, newest first (the request list has no titles: details() fills them in, cached a day).
+    # Your requests (this TV's user, my_user), newest first (the request list has no titles: details() fills them in,
+    # cached a day; its download state too, so "Downloading" can be an hour late).
     try:
-        requests = api(conf, "/request?take=%d&skip=0&sort=added&filter=all" % BROWSE_ITEMS).get("results") or []
+        requests = api(conf, "/request?take=%d&skip=0&sort=added&filter=all&requestedBy=%s"
+                       % (BROWSE_ITEMS, my_user(conf))).get("results") or []
         cache = json.loads(DETAILS.read_text()) if DETAILS.exists() else {}
         items = []
         for req in requests:
@@ -220,7 +246,7 @@ def browse(conf):
                 continue
             status = media.get("status") or info["status"]
             tile = browse_tile(kind, tmdb, info["title"], info["year"], info.get("poster"), status, info.get("overview"),
-                               info.get("backdrop"))
+                               info.get("backdrop"), info.get("downloading"))
             tile["trailer"] = info.get("trailer") or ""
             items.append(tile)
         DETAILS.write_text(json.dumps(cache))
@@ -244,7 +270,7 @@ def seasons(conf, tmdb):
     out = []
     for season in sorted(d.get("seasons") or [], key=lambda x: (x["seasonNumber"] == 0, x["seasonNumber"])):
         number, status = season["seasonNumber"], media.get(season["seasonNumber"], 1)
-        state = {5: "available", 4: "partly", 3: "downloading", 2: "requested"}.get(status, "")
+        state = {5: "available", 4: "partly", 3: "requested", 2: "requested"}.get(status, "")
         if not state and number in asked:
             state = "requested"
         out.append({"number": number, "name": "Specials" if number == 0 else "Season %d" % number,
@@ -255,7 +281,8 @@ def seasons(conf, tmdb):
 def ready(conf):
     """Requests whose media went to available (5), or partly available (4, e.g. a new season), since last time."""
     try:
-        requests = api(conf, "/request?take=50&skip=0&sort=modified&filter=all").get("results") or []
+        requests = api(conf, "/request?take=50&skip=0&sort=modified&filter=all&requestedBy=%s"
+                       % my_user(conf)).get("results") or []
     except (urllib.error.URLError, OSError, ValueError) as e:
         return {"ok": False, "error": str(e)}
     try:
