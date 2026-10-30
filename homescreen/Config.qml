@@ -22,6 +22,7 @@ QtObject {
     property var appOrder: []         // app ids in the order the user moved them to (~/.config/tv-project/app-order.json)
     property var seerrQuery: null     // function(args, callback(json | null)): jellyseerr.py <args> (Jellyseerr page)
     property var scriptQuery: null    // function(script, args, callback(json | null)): any helper's JSON (Bigscreen)
+    property var appBadges: ({})      // app id -> short status on its tile ("● Steam running", "Server offline")
     property bool homeActive: true    // Bigscreen: the home screen is the active window (not an app in front)
 
     property var actionRunner: null   // function(action); set by Home.qml (its runAction), for tiles with an "action"

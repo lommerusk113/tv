@@ -150,6 +150,27 @@
       "norwegian language",
       "norsk tale",
       "norsk lyd"
+    ],
+    "stream_profile:Best picture": [
+      "stream in 4k",
+      "4k streaming",
+      "best picture",
+      "best quality streaming"
+    ],
+    "stream_profile:Low latency": [
+      "low latency",
+      "low latency mode",
+      "stream at 120"
+    ],
+    "stream_profile:Balanced": [
+      "normal streaming",
+      "balanced streaming",
+      "normal quality"
+    ],
+    "stream_profile:Save bandwidth": [
+      "save bandwidth",
+      "low bandwidth",
+      "stream in 1080"
     ]
   },
   "open": [

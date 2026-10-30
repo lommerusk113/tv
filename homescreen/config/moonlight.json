@@ -1,5 +1,5 @@
 {
-  "comment": "Moonlight game streaming (Sunshine, Apollo or Wolf). host: the gaming PC's name or IP, filled in by `moonlight.py pair` (saved in ~/.config/tv-project/moonlight.json); empty = the Moonlight tile just opens Moonlight. tileApp: the host app the Moonlight tile streams (Sunshine: Desktop; Wolf: Wolf UI). options are passed to `moonlight stream`. bootSeconds: per app, how long the loading screen stays after a fresh start. keepRunningMinutes: after Home the app keeps running on the host this long, then it is quit; -1 = never (e.g. a server-side watchdog such as scripts/server/wolf-idle-watchdog.sh decides). Change any of it in ~/.config/tv-project/moonlight.json.",
+  "comment": "Moonlight game streaming (Sunshine, Apollo or Wolf). host: the gaming PC's name or IP, filled in by `moonlight.py pair` (saved in ~/.config/tv-project/moonlight.json); empty = the Moonlight tile just opens Moonlight. tileApp: the host app the Moonlight tile streams (Sunshine: Desktop; Wolf: Wolf UI). options are passed to `moonlight stream`. bootSeconds: per app, how long the loading screen stays after a fresh start. keepRunningMinutes: after Home the app keeps running on the host this long, then it is quit; -1 = never (e.g. a server-side watchdog such as scripts/server/wolf-idle-watchdog.sh decides). Change any of it in ~/.config/tv-project/moonlight.json. profiles: stream quality presets (Moonlight options added after \"options\"); profile: the one in use (Settings > Game streaming, or voice \"stream in 4K\").",
   "host": "",
   "tileApp": "Desktop",
   "options": [
@@ -14,5 +14,27 @@
   "bootSeconds": {
     "Steam": 24
   },
-  "keepRunningMinutes": 30
+  "keepRunningMinutes": 30,
+  "profile": "Balanced",
+  "profiles": {
+    "Balanced": [],
+    "Best picture": [
+      "--4K",
+      "--bitrate",
+      "80000",
+      "--frame-pacing"
+    ],
+    "Low latency": [
+      "--1080",
+      "--fps",
+      "120",
+      "--no-vsync",
+      "--no-frame-pacing"
+    ],
+    "Save bandwidth": [
+      "--1080",
+      "--bitrate",
+      "15000"
+    ]
+  }
 }

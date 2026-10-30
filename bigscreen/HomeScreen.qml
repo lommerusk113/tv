@@ -337,6 +337,22 @@ Item {
         }
     }
 
+    // The game server's state on the Steam and Moonlight tiles (moonlight.py status): "● Steam running" (OK resumes
+    // in a few seconds) or "Server offline"; nothing while it is ready. On activation and every minute meanwhile.
+    function checkServer() {
+        Config.scriptQuery && Config.scriptQuery("moonlight", ["status"], r => {
+            const badge = !r || !r.ok ? "" : !r.reachable ? "Server offline" : r.running ? "● " + r.running + " running" : "";
+            Config.appBadges = badge ? { steam: badge, moonlight: badge } : {};
+        });
+    }
+    Timer {
+        interval: 60000
+        repeat: true
+        running: root.windowActive
+        triggeredOnStart: true
+        onTriggered: root.checkServer()
+    }
+
     // Low batteries (game controllers, the remote): a message once when one is at 15 % or less, over a game too;
     // again only after it has been charged above 30 %.
     property var lowWarned: ({})
@@ -846,6 +862,9 @@ Item {
                     Config.scriptQuery("jellyfin", [kind, wanted], r => root.notify(
                         r && r.ok ? r.label : r && r.error ? r.error.charAt(0).toUpperCase() + r.error.slice(1)
                                                            : "Could not change it"));
+                } else if (action.startsWith("stream_profile:")) {  // voice "stream in 4K", Settings
+                    Config.scriptQuery("moonlight", ["profile", action.slice(15)], r => root.notify(
+                        r && r.ok ? "Game streaming: " + r.profile : "No streaming profile called " + action.slice(15)));
                 } else if (action === "check_ready") {  // the "ready to watch" check now, instead of in 5 minutes
                     root.checkReady();
                 } else if (action === "refresh_rows") {  // after "Mark as watched": Continue watching changes

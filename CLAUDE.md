@@ -231,6 +231,37 @@ homescreen/
                     middle near an edge. Cards: spatial navigation lands on the card's Request button (card shows its
                     details). jellyseerr.py quiet_chrome() turns off Chrome's "Save password?" bubble (unreachable with
                     the remote) in the profile's Preferences before each start.
+  Showcase.qml      (2026-10-30) background follows the selection: on media rows (not hero/apps) Home.focusedItem's
+                    "backdrop" (jellyfin.py backdrop(), jellyseerr TMDb w1280 URL; landscape rows fall back to "image")
+                    fills the screen dimmed, title/subtitle/overview top-left; the focused row scrolls to showcaseTop
+                    (440 px) and rows above it fade. Items compared by id (rows hand out copies).
+  AmbientMode.qml   after layout.json "ambientMinutes" (10; 0 = off) idle on the home screen (Config.homeActive,
+                    atHomeLevel): Ken Burns cross-fade of every tile backdrop + banner, big clock/weather; the first key
+                    only wakes it.
+  DetailsSheet.qml  ⓘ (keymap "options": Info / evdev:358) on a media tile: jellyfin.py info -> episode, year, genres,
+                    runtime, "Ends at", progress, plot; Resume / Start over (jellyfin_play_id:<id>:start -> play-id
+                    --start) / Go to series (jellyfin_show:<id> -> server DisplayContent) / Mark as (un)watched (then
+                    refresh_rows). request: tiles open RequestDialog; others a simple Play page. Config.scriptQuery
+                    (HomeScreen) runs any helper and returns its JSON. Don't name properties left/top (FINAL on Item).
+  ReadyToast.qml    jellyseerr.py ready (every 5 min + check_ready action): requests whose media went to 4/5 since
+                    READY_STATE (first run only records) -> poster card top-right in a layer-shell window (over apps).
+                    Window visibility must follow a plain property (toast.showing), not the item's `visible`.
+  SleepPrompt.qml   sleep timer (Yellow = sleep_timer: 15/30/60/90/off; voice sleep_timer:<min>, voice.py
+                    sleep_request) and "Still watching?" (layout.json "stillWatchingHours" 3: media.py status every
+                    minute, steady position or a new item < 90 s counts as untouched; KDE/Wayland has no idle time:
+                    GetSessionIdleTime NotSupported, logind IdleSinceHint 0). Last minute = countdown in an exclusive-
+                    keyboard overlay; any key/remote action keeps watching; 0 -> media.py pause + tvpower.py off.
+                    Subtitles/audio: subtitles:<off|next|lang>, audio:<next|lang> (voice, Subtitle button) ->
+                    jellyfin.py set_track = server Sessions/<id>/Command SetSubtitleStreamIndex/SetAudioStreamIndex.
+  Controllers       system.py controllers (js* input devices + UPower batteries, the remote too): Settings >
+                    Controllers (pairing hints -> Bluetooth search), low-battery message (<= 15 %, again after > 30 %)
+                    every 2 min, chips on LoadingScreen. icons/settings/gamepad.svg = breeze-dark input-gamepad.
+  Game streaming    moonlight.json "profiles" (Balanced, Best picture, Low latency, Save bandwidth; options appended
+                    after "options", Moonlight takes the last value) + "profile" (Settings > Game streaming, voice
+                    stream_profile:<name>). moonlight.py status = paired HTTPS serverinfo (:47984) with Moonlight's own
+                    client cert from Moonlight.conf (temp file 600, deleted): currentgame -> app name (only real when
+                    paired; plain HTTP says 0). HomeScreen: badge on steam/moonlight tiles (Config.appBadges) every
+                    minute while active. Wolf idle -> currentgame 0.
   jellyfin_nav.py   `search <text>`: Jellyfin's search page with the text typed in (voice "search for X")
   location.py       weather location without GPS (user chose BeaconDB, 2026-10-29): nearby Wi-Fi BSSIDs (nmcli) +
                     considerIp to api.beacondb.net; BeaconDB did not know the home networks yet, so it is the IP

@@ -25,6 +25,14 @@ the TV itself switching on and off with the PC.
   by voice. It finds the TV again if its address changes.
 - **Settings for the couch**: Wi-Fi, Bluetooth pairing, display resolution and scale (with auto-revert), volume,
   power.
+- **Like a real TV platform**: the screen's background follows what you select (its picture, title and plot);
+  ⓘ opens details with Resume, Start over, Go to series and Mark as watched; ambient mode after 10 idle minutes;
+  a "Ready to watch" card when something you requested arrives; a sleep timer on the yellow button ("turn off in 45
+  minutes") and "Still watching?" after hours of untouched playback; subtitles and audio by voice ("Norwegian
+  subtitles") or the subtitle button.
+- **Gaming**: controllers in Settings (pairing, battery levels), a low-battery warning over games, the connected
+  controllers on the loading screen, stream quality profiles (best picture, low latency...) and a badge on the Steam
+  tile when a game is still running on the server.
 - **Little things**: sound follows the TV over HDMI, the weather (MET Norway) in the corner, recommendations from
   Trakt that change every few hours, Back on Jellyfin's start page returns home.
 

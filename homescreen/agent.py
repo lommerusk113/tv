@@ -33,7 +33,8 @@ API = "https://api.openai.com/v1/"
 # Actions the model may return: exact ones, and prefixes with free text after them.
 EXACT = {"home", "volume_up", "volume_down", "volume_mute", "tv_off", "move_to_tv", "youtube_history", "settings",
          "weather_refresh", "sleep_timer", "sleep_timer:off", "subtitles:off", "subtitles:next", "audio:next"}
-FREE = ("jellyfin_play:", "jellyfin_search:", "youtube_search:", "request_search:", "subtitles:", "audio:")
+FREE = ("jellyfin_play:", "jellyfin_search:", "youtube_search:", "request_search:", "subtitles:", "audio:",
+        "stream_profile:")
 # Prefixes whose value must be one of the tiles' actions (ids cannot be guessed).
 FROM_TILES = ("jellyfin_play_id:", "youtube_watch:", "moonlight_stream:", "request:", "launch_desktop:")
 
@@ -59,6 +60,7 @@ action is ONE of these, or null:
 - sleep_timer:<minutes> / sleep_timer:off   turn the TV off after that many minutes / cancel it
 - subtitles:<off|next|language>    subtitles of what plays in Jellyfin (language as an English name: norwegian...)
 - audio:<next|language>            audio track of what plays in Jellyfin
+- stream_profile:<Balanced|Best picture|Low latency|Save bandwidth>   game streaming quality
 
 "library" is the COMPLETE list of films and series on the Jellyfin server (nothing else is there): when the words SOUND like one of them ("mobile and" ->
 MobLand, "mot i brystet" -> Mot i brøstet), play it (its tile action if it has a tile, else jellyfin_play:<exact name>). "Play X"

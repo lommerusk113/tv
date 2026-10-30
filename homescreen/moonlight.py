@@ -10,6 +10,11 @@
   python3 moonlight.py stop            Home: closes Moonlight now and quits the app on the host after
                                        keepRunningMinutes (config; at least 10 s); a new start in between cancels that
   python3 moonlight.py wake            mouse wiggle into the stream (wakes Steam's screensaver; done after a start)
+  python3 moonlight.py status          {"ok", "reachable", "running" (app name or ""), "profile", "profiles"}: the Steam
+                                       tile's badge and Settings (a paired HTTPS serverinfo, with Moonlight's own
+                                       client certificate, so the host tells which app runs)
+  python3 moonlight.py profile <name>  stream quality from now on (config "profiles": options added to "options"),
+                                       saved in ~/.config/tv-project/moonlight.json
   python3 moonlight.py quit            ends the stream on this computer (Ctrl+Alt+Shift+Q via ydotool, the remote's
                                        exit button); the game keeps running on the PC
 
@@ -17,7 +22,12 @@ Moonlight is the Flatpak com.moonlight_stream.Moonlight (CLI: list/stream/pair/q
 """
 import json
 import os
+import re
+import ssl
 import subprocess
+import tempfile
+import urllib.request
+import uuid
 import sys
 import time
 from pathlib import Path
@@ -62,7 +72,9 @@ def stream(app=None, wait=False):
         sys.exit("moonlight: no host paired yet (moonlight.py pair <host> <pin>)")
     LOG.parent.mkdir(parents=True, exist_ok=True)
     cancel_pending_stop()
-    command = MOONLIGHT + ["stream", conf["host"], app or conf.get("tileApp", "Desktop")] + conf.get("options", [])
+    # The quality profile comes after "options": Moonlight takes the last value of an option given twice.
+    command = (MOONLIGHT + ["stream", conf["host"], app or conf.get("tileApp", "Desktop")] + conf.get("options", [])
+               + conf.get("profiles", {}).get(conf.get("profile", ""), []))
 
     def launch():
         with open(LOG, "w") as log:
@@ -168,6 +180,75 @@ def cancel_pending_stop():
     PENDING_STOP.unlink(missing_ok=True)
 
 
+MOONLIGHT_CONF = (Path.home() / ".var/app/com.moonlight_stream.Moonlight/config/Moonlight Game Streaming Project"
+                  / "Moonlight.conf")
+
+
+def moonlight_settings():
+    """Moonlight's client certificate, key, unique id and the host's app ids -> names, from its Qt settings file."""
+    text = MOONLIGHT_CONF.read_text()
+
+    def pem(key):
+        m = re.search(r'^%s="?@ByteArray\((.*?)\)"?$' % key, text, re.M)
+        return m.group(1).replace("\\n", "\n").encode() if m else None
+    apps = {}
+    for num, value in re.findall(r"^\d+\\apps\\(\d+)\\id=(\d+)$", text, re.M):
+        name = re.search(r"^\d+\\apps\\%s\\name=(.*)$" % num, text, re.M)
+        apps[value] = name.group(1) if name else value
+    unique = re.search(r"^uniqueid=(\w+)$", text, re.M)
+    return pem("certificate"), pem("key"), unique.group(1) if unique else "0123456789ABCDEF", apps
+
+
+def serverinfo(host, timeout=4):
+    """The host's serverinfo XML over paired HTTPS (state and currentgame are only real there); plain HTTP when
+    Moonlight's certificate cannot be read. The key is written to a private temporary file for ssl and deleted."""
+    query = "?uniqueid=%s&uuid=%s"
+    try:
+        cert, key, unique, apps = moonlight_settings()
+    except OSError:
+        cert = key = None
+        unique, apps = "0123456789ABCDEF", {}
+    if cert and key:
+        context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE  # the host's certificate is self-signed (Moonlight pins it itself)
+        with tempfile.NamedTemporaryFile("wb", dir=os.environ.get("XDG_RUNTIME_DIR"), suffix=".pem") as f:
+            os.chmod(f.name, 0o600)
+            f.write(cert + b"\n" + key)
+            f.flush()
+            context.load_cert_chain(f.name)
+        url = "https://%s:47984/serverinfo" % host + query % (unique, uuid.uuid4())
+        with urllib.request.urlopen(url, timeout=timeout, context=context) as res:
+            return res.read().decode(errors="replace"), apps
+    with urllib.request.urlopen("http://%s:47989/serverinfo" % host + query % (unique, uuid.uuid4()),
+                                timeout=timeout) as res:
+        return res.read().decode(errors="replace"), apps
+
+
+def status():
+    conf = config()
+    out = {"ok": bool(conf.get("host")), "reachable": False, "running": "", "profile": conf.get("profile", ""),
+           "profiles": list(conf.get("profiles", {}))}
+    if not conf.get("host"):
+        return out
+    try:
+        xml, apps = serverinfo(conf["host"])
+    except (OSError, ssl.SSLError, ValueError):
+        return out
+    out["reachable"] = True
+    game = re.search(r"<currentgame>(\d+)</currentgame>", xml)
+    if game and game.group(1) != "0":
+        out["running"] = apps.get(game.group(1), "a game")
+    return out
+
+
+def set_profile(name):
+    if name not in config().get("profiles", {}):
+        return {"ok": False, "error": "no stream profile called %s" % name}
+    tvconfig.update_user("moonlight", {"profile": name})
+    return {"ok": True, "profile": name}
+
+
 def main():
     args = sys.argv[1:]
     wait = "--wait" in args
@@ -187,6 +268,10 @@ def main():
         return subprocess.run(["flatpak", "kill", "com.moonlight_stream.Moonlight"], capture_output=True, timeout=15)
     if args == ["wake"]:
         return wake()
+    if args == ["status"]:
+        return print(json.dumps(status(), ensure_ascii=False))
+    if args[:1] == ["profile"] and len(args) >= 2:
+        return print(json.dumps(set_profile(" ".join(args[1:])), ensure_ascii=False))
     if args:
         sys.exit(__doc__)
     host = config().get("host")

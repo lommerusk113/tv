@@ -19,6 +19,7 @@ Item {
     property var wifi: null          // system.py wifi
     property var bt: null            // system.py bt / bt-scan
     property var pads: null          // system.py controllers (game controllers and battery levels)
+    property var stream: null        // moonlight.py status (game streaming: profiles, server state)
     property var display: null       // system.py display
     property var place: null         // system.py location (status of "Use my location")
     property var pending: ({})       // display: "<output id>:mode" / ":scale" -> chosen slider index, not applied yet
@@ -57,7 +58,7 @@ Item {
 
     // Rows of the current page: {key, label, sub, icon, kind: link|action|toggle|slider|button|header|input, ...}
     readonly property var entries: {
-        const w = wifi, b = bt, d = display, p = pending, r = revert, c = confirming, g = pads;
+        const w = wifi, b = bt, d = display, p = pending, r = revert, c = confirming, g = pads, m = stream;
         switch (page) {
         case "main": {
             const net = w && w.networks ? w.networks.find(n => n.connected) : null;
@@ -72,6 +73,9 @@ Item {
                   sub: b ? (!b.powered ? "Off" : devs ? devs + " connected" : "On") : " " },
                 { key: "controllers", label: "Controllers", icon: "gamepad", kind: "link",
                   sub: g ? (g.controllers.length ? g.controllers.length + " connected" : "None connected") : " " },
+                ...(m && m.ok ? [{ key: "streaming", label: "Game streaming", icon: "gamepad", kind: "link",
+                    sub: m.profile + " · " + (!m.reachable ? "server offline" : m.running ? m.running + " running" : "server ready") }]
+                    : []),
                 { key: "display", label: "Display", icon: "display", kind: "link",
                   sub: out ? out.modeLabel + " · " + Math.round(out.scale * 100) + " %" : " " },
                 { key: "location", label: "Use my location", icon: "location", kind: "toggle", on: !!(place && place.auto),
@@ -128,6 +132,22 @@ Item {
             rows.push({ key: "hdr-pair", label: "Add a controller", kind: "header" });
             rows.push({ key: "pad-pair", label: "Pair a controller", icon: "search", kind: "action",
                         sub: "Xbox: pair button · PS: PS + Create · Switch: sync" });
+            return rows;
+        }
+        case "streaming": {
+            if (!m)
+                return [{ key: "loading", label: "Loading…", kind: "header" }];
+            const rows = [{ key: "hdr-quality", label: "Quality", kind: "header" }];
+            const about = { "Balanced": "The screen's resolution, 60 fps", "Best picture": "4K, high bitrate",
+                            "Low latency": "1080p at 120 fps, no V-Sync", "Save bandwidth": "1080p, low bitrate" };
+            for (const name of m.profiles)
+                rows.push({ key: "profile:" + name, label: name, icon: "display", kind: "action",
+                            sub: (name === m.profile ? "In use · " : "") + (about[name] || "") });
+            rows.push({ key: "hdr-server", label: "Server", kind: "header" });
+            rows.push({ key: "server", label: !m.reachable ? "Offline" : m.running ? m.running + " is running" : "Ready",
+                        icon: "power", kind: "action",
+                        sub: !m.reachable ? "The game PC does not answer" : m.running ? "Its tile picks it up in seconds"
+                                                                          : "Nothing is running" });
             return rows;
         }
         case "display": {
@@ -187,6 +207,8 @@ Item {
         query(["bt"], r => bt = r);
         query(["display"], r => display = r);
         query(["controllers"], r => pads = r);
+        if (Config.scriptQuery)
+            Config.scriptQuery("moonlight", ["status"], r => panel.stream = r);
         query(["location", "status"], r => place = r);
     }
 
@@ -297,6 +319,8 @@ Item {
                 query(["wifi-rescan"], r => wifi = r);  // fresh list in the background
             if (e.key === "controllers")
                 query(["controllers"], r => pads = r);
+        if (Config.scriptQuery)
+            Config.scriptQuery("moonlight", ["status"], r => panel.stream = r);
             return;
         }
         if (e.confirm && confirming !== e.key) {
@@ -312,6 +336,9 @@ Item {
         case "wifi-rescan": query(["wifi-rescan"], r => wifi = r, "Searching…"); return;
         case "bt-power": query(["bt-power", e.on ? "off" : "on"], r => bt = r, e.on ? "Turning off…" : "Turning on…"); return;
         case "bt-scan": query(["bt-scan", "8"], r => bt = r, "Searching for devices…"); return;
+        case "server":
+            Config.scriptQuery("moonlight", ["status"], r => panel.stream = r);
+            return;
         case "pad-pair":  // the Bluetooth page, searching: the controller shows up there, OK pairs it
             go("bluetooth", 0);
             query(["bt-scan", "10"], r => bt = r, "Searching… put the controller in pairing mode");
@@ -326,6 +353,14 @@ Item {
         case "keep": revert = null; revertTimer.stop(); go("display", 0); return;
         case "undo": undoDisplay(); return;
         case "join": joinWifi(); return;
+        }
+        if (e.key.startsWith("profile:")) {
+            const name = e.key.slice(8);
+            Config.scriptQuery("moonlight", ["profile", name], r => {
+                if (r && r.ok)
+                    panel.stream = Object.assign({}, panel.stream, { profile: name });
+            });
+            return;
         }
         if (e.net) {
             const n = e.net;

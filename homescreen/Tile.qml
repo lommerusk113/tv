@@ -88,6 +88,29 @@ Item {
             }
         }
 
+        // App tiles: a small status pill in the corner (Config.appBadges, e.g. the game server's "● Steam running").
+        Rectangle {
+            readonly property string badge: tile.style === "app" ? Config.appBadges[tile.modelData.id] || "" : ""
+            visible: badge !== ""
+            anchors.top: parent.top
+            anchors.right: parent.right
+            anchors.margins: Config.px(10)
+            width: badgeText.implicitWidth + Config.px(20)
+            height: Config.px(30)
+            radius: height / 2
+            color: badge.indexOf("●") === 0 ? "#2e7d32" : "#5f6368"
+            z: 2
+            Text {
+                id: badgeText
+                anchors.centerIn: parent
+                text: parent.badge
+                color: "#ffffff"
+                font.family: tile.theme.font.family
+                font.pixelSize: Config.px(16)
+                font.weight: Font.DemiBold
+            }
+        }
+
         // Media tiles: artwork (optional, e.g. TMDb backdrops from trakt.py), cropped to the rounded card.
         // The gradient above stays visible while it loads or when there is none.
         Image {
