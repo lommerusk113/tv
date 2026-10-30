@@ -313,23 +313,52 @@ FocusScope {
         if (!row)
             return;
         row.moving = true;
+        moving = true;
         showMessage("Move with ‹ › · OK when done");
     }
 
     // Leaves move mode and saves the order (Config.system("save_app_order:<ids>"): apps.py order).
     function stopMoving() {
-        const row = sectionAt(section);
-        if (!row || !row.moving)
+        if (!moving)
             return false;
-        row.moving = false;
-        const ids = Config.apps.map(a => a.id);
+        moving = false;
+        let ids = Config.apps.map(a => a.id);
+        for (let i = 0; i < sections.length; i++) {
+            const row = sectionAt(i);
+            if (!row || !row.moving)
+                continue;
+            row.moving = false;
+            ids = row.items.map(a => a.id);  // the row's own copy of the apps is the one that was reordered
+        }
+        // The real list too (a rebuild of the rows would otherwise bring the old order back); focus stays on the app.
+        const focused = sectionAt(section);
+        movedApp = focused && focused.items[focused.current] ? focused.items[focused.current].id : "";
+        Config.apps = ids.map(id => Config.apps.find(a => a.id === id)).filter(a => a);
+        refocusMoved.restart();
         if (!(Config.system && Config.system("save_app_order:" + ids.join(","))))
             console.log("action:save_app_order:" + ids.join(","));
         showMessage("Apps saved in this order");
         return true;
     }
 
-    readonly property bool moving: !!sectionAt(section) && sectionAt(section).moving === true
+    // After a move the rows are rebuilt (Config.apps changed): put the focus back on the app that was moved.
+    property string movedApp: ""
+    Timer {
+        id: refocusMoved
+        interval: 50
+        onTriggered: {
+            const i = home.sections.findIndex(s => s.action === "launch");
+            const row = home.sectionAt(i);
+            if (!row)
+                return;
+            home.section = i;
+            row.current = Math.max(0, row.items.findIndex(a => a.id === home.movedApp));
+        }
+    }
+
+    // Set by startMoving/stopMoving (not computed from the row: sectionAt() is a function, so such a binding was not
+    // re-evaluated when the row's flag changed, and the arrows moved the focus instead of the tile).
+    property bool moving: false
 
     Keys.onPressed: event => {
         if (settingsPanel.typeKey(event)) {

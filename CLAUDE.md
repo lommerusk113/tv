@@ -193,8 +193,12 @@ homescreen/
   Moving apps (2026-10-29): hold OK ~0.6 s on a "Your apps" tile (Home.qml holdTimer; on that row OK acts on
                     release; 2026-10-30: a release only counts after 200 ms without a new press (releaseGrace), for
                     remotes that repeat press/release while held, and ⓘ (Info / evdev:358 = "options") starts it too.
-                    User reported OK just opened the app; with ydotool holds (Qt autorepeat from 0.57 s) it works, the
-                    real remote's hold is still unconfirmed) -> TileRow.moving, ‹ › on the tile, left/right swap (Config.apps in place), anything else
+                    The real remote's hold works (key log: one press, release ~1 s later, no autorepeat). Bugs fixed
+                    2026-10-30: Home.moving was a binding over sectionAt() (a function), not re-evaluated when the row's
+                    flag changed -> arrows moved the focus instead of the tile; now a plain property. TileRow's items
+                    are a COPY of Config.apps (passing through a var property), so stopMoving saves row.items' order,
+                    assigns Config.apps in that order (rows rebuild) and refocusMoved puts the focus back on the app.
+                    Host-verified with ydotool: pick up, move, put down, saved file, focus stays on the moved tile) -> TileRow.moving, ‹ › on the tile, left/right swap (Config.apps in place), anything else
                     finishes -> Config.system("save_app_order:<ids>") -> apps.py order -> ~/.config/tv-project/
                     app-order.json; TvHome.applyContent sorts apps.json by it (unknown apps after). Home (goHome)
                     closes every window: request, Did you mean, Not on your server, settings, move mode.
