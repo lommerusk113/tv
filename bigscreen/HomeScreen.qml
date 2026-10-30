@@ -136,7 +136,9 @@ Item {
                 appVoice.show(action ? "heard" : "unknown", result.text);
             if (!action)
                 return;
-            if (action === "home" || action === "settings" || action.startsWith("request:")) {
+            // Apps that live on the home screen (Settings, Jellyseerr) need it in front too.
+            const builtIn = action.startsWith("launch:") && Config.apps.some(a => a.id === action.slice(7) && a.action);
+            if (action === "home" || action === "settings" || action.startsWith("request:") || builtIn) {
                 appVoice.hide();
                 Shortcuts.toggleHomeScreen();
                 if (action === "home")
@@ -450,6 +452,18 @@ Item {
                 });
             };
             // Wi-Fi, Bluetooth and display for the Settings panel: system.py prints one JSON object.
+            Config.seerrQuery = (args, callback) => {
+                const quoted = args.map(a => "'" + String(a).replace(/'/g, "'\\''") + "'").join(" ");
+                exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/jellyseerr.py")) + "' " + quoted, data => {
+                    let result = null;
+                    try {
+                        result = JSON.parse(data.stdout);
+                    } catch (e) {
+                        console.warn("tv: jellyseerr.py " + args.join(" ") + ": " + data.stderr.trim().slice(-200));
+                    }
+                    callback(result);
+                });
+            };
             Config.systemQuery = (args, callback) => {
                 const quoted = args.map(a => "'" + String(a).replace(/'/g, "'\\''") + "'").join(" ");
                 exec.run("python3 '" + root.localPath(Qt.resolvedUrl("tv/system.py")) + "' " + quoted, data => {

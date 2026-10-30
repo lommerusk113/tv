@@ -8,6 +8,11 @@
   python3 jellyseerr.py search <title>       films/series matching a title (voice: "play X" when X is not on the server,
                                              "download X"): {"ok", "query", "results": [{kind, tmdb, title, year,
                                              image, status, label, overview}]}, best first, max SEARCH_ITEMS
+  python3 jellyseerr.py browse               the Jellyseerr page (SeerrPage.qml): {"ok", "rows": [{id, title, items}]} -
+                                             trending, popular films/series, upcoming, your requests; tiles like
+                                             search's (poster = TMDb URL, loaded by QML; kind, tmdb, status, label)
+  python3 jellyseerr.py details movie|tv <tmdb>   {"ok", "trailer", "overview", "status"} (RequestDialog, lazily)
+  python3 jellyseerr.py search --all <title> up to BROWSE_ITEMS results instead of SEARCH_ITEMS
   python3 jellyseerr.py open                 the Jellyseerr website full screen (the "Jellyseerr" app tile,
                                              desktop/tv-jellyseerr.desktop): Chrome kiosk with its own profile
 
@@ -31,10 +36,16 @@ DETAILS = CACHE / "jellyseerr-details.json"
 TMDB_IMAGES = "https://image.tmdb.org/t/p/w342"
 MAX_ITEMS = 20
 SEARCH_ITEMS = 6
+BROWSE_ITEMS = 20
+BROWSE_ROWS = [("trending", "Trending", "/discover/trending"), ("movies", "Popular films", "/discover/movies"),
+               ("tv", "Popular series", "/discover/tv"), ("upcomingMovies", "Coming soon: films",
+               "/discover/movies/upcoming"), ("upcomingTv", "Coming soon: series", "/discover/tv/upcoming")]
+TMDB_POSTERS = "https://image.tmdb.org/t/p/w342"
 STATUS_AGE = 3600
 DETAILS_AGE = 86400
 # Jellyseerr media status: 1 unknown, 2 pending, 3 processing, 4 partially available, 5 available, 6 blacklisted
 LABEL = {2: "Requested", 3: "Downloading", 4: "Partly on the server", 5: "On the server"}
+SHORT_LABEL = {2: "Requested", 3: "Downloading", 4: "✓ Partly there", 5: "✓ On your server"}
 
 
 def settings():
@@ -149,25 +160,81 @@ def request(conf, kind, tmdb):
     return {"ok": True, "status": res.get("status")}
 
 
-def search(conf, query):
+def browse_tile(kind, tmdb, title, date, poster, status, overview=""):
+    """A poster tile for SeerrPage / search: OK = request:<kind>:<tmdb>:<title> (RequestDialog)."""
+    label = LABEL.get(status, "")
+    return {"id": "seerr-%s-%s" % (kind, tmdb), "kind": kind, "tmdb": tmdb, "title": title, "year": date[:4],
+            "status": status, "label": label,
+            # under a poster there is room for about 20 characters: the status alone when it has one
+            "meta": SHORT_LABEL.get(status) or " · ".join(p for p in ("Series" if kind == "tv" else "Film", date[:4]) if p),
+            "overview": (overview or "")[:400], "image": TMDB_POSTERS + poster if poster else "",
+            "colors": colors("%s-%s" % (kind, tmdb)), "action": "request:%s:%s:%s" % (kind, tmdb, title)}
+
+
+def result_tile(r):
+    """Tile for a /search or /discover result; None for people and titles without a poster."""
+    if r.get("mediaType") not in ("movie", "tv") or not r.get("posterPath"):
+        return None
+    return browse_tile(r["mediaType"], r["id"], r.get("title") or r.get("name") or "",
+                       r.get("releaseDate") or r.get("firstAirDate") or "", r["posterPath"],
+                       (r.get("mediaInfo") or {}).get("status") or 1, r.get("overview"))
+
+
+def browse(conf):
+    rows = []
+    for row_id, title, path in BROWSE_ROWS:
+        try:
+            res = api(conf, path + "?page=1")
+        except (urllib.error.URLError, OSError, ValueError) as e:
+            print(f"jellyseerr: {path}: {e}", file=sys.stderr)
+            continue
+        items = [t for t in map(result_tile, res.get("results") or []) if t][:BROWSE_ITEMS]
+        if items:
+            rows.append({"id": row_id, "title": title, "items": items})
+    # Your requests, newest first (the request list has no titles: details() fills them in, cached a day).
+    try:
+        requests = api(conf, "/request?take=%d&skip=0&sort=added&filter=all" % BROWSE_ITEMS).get("results") or []
+        cache = json.loads(DETAILS.read_text()) if DETAILS.exists() else {}
+        items = []
+        for req in requests:
+            media = req.get("media") or {}
+            kind, tmdb = media.get("mediaType"), media.get("tmdbId")
+            if kind not in ("movie", "tv") or not tmdb:
+                continue
+            try:
+                info = details(conf, kind, tmdb, cache)
+            except (urllib.error.URLError, OSError, ValueError):
+                continue
+            status = media.get("status") or info["status"]
+            tile = browse_tile(kind, tmdb, info["title"], info["year"], info.get("poster"), status, info.get("overview"))
+            tile["trailer"] = info.get("trailer") or ""
+            items.append(tile)
+        DETAILS.write_text(json.dumps(cache))
+        if items:
+            rows.insert(1, {"id": "requests", "title": "Your requests", "items": items})
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        print(f"jellyseerr: requests: {e}", file=sys.stderr)
+    return {"ok": bool(rows), "rows": rows}
+
+
+def details_of(conf, kind, tmdb):
+    try:
+        cache = json.loads(DETAILS.read_text()) if DETAILS.exists() else {}
+        info = details(conf, kind, tmdb, cache)
+        DETAILS.write_text(json.dumps(cache))
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        return {"ok": False, "error": str(e)}
+    return {"ok": True, "trailer": info.get("trailer") or "", "overview": info.get("overview") or "",
+            "status": info["status"]}
+
+
+def search(conf, query, limit=SEARCH_ITEMS):
     try:
         # Jellyseerr wants spaces as %20, not "+" (it rejects the query otherwise).
         res = api(conf, "/search?query=%s&page=1" % urllib.parse.quote(query, safe=""))
     except (urllib.error.URLError, OSError, ValueError) as e:
         return {"ok": False, "error": str(e)}
-    out = []
-    for r in res.get("results") or []:
-        if r.get("mediaType") not in ("movie", "tv") or not r.get("posterPath"):
-            continue
-        status = (r.get("mediaInfo") or {}).get("status") or 1
-        date = r.get("releaseDate") or r.get("firstAirDate") or ""
-        out.append({"kind": r["mediaType"], "tmdb": r["id"], "title": r.get("title") or r.get("name") or "",
-                    "year": date[:4], "status": status, "label": LABEL.get(status, ""),
-                    "overview": (r.get("overview") or "")[:300],
-                    "image": download(TMDB_IMAGES + r["posterPath"], "tmdb-%s-%s-w342.jpg" % (r["mediaType"], r["id"])),
-                    "colors": colors("%s-%s" % (r["mediaType"], r["id"]))})
-        if len(out) == SEARCH_ITEMS:
-            break
+    out = [t for t in map(result_tile, res.get("results") or []) if t][:limit]
     return {"ok": True, "query": query, "results": out}
 
 
@@ -209,8 +276,17 @@ def main():
     if len(sys.argv) == 4 and sys.argv[1] == "request" and sys.argv[2] in ("movie", "tv") and sys.argv[3].isdigit():
         print(json.dumps(request(conf, sys.argv[2], sys.argv[3])))
         return
+    if len(sys.argv) >= 4 and sys.argv[1:3] == ["search", "--all"]:
+        print(json.dumps(search(conf, " ".join(sys.argv[3:]), BROWSE_ITEMS), ensure_ascii=False))
+        return
     if len(sys.argv) >= 3 and sys.argv[1] == "search":
         print(json.dumps(search(conf, " ".join(sys.argv[2:])), ensure_ascii=False))
+        return
+    if sys.argv[1:] == ["browse"]:
+        print(json.dumps(browse(conf), ensure_ascii=False))
+        return
+    if len(sys.argv) == 4 and sys.argv[1] == "details" and sys.argv[2] in ("movie", "tv") and sys.argv[3].isdigit():
+        print(json.dumps(details_of(conf, sys.argv[2], sys.argv[3])))
         return
     if len(sys.argv) > 1:
         sys.exit(__doc__)

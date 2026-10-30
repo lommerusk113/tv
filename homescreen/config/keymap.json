@@ -24,5 +24,7 @@
   "evdev:589": "launch:jellyfin",
   "KeyboardBrightnessUp": "launch:rikstv",
   "KeyboardBrightnessDown": "launch:moonlight",
-  "evdev:362": "launch:rikstv"
+  "evdev:362": "launch:rikstv",
+  "Info": "options",
+  "evdev:358": "options"
 }

@@ -16,7 +16,7 @@ FocusScope {
     // its overlay).
     readonly property bool atRoot: {
         const loader = sectionRepeater.count > section ? sectionRepeater.itemAt(section) : null;
-        return !settingsPanel.open && !requestDialog.open && !choiceDialog.open && !getDialog.open && !loadingScreen.open && section === initialSection
+        return !settingsPanel.open && !seerrPage.open && !requestDialog.open && !choiceDialog.open && !getDialog.open && !loadingScreen.open && section === initialSection
                 && (!loader || !loader.item || loader.item.current === 0);
     }
 
@@ -130,6 +130,7 @@ FocusScope {
         requestDialog.open = false;
         choiceDialog.open = false;
         getDialog.open = false;
+        seerrPage.close();
         if (settingsPanel.open)
             settingsPanel.close();
     }
@@ -171,6 +172,11 @@ FocusScope {
         }
         if (action === "home")
             closeWindows();
+        if (action === "options") {  // ⓘ: move the focused app tile
+            if (onAppRow)
+                startMoving();
+            return;
+        }
         if (loadingScreen.open) {  // a Moonlight stream is starting: only Back cancels it
             if (action === "back" && !(Config.system && Config.system("moonlight_cancel")))
                 loadingScreen.hide();
@@ -182,10 +188,16 @@ FocusScope {
             return;
         if (getDialog.open && getDialog.handle(action))
             return;
-        if (action.startsWith("request:")) {  // a "Get more" tile: ask first
-            requestDialog.ask(action);
+        if (action.startsWith("request:")) {  // a "Get more" or Jellyseerr-page tile: ask first
+            requestDialog.ask(action, seerrPage.open ? seerrPage.itemFor(action) : null);
             return;
         }
+        if (action === "seerr") {
+            seerrPage.show();
+            return;
+        }
+        if (seerrPage.open && seerrPage.handle(action))
+            return;
         if (settingsPanel.open && settingsPanel.handle(action))
             return;
         if (action === "settings") {
@@ -273,14 +285,28 @@ FocusScope {
     }
 
     // OK on an app tile waits for the release: a short press opens the app, holding it moves the tile (like Google TV).
+    // Some remotes send press/release over and over while a button is held, so a release only counts once no new
+    // press follows within releaseGrace; the ⓘ button ("options") on an app tile starts moving too.
     readonly property bool onAppRow: !!sections[section] && sections[section].action === "launch" && atHomeLevel
-    readonly property bool atHomeLevel: !settingsPanel.open && !requestDialog.open && !choiceDialog.open
+    readonly property bool atHomeLevel: !settingsPanel.open && !seerrPage.open && !requestDialog.open && !choiceDialog.open
                                         && !getDialog.open && !loadingScreen.open
     Timer {
         id: holdTimer
         interval: 600
-        onTriggered: home.startMoving()
+        onTriggered: {
+            releaseGrace.stop();
+            home.startMoving();
+        }
     }
+    Timer {
+        id: releaseGrace
+        interval: 200
+        onTriggered: {  // a short press: open the app
+            holdTimer.stop();
+            home.runAction("select");
+        }
+    }
+    property real lastSelectKey: 0  // while moving: OK presses still coming from the hold that started it are ignored
 
     function startMoving() {
         const row = sectionAt(section);
@@ -315,9 +341,19 @@ FocusScope {
             return;
         event.accepted = true;
         if (action === "select" && onAppRow && !moving) {
-            if (!event.isAutoRepeat && !holdTimer.running)
+            if (event.isAutoRepeat)
+                return;
+            if (releaseGrace.running)
+                releaseGrace.stop();  // the remote repeats press/release while held: still the same hold
+            else if (!holdTimer.running)
                 holdTimer.restart();
             return;
+        }
+        if (action === "select" && moving) {
+            const held = Date.now() - lastSelectKey < 350;
+            lastSelectKey = Date.now();
+            if (held || event.isAutoRepeat)
+                return;
         }
         if (event.isAutoRepeat && action === "select")
             return;
@@ -325,11 +361,14 @@ FocusScope {
     }
 
     Keys.onReleased: event => {
-        if (event.isAutoRepeat || keyAction(event) !== "select" || !holdTimer.running)
+        if (keyAction(event) !== "select")
             return;
-        holdTimer.stop();  // a short press: open the app
+        if (moving)
+            lastSelectKey = Date.now();
+        if (event.isAutoRepeat || !holdTimer.running)
+            return;
         event.accepted = true;
-        runAction("select");
+        releaseGrace.restart();
     }
 
     Component.onCompleted: {
@@ -483,6 +522,10 @@ FocusScope {
         id: settingsPanel
     }
 
+    SeerrPage {
+        id: seerrPage
+    }
+
     GetDialog {
         id: getDialog
         onMessage: text => home.showMessage(text)
@@ -495,6 +538,10 @@ FocusScope {
 
     RequestDialog {
         id: requestDialog
+        onRequested: (kind, tmdb) => {
+            if (seerrPage.open)
+                seerrPage.markRequested(kind, tmdb);
+        }
     }
 
     LoadingScreen {

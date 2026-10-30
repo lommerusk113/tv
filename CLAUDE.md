@@ -191,7 +191,10 @@ homescreen/
                     with Breeze icons (icons/settings/, copied from breeze-dark, tinted with MultiEffect), toggles,
                     sliders, section headers. Avoid property names Item already has (`top` is FINAL: page fails to load)
   Moving apps (2026-10-29): hold OK ~0.6 s on a "Your apps" tile (Home.qml holdTimer; on that row OK acts on
-                    release) -> TileRow.moving, ‹ › on the tile, left/right swap (Config.apps in place), anything else
+                    release; 2026-10-30: a release only counts after 200 ms without a new press (releaseGrace), for
+                    remotes that repeat press/release while held, and ⓘ (Info / evdev:358 = "options") starts it too.
+                    User reported OK just opened the app; with ydotool holds (Qt autorepeat from 0.57 s) it works, the
+                    real remote's hold is still unconfirmed) -> TileRow.moving, ‹ › on the tile, left/right swap (Config.apps in place), anything else
                     finishes -> Config.system("save_app_order:<ids>") -> apps.py order -> ~/.config/tv-project/
                     app-order.json; TvHome.applyContent sorts apps.json by it (unknown apps after). Home (goHome)
                     closes every window: request, Did you mean, Not on your server, settings, move mode.
@@ -260,7 +263,16 @@ homescreen/
   config/theme.json, config/apps.json, config/layout.json, config/keymap.json
   data/placeholder.json   placeholder featured/upNext/trending content; keys in content.json override it
   desktop/tv-rikstv.desktop  Chrome kiosk on rikstv.no; install-bigscreen.sh copies it to ~/.local/share/applications
-  desktop/tv-jellyseerr.desktop  "Jellyseerr" app tile (2026-10-30): runs `jellyseerr.py open` = Chrome kiosk on secrets
+  SeerrPage.qml     the Jellyseerr tile (apps.json action "seerr", 2026-10-30; the user found the website poor with the
+                    remote even with TV_FOCUS): full-screen page on the home screen from the API (Config.seerrQuery ->
+                    `jellyseerr.py browse` ~1.2 s: Trending, Your requests, Popular films/series, Coming soon films/
+                    series; posters are TMDb URLs loaded by QML; meta = short status or "Film · 2026"). Search box at
+                    the top (up from the first row; OK -> TextEntry; `search --all` 0.5 s after typing stops). OK on a
+                    poster -> RequestDialog with the tile (itemFor): by status Request / ▶ Play (jellyfin_play) / nothing
+                    (requested), ▶ Trailer (tiles without "trailer" fetch `details` lazily). requested() marks the tile
+                    and reloads. Back: first row/tile, then closes; Home closes. Host-verified with screenshots.
+  desktop/tv-jellyseerr.desktop  the website in a kiosk (no longer on a tile; kept for the login/admin pages)
+                    (2026-10-30): runs `jellyseerr.py open` = Chrome kiosk on secrets
                     jellyseerr.url (the URL stays out of the repo; install-bigscreen.sh fills in @REPO@), own profile
                     ~/.var/app/com.google.Chrome/data/tv-jellyseerr (separate process from RiksTV's Chrome, so --class
                     sticks and the login is kept), --enable-spatial-navigation (arrows move between buttons). Sign in

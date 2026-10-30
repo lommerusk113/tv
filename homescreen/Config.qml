@@ -19,6 +19,8 @@ QtObject {
     property var volumeReader: null   // function(callback(volume 0..1)): current output volume (Settings panel)
     property var systemQuery: null    // function(args, callback(json)): system.py <args> (Wi-Fi, Bluetooth, display)
 
+    property var seerrQuery: null     // function(args, callback(json | null)): jellyseerr.py <args> (Jellyseerr page)
+
     property var actionRunner: null   // function(action); set by Home.qml (its runAction), for tiles with an "action"
 
     // Runs a keymap-style action ("launch:x", "jellyfin_play_id:<id>", ...), as tiles with an "action" do.

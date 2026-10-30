@@ -1,10 +1,12 @@
 import QtQuick
 import "."
 
-// "Request <title>?" for a "Get more" tile (titles not on the server): poster, plot, and Request / ▶ Trailer / Cancel.
-// Left/right pick a button, OK runs it, Back cancels. Request goes to
-// Config.system("jellyseerr_request:<movie|tv>:<tmdb id>:<title>"); Trailer plays the tile's "trailer" (YouTube id,
-// jellyseerr.py) through Config.system("youtube_watch:<id>") and leaves the dialog open for when you come back.
+// A film/series from Jellyseerr ("Get more" tiles, the Jellyseerr page): poster, plot, and buttons by its status:
+// not there -> Request; requested/downloading -> nothing to do; on the server -> ▶ Play (jellyfin_play:<title>);
+// plus ▶ Trailer when it has one. Left/right pick a button, OK runs it, Back cancels. Request goes to
+// Config.system("jellyseerr_request:<movie|tv>:<tmdb id>:<title>") (requested() lets the page mark it); Trailer plays
+// the tile's "trailer" (YouTube id) through Config.system("youtube_watch:<id>") and leaves the dialog open for when
+// you come back. Tiles without "trailer" get it (and the plot) from `jellyseerr.py details` via Config.seerrQuery.
 Item {
     id: dialog
     property bool open: false
@@ -14,7 +16,12 @@ Item {
     property var item: ({})
     property int choice: 0
     readonly property var theme: Config.theme
-    readonly property var buttons: item.trailer ? ["Request", "▶  Trailer", "Cancel"] : ["Request", "Cancel"]
+    readonly property int status: item.status || 1
+    readonly property var buttons: (status >= 4 ? ["▶  Play"] : status >= 2 ? [] : ["Request"])
+        .concat(item.trailer ? ["▶  Trailer"] : []).concat([status < 2 ? "Cancel" : "Close"])
+
+    signal requested(string kind, string tmdb)
+    onButtonsChanged: choice = Math.min(choice, buttons.length - 1)  // the details came in and changed them
 
     // The tile with this action, from whichever row has it (for its poster, plot and trailer).
     function findItem(action) {
@@ -30,14 +37,23 @@ Item {
     }
 
     // action is "request:<movie|tv>:<tmdb id>:<title>" (the title may contain colons)
-    function ask(action) {
+    // item: the tile, when the caller has it (else it is looked up in Config.content)
+    function ask(action, tile) {
         const parts = action.split(":");
         kind = parts[1];
         tmdb = parts[2];
         title = parts.slice(3).join(":");
-        item = findItem(action);
+        item = tile || findItem(action);
         choice = 0;
         open = true;
+        if (item.trailer === undefined && Config.seerrQuery) {
+            const asked = tmdb;
+            Config.seerrQuery(["details", kind, tmdb], data => {
+                if (data && data.ok && asked === dialog.tmdb)
+                    dialog.item = Object.assign({}, dialog.item, { trailer: data.trailer || "",
+                        overview: dialog.item.overview || data.overview, status: dialog.item.status || data.status });
+            });
+        }
     }
 
     // Returns true when the action was used.
@@ -53,7 +69,11 @@ Item {
                 const request = "jellyseerr_request:" + kind + ":" + tmdb + ":" + title;
                 if (!(Config.system && Config.system(request)))
                     console.log("action:" + request);
-            } else if (button === "Cancel") {
+                requested(kind, tmdb);
+            } else if (button === "▶  Play") {
+                open = false;
+                Config.run("jellyfin_play:" + title);
+            } else if (button === "Cancel" || button === "Close") {
                 open = false;
             } else if (!(Config.system && Config.system("youtube_watch:" + item.trailer))) {
                 console.log("action:youtube_watch:" + item.trailer);
@@ -115,7 +135,8 @@ Item {
 
             Text {
                 width: parent.width
-                text: "Not on your server · " + (dialog.kind === "tv" ? "Series" : "Film")
+                text: ({ 2: "Requested", 3: "Downloading", 4: "Partly on your server", 5: "On your server" }[dialog.status]
+                       || "Not on your server") + " · " + (dialog.kind === "tv" ? "Series" : "Film")
                       + (dialog.item.meta && dialog.item.meta.match(/\d{4}/) ? " · " + dialog.item.meta.match(/\d{4}/)[0] : "")
                 color: dialog.theme.colors.accent
                 font.family: dialog.theme.font.family
@@ -145,8 +166,10 @@ Item {
             }
             Text {
                 width: parent.width
-                text: "Request asks Sonarr/Radarr to download it" + (dialog.kind === "tv" ? " (all seasons)" : "")
-                      + "; it shows up on the home screen when it is ready."
+                text: dialog.status >= 4 ? "Play opens it in Jellyfin."
+                      : dialog.status >= 2 ? "It is on its way; it shows up on the home screen when it is ready."
+                      : "Request asks Sonarr/Radarr to download it" + (dialog.kind === "tv" ? " (all seasons)" : "")
+                        + "; it shows up on the home screen when it is ready."
                 wrapMode: Text.WordWrap
                 color: Config.withAlpha(dialog.theme.colors.text, 0.5)
                 font.family: dialog.theme.font.family
