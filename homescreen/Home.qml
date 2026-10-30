@@ -105,7 +105,8 @@ FocusScope {
         const s = sections[section];
         const row = sectionAt(section);
         const at = row ? row.current : 0;
-        return { id: s ? s.id : "", item: s && s.items[at] ? s.items[at].id : "", index: at };
+        const items = row && row.orderedItems ? row.orderedItems : s ? s.items : [];
+        return { id: s ? s.id : "", item: items[at] ? items[at].id : "", index: at };
     }
 
     // Back to that row and the same item (it may have moved), else the same position; the start if the row is gone.
@@ -328,32 +329,13 @@ FocusScope {
             if (!row || !row.moving)
                 continue;
             row.moving = false;
-            ids = row.items.map(a => a.id);  // the row's own copy of the apps is the one that was reordered
+            ids = row.orderedItems.map(a => a.id);  // the row shows the new order itself (no rebuild, no jump)
         }
-        // The real list too (a rebuild of the rows would otherwise bring the old order back); focus stays on the app.
-        const focused = sectionAt(section);
-        movedApp = focused && focused.items[focused.current] ? focused.items[focused.current].id : "";
-        Config.apps = ids.map(id => Config.apps.find(a => a.id === id)).filter(a => a);
-        refocusMoved.restart();
+        Config.appOrder = ids;  // TvHome sorts Config.apps by it at the next rebuild
         if (!(Config.system && Config.system("save_app_order:" + ids.join(","))))
             console.log("action:save_app_order:" + ids.join(","));
         showMessage("Apps saved in this order");
         return true;
-    }
-
-    // After a move the rows are rebuilt (Config.apps changed): put the focus back on the app that was moved.
-    property string movedApp: ""
-    Timer {
-        id: refocusMoved
-        interval: 50
-        onTriggered: {
-            const i = home.sections.findIndex(s => s.action === "launch");
-            const row = home.sectionAt(i);
-            if (!row)
-                return;
-            home.section = i;
-            row.current = Math.max(0, row.items.findIndex(a => a.id === home.movedApp));
-        }
     }
 
     // Set by startMoving/stopMoving (not computed from the row: sectionAt() is a function, so such a binding was not

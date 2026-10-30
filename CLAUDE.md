@@ -196,9 +196,12 @@ homescreen/
                     The real remote's hold works (key log: one press, release ~1 s later, no autorepeat). Bugs fixed
                     2026-10-30: Home.moving was a binding over sectionAt() (a function), not re-evaluated when the row's
                     flag changed -> arrows moved the focus instead of the tile; now a plain property. TileRow's items
-                    are a COPY of Config.apps (passing through a var property), so stopMoving saves row.items' order,
-                    assigns Config.apps in that order (rows rebuild) and refocusMoved puts the focus back on the app.
-                    Host-verified with ydotool: pick up, move, put down, saved file, focus stays on the moved tile) -> TileRow.moving, ‹ › on the tile, left/right swap (Config.apps in place), anything else
+                    are a COPY of Config.apps (passing through a var property). Animation (user: "everything else hops
+                    around it"): re-setting the model rebuilt the row; now TileRow keeps its delegates and an order
+                    (order[slot] = item index, current = slot); each tile's body slides to its slot (Translate,
+                    OutCubic) and the picked-up one lifts (-14 px, scale 1.06, OutBack). stopMoving saves
+                    row.orderedItems and sets Config.appOrder (TvHome sorts Config.apps by it at the next rebuild); no
+                    rebuild when putting down. Host-verified with ydotool + screenshots) -> TileRow.moving, ‹ › on the tile, left/right swap (Config.apps in place), anything else
                     finishes -> Config.system("save_app_order:<ids>") -> apps.py order -> ~/.config/tv-project/
                     app-order.json; TvHome.applyContent sorts apps.json by it (unknown apps after). Home (goHome)
                     closes every window: request, Did you mean, Not on your server, settings, move mode.

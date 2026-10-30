@@ -69,17 +69,27 @@ Item {
         show: row.moreRight && row.focused
     }
 
-    // Move mode: swap the focused tile with its neighbour (the items array is changed in place: it is Config.apps).
+    // Moving tiles: the ListView keeps its delegates; order[slot] = item index and each tile slides to its slot, so
+    // only the two tiles that swap move (re-setting the model rebuilt the row and everything hopped). current is a
+    // slot. The order stays after moving ends (Config.appOrder sorts the apps at the next rebuild).
+    property var order: []
+    readonly property var orderedItems: order.length === items.length ? order.map(i => items[i]) : items
+    readonly property real pitch: Config.px(theme.tiles[style][0]) + list.spacing
+    function slotOf(i) {
+        return order.length === items.length ? order.indexOf(i) : i;
+    }
+    onMovingChanged: if (moving && order.length !== items.length) order = items.map((_, i) => i)
+
     function swap(d) {
         const n = current + d;
         if (n < 0 || n >= items.length)
             return;
-        const tmp = items[current];
-        items[current] = items[n];
-        items[n] = tmp;
-        list.model = Qt.binding(() => row.items);  // same array object: force the ListView to re-read it
+        const o = order.slice();
+        const tmp = o[current];
+        o[current] = o[n];
+        o[n] = tmp;
+        order = o;
         current = n;
-        ensureVisible();
     }
 
     function move(d) {
@@ -91,7 +101,7 @@ Item {
     // App tiles launch their app; media items log open:<id> and run their "action" (Jellyfin: play the item), else
     // launch the "app" they name.
     function activate() {
-        const item = items[current];
+        const item = orderedItems[current];
         if (section.action === "launch") {
             Config.launch(item.id);
             return;
@@ -172,41 +182,58 @@ Item {
             id: cell
             required property var modelData
             required property int index
+            readonly property int slot: row.slotOf(index)
+            readonly property bool lifted: row.moving && tile.focused
             width: tile.width
             height: list.height
-            z: tile.focused ? 1 : 0
-            // Tiles scrolled past the left page margin fade out, so every row starts at the same edge (the next tile
-            // still peeks in on the right). Measured against where the scroll ends, so it does not flicker meanwhile.
-            opacity: cell.x < row.scrollX + list.leftMargin - 1 ? 0 : 1
-            Behavior on opacity { NumberAnimation { duration: row.theme.animationMs * 2 } }
+            z: lifted ? 3 : tile.focused ? 1 : 0
 
-            Tile {
-                id: tile
-                y: row.glowPad
-                modelData: cell.modelData
-                index: cell.index
-                style: row.style
-                focused: row.focused && cell.index === row.current
-            }
+            // The cell stays at its index; what it shows slides to its slot (moving tiles), the picked-up one lifted.
+            Item {
+                id: body
+                width: tile.width
+                height: list.height
+                // Tiles scrolled past the left page margin fade out, so every row starts at the same edge (the next
+                // tile still peeks in on the right). Measured against where the scroll ends, so it does not flicker.
+                opacity: cell.x + (cell.slot - cell.index) * row.pitch < row.scrollX + list.leftMargin - 1 ? 0 : 1
+                Behavior on opacity { NumberAnimation { duration: row.theme.animationMs * 2 } }
+                transform: Translate {
+                    x: (cell.slot - cell.index) * row.pitch
+                    y: cell.lifted ? -Config.px(14) : 0
+                    Behavior on x { NumberAnimation { duration: row.theme.animationMs * 2.5; easing.type: Easing.OutCubic } }
+                    Behavior on y { NumberAnimation { duration: row.theme.animationMs * 2; easing.type: Easing.OutBack } }
+                }
+                scale: cell.lifted ? 1.06 : 1
+                Behavior on scale { NumberAnimation { duration: row.theme.animationMs * 2; easing.type: Easing.OutBack } }
 
-            // Move mode: arrows beside the tile being moved, "Moving" under it.
-            Repeater {
-                model: row.moving && tile.focused ? [-1, 1] : []
-                delegate: Rectangle {
-                    required property int modelData
-                    x: modelData < 0 ? -width / 2 - Config.px(6) : tile.width - width / 2 + Config.px(6)
-                    y: row.glowPad + tile.height / 2 - height / 2
-                    z: 2
-                    width: Config.px(44)
-                    height: width
-                    radius: width / 2
-                    color: row.theme.colors.accent
-                    Text {
-                        anchors.centerIn: parent
-                        text: parent.modelData < 0 ? "‹" : "›"
-                        color: row.theme.colors.onFocused
-                        font.pixelSize: Config.px(34)
-                        font.weight: Font.Bold
+                Tile {
+                    id: tile
+                    y: row.glowPad
+                    modelData: cell.modelData
+                    index: cell.index
+                    style: row.style
+                    focused: row.focused && cell.slot === row.current
+                }
+
+                // Move mode: arrows beside the tile being moved, "Moving" under it.
+                Repeater {
+                    model: row.moving && tile.focused ? [-1, 1] : []
+                    delegate: Rectangle {
+                        required property int modelData
+                        x: modelData < 0 ? -width / 2 - Config.px(6) : tile.width - width / 2 + Config.px(6)
+                        y: row.glowPad + tile.height / 2 - height / 2
+                        z: 2
+                        width: Config.px(44)
+                        height: width
+                        radius: width / 2
+                        color: row.theme.colors.accent
+                        Text {
+                            anchors.centerIn: parent
+                            text: parent.modelData < 0 ? "‹" : "›"
+                            color: row.theme.colors.onFocused
+                            font.pixelSize: Config.px(34)
+                            font.weight: Font.Bold
+                        }
                     }
                 }
             }

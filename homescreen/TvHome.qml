@@ -25,7 +25,6 @@ FocusScope {
     property var placeholder: ({})
     property string liveText: ""
 
-    property var appOrder: []        // ~/.config/tv-project/app-order.json: app ids in the order the user moved them to
     property int pending: 8
     // True when Back has nothing left to do in Home (start row, first tile); Bigscreen then opens its overlay.
     readonly property bool atTop: loader.item ? loader.item.atRoot : false
@@ -55,7 +54,7 @@ FocusScope {
         } catch (e) {}
         Config.content = Object.assign({}, placeholder, live);
         // Apps the user moved (hold OK on an app tile): saved ids first in that order, new apps after them.
-        const rank = id => { const i = appOrder.indexOf(id); return i < 0 ? 1000 : i; };
+        const rank = id => { const i = Config.appOrder.indexOf(id); return i < 0 ? 1000 : i; };
         Config.apps = Config.apps.map((a, i) => [a, i]).sort((x, y) => rank(x[0].id) - rank(y[0].id) || x[1] - y[1])
                                  .map(x => x[0]);
     }
@@ -157,7 +156,7 @@ FocusScope {
         loadJson("config/keymap.json", v => Config.keymap = v);
         loadJson("config/voice.json", v => Config.voice = v);
         loadJson(liveUrl, v => root.liveText = JSON.stringify(v), true);
-        loadJson(appOrderUrl, v => root.appOrder = Array.isArray(v) ? v : [], true);
+        loadJson(appOrderUrl, v => Config.appOrder = Array.isArray(v) ? v : [], true);
     }
 
     Loader {

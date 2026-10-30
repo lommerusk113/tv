@@ -19,6 +19,7 @@ QtObject {
     property var volumeReader: null   // function(callback(volume 0..1)): current output volume (Settings panel)
     property var systemQuery: null    // function(args, callback(json)): system.py <args> (Wi-Fi, Bluetooth, display)
 
+    property var appOrder: []         // app ids in the order the user moved them to (~/.config/tv-project/app-order.json)
     property var seerrQuery: null     // function(args, callback(json | null)): jellyseerr.py <args> (Jellyseerr page)
 
     property var actionRunner: null   // function(action); set by Home.qml (its runAction), for tiles with an "action"
