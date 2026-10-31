@@ -33,6 +33,7 @@ Item {
             tv.reloadLive();
             root.runScript("jellyseerr.py", tv.reloadLive);
         });
+        runScript("discover.py", tv.reloadLive);  // Trakt: because you watched, trending, new episodes
         runScript("tmdb.py", tv.reloadLive);
         runScript("jellyfin.py", tv.reloadLive);
         runScript("youtube.py", tv.reloadLive);

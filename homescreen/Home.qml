@@ -34,7 +34,7 @@ FocusScope {
             out.push({
                 id: r.id,
                 type: r.type || "row",
-                title: r.title || "",
+                title: (r.titleFrom && Config.content[r.titleFrom]) || r.title || "",  // e.g. "Because you watched X"
                 style: r.style || "landscape",
                 action: source === "apps" ? "launch" : "open",
                 items: items

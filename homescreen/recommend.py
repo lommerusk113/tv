@@ -54,6 +54,14 @@ def recommendations():
     return fresh
 
 
+def library_items(conf, uid):
+    """Every film and series on the server, with provider ids and watched state (discover.py uses it too)."""
+    query = urllib.parse.urlencode({"userId": uid, "includeItemTypes": "Movie,Series", "recursive": "true",
+                                    "fields": "ProviderIds,UserData,Overview,Genres,ChildCount",
+                                    "enableImageTypes": jellyfin.IMAGE_TYPES})
+    return (jellyfin.get(conf, "/Items?" + query) or {}).get("Items", [])
+
+
 def interleave(a, b):
     out = []
     for i in range(max(len(a), len(b))):
@@ -110,11 +118,7 @@ def main():
         print("recommend: no Trakt recommendations yet; keeping content.json", file=sys.stderr)
         return
     try:
-        uid = jellyfin.user_id(conf)
-        query = urllib.parse.urlencode({"userId": uid, "includeItemTypes": "Movie,Series", "recursive": "true",
-                                        "fields": "ProviderIds,UserData,Overview,Genres,ChildCount",
-                                        "enableImageTypes": jellyfin.IMAGE_TYPES})
-        library = (jellyfin.get(conf, "/Items?" + query) or {}).get("Items", [])
+        library = library_items(conf, jellyfin.user_id(conf))
     except (urllib.error.URLError, OSError, ValueError) as e:
         print(f"recommend: {conf['url']}: {e}; keeping content.json", file=sys.stderr)
         return

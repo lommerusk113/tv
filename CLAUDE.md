@@ -181,6 +181,14 @@ homescreen/
                     jellyfin_play). Triggered by: jellyfin_play with no Jellyfin match (instead of "Nothing called X"),
                     the AI step (titles not in its library list, "download X"), and voice.py when the AI is unsure
                     about "play X" and no library name scores >= 0.75 (jellyfin.match_score).
+  discover.py       (2026-10-31, user: "can we improve the discoverability using trakt?", chose 3 of 4; not the
+                    Trakt watchlist): rows "New episodes this week" (traktCalendar: /calendars/my/shows yesterday + 7
+                    days, specials left out; on the server -> plays the episode, else the series page, else request),
+                    "Because you watched X" (traktBecause + traktBecauseTitle via layout "titleFrom": /related of the
+                    last film/series in /sync/history) and "Trending now" (traktTrending). Poster rows mix Jellyfin
+                    tiles (play, "✓ On your server") and Jellyseerr request tiles. Trakt answers cached 1 h
+                    (trakt-discover.json). Run by HomeScreen with the other scripts. No TMDb key in secrets, so episode
+                    art = Jellyfin's series backdrop, else Jellyseerr's.
   recommend.py rotation: traktRecommended, the banner and trakt-missing (Get more) are a shuffle of the best 60,
                     new every ROTATE_HOURS (3).
   VoiceOverlay.qml  push-to-talk feedback pill (bottom centre) (also "busy" status: showStatus("Starting…"))
