@@ -64,6 +64,12 @@ kwriteconfig6 --file kwinrc --group Effect-hidecursor --key HideOnTyping true
 kwriteconfig6 --file kwinrc --group Effect-hidecursor --key InactivityDuration 2
 qdbus org.kde.KWin /Effects org.kde.kwin.Effects.loadEffect hidecursor >/dev/null 2>&1 || true
 
+# Volume: the home screen draws its own popup (homescreen/VolumeOsd.qml), so Plasma's small one is turned off.
+# Undo: the same with true.
+kwriteconfig6 --file plasmaparc --group General --key VolumeOsd false
+kwriteconfig6 --file plasmaparc --group General --key MuteOsd false
+qdbus org.kde.kded6 /kded org.kde.kded6.reconfigure >/dev/null 2>&1 || true
+
 echo "== Optional"
 if ask "Strong RemoteG20 remote: remap its buttons (needs your password once)?"; then
     "$repo/scripts/install-remote-keys.sh"

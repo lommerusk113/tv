@@ -18,3 +18,4 @@ AmbientMode 1.0 AmbientMode.qml
 DetailsSheet 1.0 DetailsSheet.qml
 ReadyToast 1.0 ReadyToast.qml
 SleepPrompt 1.0 SleepPrompt.qml
+VolumeOsd 1.0 VolumeOsd.qml

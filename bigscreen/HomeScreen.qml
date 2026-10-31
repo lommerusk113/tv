@@ -9,6 +9,7 @@ import org.kde.bigscreen as Bigscreen
 import org.kde.private.biglauncher
 import org.kde.taskmanager as TaskManager
 import org.kde.layershell as LayerShell
+import org.kde.plasma.private.volume as Volume
 
 import "tv"
 
@@ -422,6 +423,40 @@ Item {
         }
     }
 
+    // Volume popup (VolumeOsd.qml) at the right edge, over apps too, whenever the output volume or mute changes (remote,
+    // Settings, anything). A new output device (audio.py following the TV) only updates it. Not while Settings is
+    // open on the home screen: its own volume row shows it.
+    Connections {
+        target: Volume.PreferredDevice.sink
+        function onVolumeChanged() { root.showVolume(); }
+        function onMutedChanged() { root.showVolume(); }
+    }
+    function showVolume() {
+        const sink = Volume.PreferredDevice.sink;
+        if (sink && !(root.windowActive && Config.settingsOpen))
+            volumeOsd.show(sink.volume / Volume.PulseAudio.NormalVolume, sink.muted);
+    }
+
+    Window {
+        LayerShell.Window.scope: "tv-volume"
+        LayerShell.Window.layer: LayerShell.Window.LayerOverlay
+        LayerShell.Window.anchors: LayerShell.Window.AnchorRight
+        LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityNone
+        LayerShell.Window.exclusionZone: -1
+        width: Config.px(240)
+        height: Config.px(600)
+        color: "transparent"
+        flags: Qt.FramelessWindowHint | Qt.WindowDoesNotAcceptFocus
+        visible: volumeOsd.showing
+
+        VolumeOsd {
+            id: volumeOsd
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.rightMargin: Config.px(56)
+        }
+    }
+
     // Global remote buttons (config/remote.json, shortcuts installed by `remote.py install`) work inside apps too:
     // remote.py send hands the action over through `remote.py wait`, which is rerun after every action.
     function waitForRemote() {
@@ -434,8 +469,12 @@ Item {
             if (action.startsWith("keyboard:")) { // OK on a text field in an app (osk.py watch)
                 const [, app, field] = action.match(/^keyboard:([^:]+):(.*)$/) || [];
                 try {
-                    if (app && !root.windowActive)
-                        textEntry.show(app, JSON.parse(decodeURIComponent(field)));
+                    // Already open for this app: keep what is typed and where the focus is.
+                    if (app && !root.windowActive && !(textEntry.open && textEntry.app === app)) {
+                        keyboardShow.app = app;
+                        keyboardShow.field = JSON.parse(decodeURIComponent(field));
+                        keyboardShow.restart();
+                    }
                 } catch (e) {
                     console.warn("tv: keyboard: " + e);
                 }
@@ -459,6 +498,17 @@ Item {
             // A short pause, so a failing wait cannot spin.
             remoteRestart.restart();
         });
+    }
+
+    // The page reports OK while it is still held down. Taking the keyboard then means the app never sees it
+    // released, and Jellyfin Desktop repeats "enter" (~17 a second) until the next key. A remote press lasts
+    // 0.1-0.2 s (Jellyfin's log), so open the keyboard once it is up.
+    Timer {
+        id: keyboardShow
+        property string app
+        property var field
+        interval: 300
+        onTriggered: textEntry.show(app, field)
     }
 
     Timer {

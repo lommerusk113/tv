@@ -68,11 +68,17 @@ if (!window.__tvKeyboard) {
     };
     new MutationObserver(startOnLogin).observe(document.documentElement, {childList: true, subtree: true});
     startOnLogin();
-    let tries = 0;
+    // Jellyfin Desktop repeats a held key itself (~every 60 ms after 0.65 s). Our panel takes the keyboard while OK is
+    // still down, so Jellyfin never sees it released and repeats "enter" until the next key: only a fresh press opens.
+    let tries = 0, lastEnter = 0;
     const hook = () => {
         if (window.api && window.api.input && window.api.input.hostInput)
             window.api.input.hostInput.connect(actions => {
-                if (actions.includes("enter") || actions.includes("select"))
+                if (!actions.includes("enter") && !actions.includes("select"))
+                    return;
+                const repeat = Date.now() - lastEnter < 250;
+                lastEnter = Date.now();
+                if (!repeat)
                     open();
             });
         else if (++tries < 20)
@@ -184,10 +190,15 @@ if (!window.__tvPlayer) {
             return;
         }
         const original = list[at];
+        let lastEnter = 0;  // the stuck "enter" repeats (see HANDLER) must not press things in Jellyfin either
         const wrapped = actions => {
             let rest = actions;
             try {
-                rest = actions.filter(a => !((a === "left" || a === "right") && seek(a)));
+                const repeat = actions.includes("enter") && Date.now() - lastEnter < 250;
+                if (actions.includes("enter"))
+                    lastEnter = Date.now();
+                rest = actions.filter(a => !(a === "enter" && repeat)
+                                           && !((a === "left" || a === "right") && seek(a)));
             } catch (e) {
                 console.warn("tv seek:", e);
             }

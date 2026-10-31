@@ -24,6 +24,7 @@ QtObject {
     property var scriptQuery: null    // function(script, args, callback(json | null)): any helper's JSON (Bigscreen)
     property var appBadges: ({})      // app id -> short status on its tile ("● Steam running", "Server offline")
     property bool homeActive: true    // Bigscreen: the home screen is the active window (not an app in front)
+    property bool settingsOpen: false // SettingsPanel is open (the volume popup stays away: the panel shows it)
 
     property var actionRunner: null   // function(action); set by Home.qml (its runAction), for tiles with an "action"
 

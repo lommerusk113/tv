@@ -208,6 +208,13 @@ homescreen/
                     finishes -> Config.system("save_app_order:<ids>") -> apps.py order -> ~/.config/tv-project/
                     app-order.json; TvHome.applyContent sorts apps.json by it (unknown apps after). Home (goHome)
                     closes every window: request, Did you mean, Not on your server, settings, move mode.
+  VolumeOsd.qml     volume popup (2026-10-31, user: "make the volume up and down look nicer"): tall pill at the right
+                    edge (level, bar from the bottom, Breeze volume-low/medium/high/muted icons) for 2 s, in a layer-shell
+                    overlay that never takes the keyboard. HomeScreen follows org.kde.plasma.private.volume
+                    PreferredDevice.sink volume/muted (any source; not while Settings is open on the home screen).
+                    Plasma's own popup off: plasmaparc [General] VolumeOsd/MuteOsd=false (install.sh). The keys stay
+                    with kded's audioshortcutsservice. Do not unload/load that kded module: it came back unable to
+                    change the volume; `systemctl --user restart plasma-kded6` fixed it.
   OnScreenKeyboard.qml  remote-driven keyboard (arrows + OK; æøå, ⇧, #+=, space, ⌫, OK) on the Wi-Fi password page.
                     The password is a plain string (SettingsPanel.password); a real keyboard types via
                     SettingsPanel.typeKey() from Home's key handler. Never give a hidden TextInput focus: it kept the
@@ -226,6 +233,13 @@ homescreen/
                     first field (else spatial navigation's first arrow went to Seerr's language button). The handler
                     is re-sent every 5 s and calls time out after 5 s: a watcher that connected during a reload hung.
                     Host-verified: Seerr login (typed, password dots, submit), Jellyfin search "dune" + remote after.
+                    2026-10-31 bug (user: "the keyboard keeps moving the button back to q"): the page reports OK on key
+                    *down*; the panel took the keyboard before the release, so Jellyfin Desktop never saw it and its own
+                    key repeat sent "enter" ~17/s forever (log: "Emit input action (autorepeat)"), each re-opening the
+                    panel on q (and Back/arrows looked dead). Fixed three ways: HomeScreen opens the panel 300 ms later
+                    (remote presses last 0.1-0.2 s), the page ignores "enter" < 250 ms after the last (handler and
+                    Jellyfin's own callback), and a panel already open for the app is not reset. Host-verified: no
+                    autorepeat lines, focus stays where moved. The panel holds the keyboard, so it does volume keys itself.
                     Jellyseerr also gets TV_FOCUS (osk.py): its own focus ring was a dark 1 px outline (user: "i cant
                     see what is selected") -> white ring + glow + scale on :focus-visible, focused thing scrolled to the
                     middle near an edge. Cards: spatial navigation lands on the card's Request button (card shows its

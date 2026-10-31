@@ -49,7 +49,13 @@ Item {
         const actions = { [Qt.Key_Left]: "left", [Qt.Key_Right]: "right", [Qt.Key_Up]: "up", [Qt.Key_Down]: "down",
                           [Qt.Key_Return]: "select", [Qt.Key_Enter]: "select", [Qt.Key_Select]: "select",
                           [Qt.Key_Escape]: "back", [Qt.Key_Back]: "back" };
-        if (actions[event.key]) {
+        // This panel holds the keyboard while open, so Plasma's volume keys never see the remote's: do them here.
+        const volume = { [Qt.Key_VolumeUp]: "volume_up", [Qt.Key_VolumeDown]: "volume_down",
+                         [Qt.Key_VolumeMute]: "volume_mute" };
+        if (volume[event.key]) {
+            if (Config.system)
+                Config.system(volume[event.key]);
+        } else if (actions[event.key]) {
             handle(actions[event.key]);
         } else if (event.key === Qt.Key_Backspace) {
             setText(text.slice(0, -1));

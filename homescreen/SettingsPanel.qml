@@ -10,6 +10,7 @@ import "."
 Item {
     id: panel
     property bool open: false
+    onOpenChanged: Config.settingsOpen = open
     property string page: "main"
     property int current: 0
     property string confirming: ""   // key of the entry waiting for its second OK
