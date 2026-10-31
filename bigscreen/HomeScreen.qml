@@ -108,7 +108,10 @@ Item {
             readonly property bool ours: String(model.AppId).indexOf("moonlight_stream") < 0 && Config.apps.some(app => app.desktopId
                 && app.desktopId.replace(/\.desktop$/, "") === String(model.AppId).replace(/\.desktop$/, ""))
 
-            // Short delay: some apps (Electron, Qt) set up their window right after it appears.
+            // Short delay: some apps (Electron, Qt) set up their window right after it appears. Looked at again after
+            // 2 and 4 s: there is only a toggle, and an app that goes fullscreen by itself just after the first look
+            // (Jellyfin Desktop, "fullscreen": true) was toggled back to a window with a title bar (2026-10-31).
+            property int looks: 0
             property Timer fullscreen: Timer {
                 interval: 500
                 running: true
@@ -116,6 +119,9 @@ Item {
                     const idx = appWindows.makeModelIndex(index);
                     if (ours && !model.IsFullScreen)
                         appWindows.requestToggleFullScreen(idx);
+                    interval = 2000;
+                    if (++looks < 3)
+                        restart();
                 }
             }
         }
