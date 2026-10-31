@@ -225,6 +225,12 @@ homescreen/
                     999). Old row list: ~/.cache/tv-project/jellyfin-home-sections-before.json (POST it back to undo).
                     On this laptop only: backdrops on (localStorage <userId>-enableBackdrops, osk.py sets it when
                     unset), WhisperSubs' "Translate into…" dropdown hidden, its Subtitles button gets the white focus.
+  Continue Watching (2026-10-31, user: "has episodes i have watched and multiple episodes of the same series"):
+                    the server's Trakt plugin imported Trakt's stale "paused at" positions back into Jellyfin
+                    (finished Overlord episodes reappeared at 9-47 %, not played). User approved: plugin
+                    SkipPlaybackProgressImportFromTrakt=true (their Trakt user), those episodes set Played via
+                    /UserItems/<id>/UserData (not "Mark played": PostSetWatched would add a second Trakt play), and
+                    Trakt /sync/playback entries of episodes Trakt counts as completed deleted.
   VolumeOsd.qml     volume popup (2026-10-31, user: "make the volume up and down look nicer"): tall pill at the right
                     edge (level, bar from the bottom, Breeze volume-low/medium/high/muted icons) for 2 s, in a layer-shell
                     overlay that never takes the keyboard. HomeScreen follows org.kde.plasma.private.volume
