@@ -524,6 +524,13 @@ an unknown key name and an unknown app id.
   left/right into DOM ArrowLeft/Right when the controls are hidden or the timeline has focus: Jellyfin's TV keyboard
   path then shows the controls, focuses the timeline and steps it by the skip lengths (10/30 s), seeking 1 s after the
   last press. Also a white focus (OSD buttons, timeline thumb, cards, buttons, menus) instead of the blue tint.
+  Host-verified 2026-10-31: → twice = timeline +60 s with the bubble, seek after the fade; white circle on the focused
+  button.
+- Flathub build a6d784a0 (2026-10-30, KDE runtime 6.11) loads the web client WITHOUT the native shell (no window.api /
+  jmpInfo, "Html Video Player", no mpv, no hostInput): rolled back with the user's OK to 101468e6 (runtime 6.10):
+  `pkexec flatpak update --system --commit=101468e6... org.jellyfin.JellyfinDesktop` + `flatpak mask --system
+  org.jellyfin.JellyfinDesktop` (holds updates; `flatpak mask --system --remove ...` to let it update again, then check
+  `typeof window.api` on DevTools 9232 and the log's "Active player" name).
 
 ## DevTools ports (127.0.0.1 only; the user accepted this on 2026-10-29: "its just youtube, its not that sensitive")
 - VacuumTube: `--remote-debugging-port=9231` in its flags.txt (scripts/install-youtube-debug.sh). homescreen/youtube_tv.py
