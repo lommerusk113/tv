@@ -511,6 +511,19 @@ an unknown key name and an unknown app id.
 - scripts/install-jellyfin-video.sh: deinterlace only (current setting). `--upscale` adds FSRCNNX_x2_8-0-4-1.glsl
   (igv, LGPL, sha256-checked) + scale/cscale=ewa_lanczossharp: tried 2026-10-29, the user saw no gain and laggier
   playback, so it is off and the shader deleted. `--remove` = everything off. Backup: jellyfin-desktop.conf.before-upscaling.
+- Sound (2026-10-31, user: "the audio is bad"): the TV's ELD offers LPCM 2 ch only (+ AC-3/E-AC-3/DTS 5.1), the
+  sink is fine (48 kHz, no xruns). 5.1 tracks (e.g. FLAC 5.1) are mixed down by mpv with audio.normalize on: measured
+  with 5.1 test tones through the Flatpak's own mpv (`flatpak run --command=mpv ... --ao=pcm`), speech came out 7.6 dB
+  under a stereo file and 3 dB under the front channels. The script now also writes other_conf
+  `audio-swresample-o=center_mix_level=1.414,surround_mix_level=0.5` (speech +4.3 dB, 3 dB over the front, no
+  clipping). Passthrough (AC-3/DTS to the TV) is not used: the TV's speakers are stereo anyway.
+- Player keys (2026-10-31, user: "i cant seem to skip forwards or move back"): jellyfin-web 10.11 videoosd: hidden
+  controls + hostInput "left"/"right" = rewind/fastForward with nothing on screen; controls up = focus moves between
+  buttons, the timeline never steps (emby-slider only steps on DOM keydown). osk.py JELLYFIN_TV wraps Jellyfin's own
+  hostInput callback (qwebchannel api.input.__objectSignals__, the one calling inputManager.handleCommand) and turns
+  left/right into DOM ArrowLeft/Right when the controls are hidden or the timeline has focus: Jellyfin's TV keyboard
+  path then shows the controls, focuses the timeline and steps it by the skip lengths (10/30 s), seeking 1 s after the
+  last press. Also a white focus (OSD buttons, timeline thumb, cards, buttons, menus) instead of the blue tint.
 
 ## DevTools ports (127.0.0.1 only; the user accepted this on 2026-10-29: "its just youtube, its not that sensitive")
 - VacuumTube: `--remote-debugging-port=9231` in its flags.txt (scripts/install-youtube-debug.sh). homescreen/youtube_tv.py

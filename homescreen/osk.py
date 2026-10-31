@@ -116,7 +116,91 @@ if (!window.__tvFocus) {
     }, true);
 }
 """
-SCRIPTS = {"jellyfin": HANDLER, "jellyseerr": HANDLER + TV_FOCUS}
+# Jellyfin Desktop, TV layout: a focus you can see from the sofa (white instead of a thin blue tint), and ← → that
+# seek in the player. Jellyfin gets remote keys as hostInput commands; with the player's controls hidden "left"/"right"
+# skip without showing anything, and once the controls are up they only move between the buttons, so the timeline
+# never moves. Here they become the arrow keys of Jellyfin's own keyboard path instead: controls up with the timeline
+# focused, each press moves it by Jellyfin's skip lengths (10 s back / 30 s ahead by default; Settings → Playback),
+# and 1 s after the last press it jumps there. On the buttons (or with a menu open) the arrows still move between them.
+JELLYFIN_TV = r"""
+if (!window.__tvPlayer) {
+    window.__tvPlayer = true;
+    const css = `
+        .paper-icon-button-light.show-focus:focus {
+            background: #ffffff !important; color: #101010 !important;
+            box-shadow: 0 0 0 3px #ffffff, 0 0 28px 8px rgba(255, 255, 255, 0.45) !important;
+        }
+        .mdl-slider.show-focus:focus::-webkit-slider-thumb {
+            transform: scale(2.2) !important; background: #ffffff !important;
+            box-shadow: 0 0 14px 4px rgba(255, 255, 255, 0.7) !important;
+        }
+        .card:focus .cardBox.visualCardBox, .card:focus .cardBox:not(.visualCardBox) .cardScalable {
+            border-color: #ffffff !important;
+            box-shadow: 0 0 0 3px #ffffff, 0 0 36px 10px rgba(255, 255, 255, 0.4) !important;
+        }
+        .emby-button.show-focus:focus, .layout-tv .emby-button.detailFloatingButton:focus {
+            background: #ffffff !important; color: #101010 !important;
+            box-shadow: 0 0 28px 6px rgba(255, 255, 255, 0.4) !important;
+        }
+        .listItem:focus, .actionSheetMenuItem:focus { background: #ffffff !important; color: #101010 !important; }
+        .emby-tab-button.show-focus:focus { color: #ffffff !important; box-shadow: inset 0 -4px 0 #ffffff !important; }`;
+    const addStyle = () => {
+        const style = document.createElement("style");
+        style.textContent = css;
+        document.head.appendChild(style);
+    };
+    if (document.head)
+        addStyle();
+    else
+        document.addEventListener("DOMContentLoaded", addStyle);
+
+    const seek = action => {
+        const slider = document.querySelector(".videoOsdBottom .osdPositionSlider");
+        if (!location.hash.startsWith("#/video") || !slider || document.querySelector(".dialogContainer"))
+            return false;
+        const osd = slider.closest(".videoOsdBottom");
+        const hidden = osd.classList.contains("hide") || osd.classList.contains("videoOsdBottom-hidden");
+        if (!hidden && document.activeElement !== slider)
+            return false;
+        const right = action === "right";
+        const key = right ? "ArrowRight" : "ArrowLeft";
+        // Hidden: Jellyfin's player page shows the controls, focuses the timeline and steps it. Up: the timeline steps.
+        (hidden ? document.activeElement || document.body : slider).dispatchEvent(new KeyboardEvent("keydown",
+            {key, code: key, keyCode: right ? 39 : 37, which: right ? 39 : 37, bubbles: true, cancelable: true}));
+        return true;
+    };
+    // Put this in front of Jellyfin's own hostInput callback (qwebchannel keeps them in __objectSignals__).
+    let tries = 0;
+    const wrap = () => {
+        const input = window.api && window.api.input;
+        const lists = input && input.__objectSignals__ ? Object.values(input.__objectSignals__) : [];
+        if (lists.some(l => l.some(f => f.__tv)))
+            return;
+        const list = lists.find(l => l.some(f => String(f).includes("inputManager.handleCommand")));
+        const at = list ? list.findIndex(f => String(f).includes("inputManager.handleCommand")) : -1;
+        if (at < 0) {
+            if (++tries < 40)
+                setTimeout(wrap, 500);
+            return;
+        }
+        const original = list[at];
+        const wrapped = actions => {
+            let rest = actions;
+            try {
+                rest = actions.filter(a => !((a === "left" || a === "right") && seek(a)));
+            } catch (e) {
+                console.warn("tv seek:", e);
+            }
+            if (rest.length)
+                original(rest);
+        };
+        wrapped.__tv = true;
+        list[at] = wrapped;
+    };
+    wrap();
+}
+"""
+SCRIPTS = {"jellyfin": HANDLER + JELLYFIN_TV, "jellyseerr": HANDLER + TV_FOCUS}
 
 
 def page_socket(port):
