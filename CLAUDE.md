@@ -526,6 +526,12 @@ an unknown key name and an unknown app id.
   last press. Also a white focus (OSD buttons, timeline thumb, cards, buttons, menus) instead of the blue tint.
   Host-verified 2026-10-31: → twice = timeline +60 s with the bubble, seek after the fade; white circle on the focused
   button.
+- CPU (2026-10-31, user: fans loud): "hardwareDecoding": "copy" (mpv auto-copy) never worked in this Flatpak
+  (vaapi-copy "Could not create device"; the libmpv here has no vaapi-drm) -> HEVC 10-bit on the CPU, ~130 % of a
+  core, and deinterlace=yes ran bwdif on every video. Now "enabled" (render-API VA-API interop: "Using hardware
+  decoding (vaapi)") + other_conf deinterlace=auto: Jellyfin ~27 % CPU, package 67 -> 50 °C (install-jellyfin-video.sh).
+- GPU hang 2026-10-31 17:48 (i915 GuC: "Engine reset failed on rcs0", in plasmashell's QSGRenderThread): picture froze,
+  sound kept going, Jellyfin's MPRIS stopped answering. Fixed by restarting Jellyfin + plasmashell. Once in 3 days.
 - Flathub build a6d784a0 (2026-10-30, KDE runtime 6.11) loads the web client WITHOUT the native shell (no window.api /
   jmpInfo, "Html Video Player", no mpv, no hostInput): rolled back with the user's OK to 101468e6 (runtime 6.10):
   `pkexec flatpak update --system --commit=101468e6... org.jellyfin.JellyfinDesktop` + `flatpak mask --system

@@ -6,7 +6,11 @@
 # mix (centre -3 dB, then scaled down so nothing clips) put dialogue 7.6 dB under the same sound in a stereo file and
 # 3 dB under the music/effects in front (measured with a 5.1 test tone). Centre +3 dB / surrounds -6 dB instead: speech
 # +4.3 dB and 3 dB over the front, still without clipping. Only touches the mix-down; stereo files are unchanged.
-# Sets "video.deinterlace" and "other.other_conf" (extra mpv options, one per line) in the default profile's
+# CPU (2026-10-31, fans loud): "hardwareDecoding": "copy" = mpv auto-copy, whose stand-alone VA-API device cannot be
+# made in this Flatpak ("vaapi-copy: Could not create device") -> HEVC 10-bit decoded on the CPU (~130 %). "enabled"
+# uses libmpv's render-API VA-API interop instead, which works. Deinterlacing ran on every video (Jellyfin passes
+# deinterlace=yes); deinterlace=auto in other_conf (applied after) only touches interlaced ones.
+# Sets "video.deinterlace", "video.hardwareDecoding" and "other.other_conf" (extra mpv options, one per line) in the default profile's
 # jellyfin-desktop.conf; closes Jellyfin first (it rewrites the file on exit). --remove undoes everything.
 set -euo pipefail
 app=~/.var/app/org.jellyfin.JellyfinDesktop
@@ -32,7 +36,9 @@ path, shader, mode = sys.argv[1:]
 c = json.load(open(path))
 s = c.get("sections", c)
 s["video"]["deinterlace"] = mode != "--remove"
-options = [] if mode == "--remove" else ["audio-swresample-o=center_mix_level=1.414,surround_mix_level=0.5"]
+s["video"]["hardwareDecoding"] = "enabled"
+options = [] if mode == "--remove" else ["audio-swresample-o=center_mix_level=1.414,surround_mix_level=0.5",
+                                         "deinterlace=auto"]
 if mode == "--upscale":
     options += ["glsl-shaders=" + shader, "scale=ewa_lanczossharp", "cscale=ewa_lanczossharp"]
 s["other"]["other_conf"] = "\n".join(options)
