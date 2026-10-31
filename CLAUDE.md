@@ -208,6 +208,15 @@ homescreen/
                     finishes -> Config.system("save_app_order:<ids>") -> apps.py order -> ~/.config/tv-project/
                     app-order.json; TvHome.applyContent sorts apps.json by it (unknown apps after). Home (goHome)
                     closes every window: request, Did you mean, Not on your server, settings, move mode.
+  Jellyfin look (2026-10-31, user: "jellyfin itself doesnt really look nice and is difficult to navigate"):
+                    the start page comes from the server plugin Home Screen Sections 2.5.7 (useModularHome). It had 18
+                    rows, all OrderIndex 999 (random order), Continue Watching at row 13. User chose: this account gets
+                    6 rows (ModularHomeViews/UserSettings?userId= EnabledSections: ContinueWatchingNextUp, MyMedia,
+                    RecentlyAddedMovies, RecentlyAddedShows, MyJellyseerrRequests, Discover) and those six got
+                    OrderIndex 1-6 in the plugin's server config (Plugins/b8298e01.../Configuration; the rest stays
+                    999). Old row list: ~/.cache/tv-project/jellyfin-home-sections-before.json (POST it back to undo).
+                    On this laptop only: backdrops on (localStorage <userId>-enableBackdrops, osk.py sets it when
+                    unset), WhisperSubs' "Translate into…" dropdown hidden, its Subtitles button gets the white focus.
   VolumeOsd.qml     volume popup (2026-10-31, user: "make the volume up and down look nicer"): tall pill at the right
                     edge (level, bar from the bottom, Breeze volume-low/medium/high/muted icons) for 2 s, in a layer-shell
                     overlay that never takes the keyboard. HomeScreen follows org.kde.plasma.private.volume

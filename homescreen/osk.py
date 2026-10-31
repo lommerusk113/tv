@@ -122,6 +122,7 @@ if (!window.__tvFocus) {
     }, true);
 }
 """
+# The film page: WhisperSubs' "Translate into…" dropdown hidden (a dropdown is a dead end with the remote).
 # Jellyfin Desktop, TV layout: a focus you can see from the sofa (white instead of a thin blue tint), and ← → that
 # seek in the player. Jellyfin gets remote keys as hostInput commands; with the player's controls hidden "left"/"right"
 # skip without showing anything, and once the controls are up they only move between the buttons, so the timeline
@@ -149,7 +150,12 @@ if (!window.__tvPlayer) {
             box-shadow: 0 0 28px 6px rgba(255, 255, 255, 0.4) !important;
         }
         .listItem:focus, .actionSheetMenuItem:focus { background: #ffffff !important; color: #101010 !important; }
-        .emby-tab-button.show-focus:focus { color: #ffffff !important; box-shadow: inset 0 -4px 0 #ffffff !important; }`;
+        .emby-tab-button.show-focus:focus { color: #ffffff !important; box-shadow: inset 0 -4px 0 #ffffff !important; }
+        .btnWhisperSubsTranslate { display: none !important; }
+        .btnWhisperSubsDetail:focus {
+            background: #ffffff !important; color: #101010 !important; border-radius: 12px;
+            box-shadow: 0 0 28px 6px rgba(255, 255, 255, 0.4) !important;
+        }`;
     const addStyle = () => {
         const style = document.createElement("style");
         style.textContent = css;
@@ -159,6 +165,16 @@ if (!window.__tvPlayer) {
         addStyle();
     else
         document.addEventListener("DOMContentLoaded", addStyle);
+
+    // Backdrops behind pages (Jellyfin's per-device display setting, off by default): on, unless already chosen.
+    const backdrops = setInterval(() => {
+        const user = window.ApiClient && window.ApiClient.getCurrentUserId && window.ApiClient.getCurrentUserId();
+        if (!user)
+            return;
+        clearInterval(backdrops);
+        if (localStorage.getItem(user + "-enableBackdrops") === null)
+            localStorage.setItem(user + "-enableBackdrops", "true");
+    }, 1000);
 
     const seek = action => {
         const slider = document.querySelector(".videoOsdBottom .osdPositionSlider");
